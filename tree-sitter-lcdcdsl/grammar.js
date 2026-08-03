@@ -13,13 +13,13 @@ const user_namespaced_identifier = new RegExp(
   `(?:${identifier_part.source}@${identifier_part.source})`
 );
 const first_identifier_part = new RegExp(
-  `(?:${identifier_part.source}(?:@)?${identifier_part.source})`
+  `(?:${identifier_part.source}(?:@${identifier_part.source})?)`
 );
 const identifier = new RegExp(
   `(?:\\$${first_identifier_part.source}(?:\\.${identifier_part.source})*)`
 );
 
-// console.log(identifier.source);
+console.log(identifier.source);
 
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check

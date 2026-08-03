@@ -21,3 +21,8 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 tree-sitter-lcdcdsl = { path = "../../../tree-sitter-lcdcdsl", editable = true }
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.6.2",
+]

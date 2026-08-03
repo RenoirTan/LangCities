@@ -16,7 +16,7 @@
   "metadata": {
     "version": "0.1.0",
     "license": "MIT",
-    "description": "Parser for LangCities' Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.",
+    "description": "Parser for LangCities Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.",
     "authors": [
       {
         "name": "RenoirTan",

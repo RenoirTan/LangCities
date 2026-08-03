@@ -1,7 +1,7 @@
 LANGUAGE_NAME := tree-sitter-lcdcdsl
 HOMEPAGE_URL := https://github.com/renoirtan/langcities
 VERSION := 0.1.0
-DESCRIPTION := Parser for LangCities' Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.
+DESCRIPTION := Parser for LangCities Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.
 
 # repository
 SRC_DIR := src

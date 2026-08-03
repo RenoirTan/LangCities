@@ -1,6 +1,6 @@
 [package]
 name = "tree-sitter-lcdcdsl"
-description = "Parser for LangCities' Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries."
+description = "Parser for LangCities Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries."
 version = "0.1.0"
 authors = ["RenoirTan <renoirtan2005@gmail.com>"]
 license = "MIT"

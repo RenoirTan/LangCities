@@ -8,7 +8,7 @@
   <artifactId>jtreesitter-lcdcdsl</artifactId>
   <name>JTreeSitter Lcdcdsl</name>
   <version>0.1.0</version>
-  <description>Parser for LangCities' Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.</description>
+  <description>Parser for LangCities Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.</description>
   <url>https://github.com/renoirtan/langcities</url>
   <licenses>
     <license>

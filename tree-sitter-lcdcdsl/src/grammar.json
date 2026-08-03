@@ -1,0 +1,233 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/grammar.schema.json",
+  "name": "lcdcdsl",
+  "rules": {
+    "source_file": {
+      "type": "SYMBOL",
+      "name": "multi_expression"
+    },
+    "multi_expression": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "expression_sep"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "first",
+          "content": {
+            "type": "SYMBOL",
+            "name": "expression"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "expression_sep"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "others",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "expression"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "expression_sep"
+          }
+        }
+      ]
+    },
+    "expression_sep": {
+      "type": "PATTERN",
+      "value": "\\r\\n|[\\n\\r]"
+    },
+    "expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "function_call"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "binary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "parenthesis_expression"
+        }
+      ]
+    },
+    "parenthesis_expression": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "binary_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "add_expression"
+        }
+      ]
+    },
+    "add_expression": {
+      "type": "PREC_LEFT",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "expression"
+          },
+          {
+            "type": "STRING",
+            "value": "+"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "expression"
+          }
+        ]
+      }
+    },
+    "function_call": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "SYMBOL",
+                "name": "expression"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "identifier": {
+      "type": "PATTERN",
+      "value": "(?:\\$(?:(?:(?:\\d+)|(?:[a-z_][a-z0-9_]*))(?:@(?:(?:\\d+)|(?:[a-z_][a-z0-9_]*)))?)(?:\\.(?:(?:\\d+)|(?:[a-z_][a-z0-9_]*)))*)"
+    },
+    "string_literal": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "unquoted_string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "dquoted_string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "squoted_string_literal"
+        }
+      ]
+    },
+    "unquoted_string_literal": {
+      "type": "PATTERN",
+      "value": "(?:[^\\s$,(){}+\\\\\"']|\\\\[$,(){}+\\\\\"'])+"
+    },
+    "dquoted_string_literal": {
+      "type": "PATTERN",
+      "value": "\"(?:\\\\.|[^\"\\\\])*\""
+    },
+    "squoted_string_literal": {
+      "type": "PATTERN",
+      "value": "'(?:\\\\.|[^'\\\\])*'"
+    }
+  },
+  "extras": [
+    {
+      "type": "PATTERN",
+      "value": "\\s"
+    }
+  ],
+  "conflicts": [],
+  "precedences": [],
+  "externals": [],
+  "inline": [],
+  "supertypes": [
+    "expression",
+    "string_literal"
+  ],
+  "reserved": {}
+}

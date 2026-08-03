@@ -1,0 +1,28 @@
+[project]
+name = "tree-sitter-lcdcdsl-experiment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "RenoirTan", email = "renoirtan2005@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "tree-sitter>=0.26.0",
+    "tree-sitter-lcdcdsl",
+]
+
+[project.scripts]
+tree-sitter-lcdcdsl-experiment = "tree_sitter_lcdcdsl_experiment:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+tree-sitter-lcdcdsl = { path = "../../../tree-sitter-lcdcdsl", editable = true }
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.6.2",
+]

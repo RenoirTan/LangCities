@@ -1,0 +1,42 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "lcdcdsl",
+      "camelcase": "Lcdcdsl",
+      "title": "LangCities DC Domain Specific Language Parser",
+      "scope": "source.lcdcdsl",
+      "file-types": [
+        "lcdcdsl"
+      ],
+      "injection-regex": "^lcdcdsl$",
+      "class-name": "TreeSitterLcdcdsl"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Parser for LangCities Domain Specific Language. Expressions in this DSL are used to generate values for LangCities Dictionaries.",
+    "authors": [
+      {
+        "name": "RenoirTan",
+        "email": "renoirtan2005@gmail.com",
+        "url": "https://renoirtan.com"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/RenoirTan/LangCities",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "java": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": true
+  }
+}

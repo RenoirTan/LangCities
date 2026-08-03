@@ -1,0 +1,65 @@
+====================
+Simple Function Call
+====================
+
+$mt.sc.ot_mt($ot.123.ipa)
+
+---
+
+(source_file
+  (multi_expression
+    (expression_sep)
+    first: (function_call
+      (identifier)
+      (identifier))
+    (expression_sep)))
+
+=======================
+Unquoted String Literal
+=======================
+
+$mt.sc.ot_mt(/ˈɥɵʉ̯pʰwɛsʰ/)
+
+---
+
+(source_file
+  (multi_expression
+    (expression_sep)
+    (function_call
+      (identifier)
+      (unquoted_string_literal))
+    (expression_sep)))
+
+==============
+All Around You
+==============
+
+$all.around ( " you " )
+
+---
+
+(source_file
+  (multi_expression
+    (expression_sep)
+    (function_call
+      (identifier)
+      (dquoted_string_literal))
+    (expression_sep)))
+
+================
+Unbounded Dquote
+:error
+================
+
+" unbounded
+
+---
+
+=================
+Broken Identifier
+:error
+=================
+
+$what. isthis
+
+---

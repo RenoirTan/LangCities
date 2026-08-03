@@ -19,7 +19,7 @@ const identifier = new RegExp(
   `(?:\\$${first_identifier_part.source}(?:\\.${identifier_part.source})*)`
 );
 
-console.log(identifier.source);
+console.log(`Identifier Regex: ${identifier.source}`);
 
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
@@ -30,7 +30,7 @@ export default grammar({
   extras: $ => [
     /\s/,
   ],
-  
+
   supertypes: $ => [
     $.expression,
     $.string_literal,
@@ -56,7 +56,20 @@ export default grammar({
       $.function_call,
       $.identifier,
       $.string_literal,
+      $.binary_expression,
+      $.parenthesis_expression,
     ),
+
+    parenthesis_expression: $ => seq(
+      "(",
+      $.expression,
+      ")",
+    ),
+
+    binary_expression: $ => choice(
+      $.add_expression,
+    ),
+    add_expression: $ => prec.left(1, seq($.expression, "+", $.expression)),
 
     function_call: $ => seq(
       $.identifier,

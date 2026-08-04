@@ -67,6 +67,7 @@ version = "0.1.0"
 name = "langcities-parser"
 version = "0.1.0"
 dependencies = [
+ "langcities-dsl",
  "tree-sitter",
  "tree-sitter-lcdcdsl",
 ]

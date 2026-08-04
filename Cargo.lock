@@ -60,6 +60,10 @@ name = "langcities-auth"
 version = "0.1.0"
 
 [[package]]
+name = "langcities-dsl"
+version = "0.1.0"
+
+[[package]]
 name = "langcities-parser"
 version = "0.1.0"
 dependencies = [

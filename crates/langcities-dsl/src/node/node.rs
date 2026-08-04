@@ -28,6 +28,14 @@ impl NodeContext {
     pub fn raw_mut<'t>(&self, tree: &'t mut Tree) -> &'t mut str {
         &mut tree.context.source[self.span.clone()]
     }
+
+    pub fn node<'t>(&self, tree: &'t Tree) -> Option<&'t Node> {
+        tree.arena.get(&self.node_id)
+    }
+
+    pub fn node_mut<'t>(&self, tree: &'t mut Tree) -> Option<&'t mut Node> {
+        tree.arena.get_mut(&self.node_id)
+    }
 }
 
 #[derive(Clone, Debug)]

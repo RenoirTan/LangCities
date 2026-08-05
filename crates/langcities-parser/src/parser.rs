@@ -7,10 +7,10 @@ use langcities_dsl::{
     },
     tree::TreeBuilder,
 };
-use tree_sitter::{Node as TSNode, Parser as TSParser, Tree as TSTree};
+use tree_sitter::{Parser as TSParser, Tree as TSTree};
 use tree_sitter_lcdcdsl::LANGUAGE;
 
-use crate::{ParserError, ParserErrorKind};
+use crate::{ParserError, ParserErrorKind, RawNodePath};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TransferInstructionContext {
@@ -39,25 +39,6 @@ enum TransferInstructionKind {
     StringLiteral(StringLiteralKind),
     Binary(BinaryOp),
     FunctionCall { arg_count: usize },
-}
-
-#[derive(Clone, Debug)]
-struct RawNodePath {
-    indices: Vec<u32>,
-}
-
-impl RawNodePath {
-    fn root() -> Self {
-        Self {
-            indices: Vec::new(),
-        }
-    }
-
-    fn with_child(&self, index: u32) -> Self {
-        let mut indices = self.indices.clone();
-        indices.push(index);
-        Self { indices }
-    }
 }
 
 #[derive(Debug)]
@@ -133,7 +114,8 @@ impl Parser {
                 TraversalTask::Expression(path) => path,
             };
 
-            let node = Self::node_at_path(&self.raw_tree, &path)
+            let node = path
+                .of_tree(&self.raw_tree)
                 .ok_or_else(|| ParserError::new(None, ParserErrorKind::InvalidSource))?;
 
             match node.kind() {
@@ -241,6 +223,8 @@ impl Parser {
         Ok(None)
     }
 
+    // Read instructions like RPN (because postorder traversal) and combine into native DSL
+    // implementation
     pub fn transfer_next(&mut self) -> Result<Option<NodeId>, ParserError> {
         if self.next_transfer_instruction == self.transfer_instructions.len()
             && self.prepare_transfer_next()?.is_none()
@@ -342,14 +326,6 @@ impl Parser {
             .tree_builder
             .register_node(Node::new(node, NodeContext { node_id, span }));
         node_id
-    }
-
-    fn node_at_path<'tree>(tree: &'tree TSTree, path: &RawNodePath) -> Option<TSNode<'tree>> {
-        let mut node = tree.root_node();
-        for index in &path.indices {
-            node = node.named_child(*index)?;
-        }
-        Some(node)
     }
 }
 

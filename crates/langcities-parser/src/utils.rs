@@ -1,7 +1,7 @@
 use tree_sitter::{Node as TSNode, Tree as TSTree};
 
 #[derive(Clone, Debug)]
-pub(crate) struct RawNodePath {
+pub struct RawNodePath {
     pub indices: Vec<u32>,
 }
 

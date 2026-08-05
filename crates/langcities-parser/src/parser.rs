@@ -44,22 +44,20 @@ enum TransferInstructionKind {
 
 #[derive(Clone, Debug)]
 struct RawNodePath {
-    named_child_indices: Vec<u32>,
+    indices: Vec<u32>,
 }
 
 impl RawNodePath {
     fn root() -> Self {
         Self {
-            named_child_indices: Vec::new(),
+            indices: Vec::new(),
         }
     }
 
-    fn child(&self, index: u32) -> Self {
-        let mut named_child_indices = self.named_child_indices.clone();
-        named_child_indices.push(index);
-        Self {
-            named_child_indices,
-        }
+    fn with_child(&self, index: u32) -> Self {
+        let mut indices = self.indices.clone();
+        indices.push(index);
+        Self { indices }
     }
 }
 
@@ -124,9 +122,7 @@ impl Parser {
             return Ok(None);
         }
 
-        if !self.transfer_preparation_started {
-            self.start_transfer_preparation()?;
-        }
+        self.start_transfer_preparation()?;
 
         while let Some(task) = self.transfer_tasks.pop() {
             let path = match task {
@@ -180,7 +176,7 @@ impl Parser {
                     }
 
                     self.transfer_tasks
-                        .push(TraversalTask::Expression(path.child(0)));
+                        .push(TraversalTask::Expression(path.with_child(0)));
                 }
                 "binary_expression" => {
                     let add_expression = node.named_child(0);
@@ -195,16 +191,16 @@ impl Parser {
                         return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
                     }
 
-                    let add_path = path.child(0);
+                    let add_path = path.with_child(0);
                     self.transfer_tasks
                         .push(TraversalTask::Register(TransferInstruction::new(
                             TransferInstructionKind::Binary(BinaryOp::Add),
                             node.byte_range(),
                         )));
                     self.transfer_tasks
-                        .push(TraversalTask::Expression(add_path.child(1)));
+                        .push(TraversalTask::Expression(add_path.with_child(1)));
                     self.transfer_tasks
-                        .push(TraversalTask::Expression(add_path.child(0)));
+                        .push(TraversalTask::Expression(add_path.with_child(0)));
                 }
                 "function_call" => {
                     let child_count = node.named_child_count();
@@ -226,7 +222,7 @@ impl Parser {
 
                     for index in (1..child_count).rev() {
                         self.transfer_tasks
-                            .push(TraversalTask::Expression(path.child(index as u32)));
+                            .push(TraversalTask::Expression(path.with_child(index as u32)));
                     }
 
                     let identifier = node.named_child(0).unwrap();
@@ -302,7 +298,12 @@ impl Parser {
         Ok(Some(node_id))
     }
 
+    /// Collect all top-level instructions into tasks
     fn start_transfer_preparation(&mut self) -> Result<(), ParserError> {
+        if self.transfer_preparation_started {
+            return Ok(());
+        }
+
         let root = self.raw_tree.root_node();
         if root.has_error() || root.kind() != "source_file" {
             return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
@@ -317,7 +318,7 @@ impl Parser {
         }
 
         let multi_expression = root.named_child(0).unwrap();
-        let multi_expression_path = RawNodePath::root().child(0);
+        let multi_expression_path = RawNodePath::root().with_child(0);
         let mut expression_count = 0;
         let mut tasks = Vec::new();
 
@@ -328,7 +329,7 @@ impl Parser {
             }
 
             tasks.push(TraversalTask::Expression(
-                multi_expression_path.child(index as u32),
+                multi_expression_path.with_child(index as u32),
             ));
             expression_count += 1;
         }
@@ -352,7 +353,7 @@ impl Parser {
 
     fn node_at_path<'tree>(tree: &'tree TSTree, path: &RawNodePath) -> Option<TSNode<'tree>> {
         let mut node = tree.root_node();
-        for index in &path.named_child_indices {
+        for index in &path.indices {
             node = node.named_child(*index)?;
         }
         Some(node)

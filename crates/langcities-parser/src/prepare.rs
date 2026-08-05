@@ -189,7 +189,7 @@ impl Preparer {
                 }
                 "function_call" => {
                     let child_count = node.named_child_count();
-                    if child_count < 2
+                    if child_count < 1
                         || node
                             .named_child(0)
                             .is_none_or(|child| child.kind() != "identifier")
@@ -239,6 +239,23 @@ impl Preparer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_function_no_args() {
+        let mut preparer = Preparer::from_source("$f()").unwrap();
+        preparer.prepare().unwrap();
+        assert_eq!(preparer.instructions.len(), 2);
+        let expected_instructions = [
+            TransferInstructionKind::IdentifierPrim,
+            TransferInstructionKind::FunctionCall { arg_count: 0 },
+        ];
+        let predicted_instructions = preparer
+            .instructions
+            .iter()
+            .map(|i| i.kind.clone())
+            .collect::<Vec<TransferInstructionKind>>();
+        assert_eq!(predicted_instructions, expected_instructions);
+    }
 
     #[test]
     fn test_prepare_transfer_next() {

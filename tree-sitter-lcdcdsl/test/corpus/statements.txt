@@ -12,6 +12,21 @@ $mt@123.456.ipa
     (identifier)
     (expression_sep)))
 
+============
+No Arguments
+============
+
+$dummy()
+
+---
+
+(source_file
+  (multi_expression
+    (expression_sep)
+    (function_call
+      (identifier))
+    (expression_sep)))
+
 ====================
 Simple Function Call
 ====================

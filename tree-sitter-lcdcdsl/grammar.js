@@ -74,9 +74,13 @@ export default grammar({
     function_call: $ => seq(
       $.identifier,
       "(",
-      $.expression,
-      repeat(seq(",", $.expression)),
-      optional(","),
+      optional(
+        seq(
+          $.expression,
+          repeat(seq(",", $.expression)),
+          optional(","),
+        ),
+      ),
       ")",
     ),
 

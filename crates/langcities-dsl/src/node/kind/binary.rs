@@ -1,20 +1,18 @@
-use std::fmt::Display;
-
 use crate::node::NodeId;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BinaryExpression {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BinaryExpr {
     pub op: BinaryOp,
     pub left_id: NodeId,
     pub right_id: NodeId,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
 }
 
-impl BinaryExpression {
+impl BinaryExpr {
     pub fn new<O, L, R>(op: O, left_id: L, right_id: R) -> Self
     where
         O: Into<BinaryOp>,
@@ -27,17 +25,5 @@ impl BinaryExpression {
             left_id,
             right_id,
         }
-    }
-}
-
-impl Display for BinaryOp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                BinaryOp::Add => "+",
-            },
-        )
     }
 }

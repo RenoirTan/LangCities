@@ -2,9 +2,8 @@ use std::ops::Range;
 
 use langcities_dsl::{
     node::{
-        BinaryExpression, BinaryOp, Expr, ExpressionNode, FunctionCall, IdentifierExpression,
-        IdentifierPrimitive, Node, NodeContext, NodeId, NodeKind, Prim, PrimitiveNode,
-        StringLiteral, StringLiteralKind,
+        BinaryExpr, BinaryOp, FunctionCallExpr, IdentifierExpr, IdentifierPrim, Node, NodeContext,
+        NodeId, NodeKind, StringLiteralExpr, StringLiteralKind,
     },
     tree::TreeBuilder,
 };
@@ -35,8 +34,8 @@ impl TransferInstruction {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum TransferInstructionKind {
-    IdentifierExpression,
-    IdentifierPrimitive,
+    IdentifierExpr,
+    IdentifierPrim,
     StringLiteral(StringLiteralKind),
     Binary(BinaryOp),
     FunctionCall { arg_count: usize },
@@ -141,7 +140,7 @@ impl Parser {
                 "identifier" => {
                     let instruction_index = self.transfer_instructions.len();
                     self.transfer_instructions.push(TransferInstruction::new(
-                        TransferInstructionKind::IdentifierExpression,
+                        TransferInstructionKind::IdentifierExpr,
                         node.byte_range(),
                     ));
                     return Ok(Some(instruction_index));
@@ -228,7 +227,7 @@ impl Parser {
                     let identifier = node.named_child(0).unwrap();
                     self.transfer_tasks
                         .push(TraversalTask::Register(TransferInstruction::new(
-                            TransferInstructionKind::IdentifierPrimitive,
+                            TransferInstructionKind::IdentifierPrim,
                             identifier.byte_range(),
                         )));
                 }
@@ -253,15 +252,13 @@ impl Parser {
         let TransferInstruction { kind, context } = instruction;
 
         let node = match kind {
-            TransferInstructionKind::IdentifierExpression => NodeKind::Expr(ExpressionNode {
-                expr: Expr::Identifier(IdentifierExpression::from(IdentifierPrimitive)),
-            }),
-            TransferInstructionKind::IdentifierPrimitive => NodeKind::Prim(PrimitiveNode {
-                prim: Prim::Identifier(IdentifierPrimitive),
-            }),
-            TransferInstructionKind::StringLiteral(kind) => NodeKind::Expr(ExpressionNode {
-                expr: Expr::StringLiteral(StringLiteral::new(kind)),
-            }),
+            TransferInstructionKind::IdentifierExpr => {
+                NodeKind::IdentifierExpr(IdentifierExpr::default())
+            }
+            TransferInstructionKind::IdentifierPrim => NodeKind::IdentifierPrim(IdentifierPrim),
+            TransferInstructionKind::StringLiteral(kind) => {
+                NodeKind::StringLiteralExpr(StringLiteralExpr::new(kind))
+            }
             TransferInstructionKind::Binary(op) => {
                 if self.transfer_values.len() < 2 {
                     return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
@@ -270,9 +267,7 @@ impl Parser {
                 let child_ids = self
                     .transfer_values
                     .split_off(self.transfer_values.len() - 2);
-                NodeKind::Expr(ExpressionNode {
-                    expr: Expr::Binary(BinaryExpression::new(op, child_ids[0], child_ids[1])),
-                })
+                NodeKind::BinaryExpr(BinaryExpr::new(op, child_ids[0], child_ids[1]))
             }
             TransferInstructionKind::FunctionCall { arg_count } => {
                 let child_count = arg_count + 1;
@@ -283,12 +278,10 @@ impl Parser {
                 let child_ids = self
                     .transfer_values
                     .split_off(self.transfer_values.len() - child_count);
-                NodeKind::Expr(ExpressionNode {
-                    expr: Expr::FunctionCall(FunctionCall::new(
-                        child_ids[0],
-                        child_ids[1..].to_vec(),
-                    )),
-                })
+                NodeKind::FunctionCallExpr(FunctionCallExpr::new(
+                    child_ids[0],
+                    child_ids[1..].to_vec(),
+                ))
             }
         };
 
@@ -378,7 +371,7 @@ mod tests {
 
         assert_eq!(parser.transfer_instructions.len(), 5);
         let expected_instructions = [
-            TransferInstructionKind::IdentifierPrimitive,
+            TransferInstructionKind::IdentifierPrim,
             TransferInstructionKind::StringLiteral(StringLiteralKind::Unquoted),
             TransferInstructionKind::StringLiteral(StringLiteralKind::Unquoted),
             TransferInstructionKind::Binary(BinaryOp::Add),
@@ -411,23 +404,17 @@ mod tests {
 
         assert_eq!(ids, [0, 1, 2, 3, 4]);
 
-        let NodeKind::Expr(ExpressionNode {
-            expr: Expr::Binary(binary),
-        }) = &parser.tree_builder.tree.arena[&ids[3]].node
-        else {
+        let NodeKind::BinaryExpr(binary) = &parser.tree_builder.tree.arena[&ids[3]].node else {
             panic!("expected binary expression");
         };
         assert_eq!(binary.left_id, 1);
         assert_eq!(binary.right_id, 2);
 
-        let NodeKind::Expr(ExpressionNode {
-            expr: Expr::FunctionCall(function_call),
-        }) = &parser.tree_builder.tree.arena[&4].node
-        else {
+        let NodeKind::FunctionCallExpr(func_call) = &parser.tree_builder.tree.arena[&4].node else {
             panic!("expected function call");
         };
-        assert_eq!(function_call.identifier, ids[0]);
-        assert_eq!(function_call.args, [3]);
+        assert_eq!(func_call.identifier_id, ids[0]);
+        assert_eq!(func_call.arg_ids, [3]);
     }
 
     #[test]

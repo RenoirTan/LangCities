@@ -1,16 +1,16 @@
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StringLiteral {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StringLiteralExpr {
     pub kind: StringLiteralKind,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StringLiteralKind {
     Unquoted,
     Squoted,
     Dquoted,
 }
 
-impl StringLiteral {
+impl StringLiteralExpr {
     pub fn new(kind: impl Into<StringLiteralKind>) -> Self {
         let kind = kind.into();
         Self { kind }

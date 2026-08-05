@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use crate::{
-    node::{ExpressionNode, NodeId, PrimitiveNode},
+    node::{NodeId, NodeKind},
     tree::Tree,
 };
 
@@ -42,12 +42,6 @@ impl NodeContext {
 pub struct Node {
     pub node: NodeKind,
     pub context: NodeContext,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum NodeKind {
-    Expr(ExpressionNode),
-    Prim(PrimitiveNode),
 }
 
 impl Node {

@@ -103,9 +103,7 @@ impl Parser {
             return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
         }
 
-        self.tasks = vec![TraversalTask::Expression(
-            RawNodePath::root().with_child(0),
-        )];
+        self.tasks = vec![TraversalTask::Expression(RawNodePath::root().with_child(0))];
         self.started = true;
         Ok(())
     }

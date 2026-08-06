@@ -1,0 +1,10 @@
+[package]
+name = "langcities-lcdcdsl"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]

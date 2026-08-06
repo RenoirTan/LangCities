@@ -89,42 +89,6 @@
     }
   },
   {
-    "type": "multi_expression",
-    "named": true,
-    "fields": {
-      "first": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "expression",
-            "named": true
-          }
-        ]
-      },
-      "others": {
-        "multiple": true,
-        "required": false,
-        "types": [
-          {
-            "type": "expression",
-            "named": true
-          }
-        ]
-      }
-    },
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "expression_sep",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "parenthesis_expression",
     "named": true,
     "fields": {},
@@ -149,7 +113,7 @@
       "required": true,
       "types": [
         {
-          "type": "multi_expression",
+          "type": "expression",
           "named": true
         }
       ]
@@ -173,10 +137,6 @@
   },
   {
     "type": "dquoted_string_literal",
-    "named": true
-  },
-  {
-    "type": "expression_sep",
     "named": true
   },
   {

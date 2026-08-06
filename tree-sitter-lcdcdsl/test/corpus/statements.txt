@@ -7,10 +7,19 @@ $mt@123.456.ipa
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (identifier)
-    (expression_sep)))
+  (identifier))
+
+============
+No Arguments
+============
+
+$dummy()
+
+---
+
+(source_file
+  (function_call
+    (identifier)))
 
 ====================
 Simple Function Call
@@ -21,12 +30,9 @@ $mt.sc.ot_mt($ot.123.ipa)
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    first: (function_call
-      (identifier)
-      (identifier))
-    (expression_sep)))
+  (function_call
+    (identifier)
+    (identifier)))
 
 =======================
 Unquoted String Literal
@@ -37,12 +43,9 @@ $mt.sc.ot_mt(/ˈɥɵʉ̯pʰwɛsʰ/)
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (function_call
-      (identifier)
-      (unquoted_string_literal))
-    (expression_sep)))
+  (function_call
+    (identifier)
+    (unquoted_string_literal)))
 
 ==============
 All Around You
@@ -53,12 +56,9 @@ $all.around ( " you " )
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (function_call
-      (identifier)
-      (dquoted_string_literal))
-    (expression_sep)))
+  (function_call
+    (identifier)
+    (dquoted_string_literal)))
 
 =====================
 Complex Function Call
@@ -69,14 +69,11 @@ $_.identity(something, "else", $ohno@1234)
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (function_call
-      (identifier)
-      (unquoted_string_literal)
-      (dquoted_string_literal)
-      (identifier))
-    (expression_sep)))
+  (function_call
+    (identifier)
+    (unquoted_string_literal)
+    (dquoted_string_literal)
+    (identifier)))
 
 ================
 Unbounded Dquote
@@ -87,7 +84,6 @@ Unbounded Dquote
 ---
 
 (ERROR
-  (expression_sep)
   (UNEXPECTED '\0'))
 
 =================
@@ -99,13 +95,10 @@ $what. isthis
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (ERROR
-      (identifier)
-      (unquoted_string_literal))
-    (unquoted_string_literal)
-    (expression_sep)))
+  (ERROR
+    (identifier)
+    (unquoted_string_literal))
+  (unquoted_string_literal))
 
 ========
 Addition
@@ -116,13 +109,10 @@ $mt.123.ipa + /ˈimʲ/
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (binary_expression
-      (add_expression
-        (identifier)
-        (unquoted_string_literal)))
-    (expression_sep)))
+  (binary_expression
+    (add_expression
+      (identifier)
+      (unquoted_string_literal))))
 
 ==========================
 Addition With Escaped Plus
@@ -133,13 +123,10 @@ Addition With Escaped Plus
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (binary_expression
-      (add_expression
-        (unquoted_string_literal)
-        (unquoted_string_literal)))
-    (expression_sep)))
+  (binary_expression
+    (add_expression
+      (unquoted_string_literal)
+      (unquoted_string_literal))))
 
 ====================
 Addition Missing LHS
@@ -150,11 +137,8 @@ Addition Missing LHS
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (ERROR)
-    (unquoted_string_literal)
-    (expression_sep)))
+  (ERROR)
+  (unquoted_string_literal))
 
 ====================
 Addition Missing RHS
@@ -165,14 +149,12 @@ $mt.sc.ot_mt(/ˈtʰɤɨ̯mjɨ̯əɾ/) +
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (binary_expression
-      (add_expression
-        (function_call
-          (identifier)
-          (unquoted_string_literal))
-        (MISSING identifier)))))
+  (binary_expression
+    (add_expression
+      (function_call
+        (identifier)
+        (unquoted_string_literal))
+      (MISSING identifier))))
 
 ========================
 Parenthesis Expression 0
@@ -183,18 +165,15 @@ Parenthesis Expression 0
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (parenthesis_expression
-      (binary_expression
-        (add_expression
-          (unquoted_string_literal)
-          (parenthesis_expression
-            (binary_expression
-              (add_expression
-                (unquoted_string_literal)
-                (unquoted_string_literal)))))))
-    (expression_sep)))
+  (parenthesis_expression
+    (binary_expression
+      (add_expression
+        (unquoted_string_literal)
+        (parenthesis_expression
+          (binary_expression
+            (add_expression
+              (unquoted_string_literal)
+              (unquoted_string_literal))))))))
 
 ========================
 Parenthesis Expression 1
@@ -205,13 +184,10 @@ $mt.sc.ot_mt(($ot.123.ipa + jə))
 ---
 
 (source_file
-  (multi_expression
-    (expression_sep)
-    (function_call
-      (identifier)
-      (parenthesis_expression
-        (binary_expression
-          (add_expression
-            (identifier)
-            (unquoted_string_literal)))))
-    (expression_sep)))
+  (function_call
+    (identifier)
+    (parenthesis_expression
+      (binary_expression
+        (add_expression
+          (identifier)
+          (unquoted_string_literal))))))

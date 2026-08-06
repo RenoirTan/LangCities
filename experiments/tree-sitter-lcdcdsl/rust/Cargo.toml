@@ -1,0 +1,12 @@
+[package]
+name = "tree-sitter-lcdcdsl-experiment"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+tree-sitter = "0.26.11"
+tree-sitter-lcdcdsl = { version = "0.1.0", path = "../../../tree-sitter-lcdcdsl" }

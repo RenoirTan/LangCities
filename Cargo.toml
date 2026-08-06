@@ -1,0 +1,14 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/*",
+  "experiments/tree-sitter-lcdcdsl/rust",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["RenoirTan <renoirtan2005@gmail.com>"]
+edition = "2024"
+keywords = []
+categories = ["command-line-utilities", "text-processing", "web-programming"]
+repository = "https://github.com/RenoirTan/LangCities"

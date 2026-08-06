@@ -14,7 +14,7 @@ pub struct TreeBuilder {
 impl TreeBuilder {
     pub fn new(source: impl Into<String>) -> Self {
         let context = TreeContext::new(source);
-        let tree = Tree::new(context, HashMap::new());
+        let tree = Tree::new(context, HashMap::new(), None);
         Self {
             next_node_id: 0,
             tree,

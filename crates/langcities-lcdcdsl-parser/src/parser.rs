@@ -158,6 +158,9 @@ impl Parser {
                     let node_id = self.register_node(node_kind, instruction.context.span);
                     // Add to stack so that higher-level expression can use it
                     self.node_ids_stack.push(node_id);
+                    if self.tasks.is_empty() {
+                        self.tree_builder.tree.root_node_id = Some(node_id);
+                    }
                     return Ok(Some(node_id));
                 }
                 TraversalTask::Expression(path) => path,
@@ -317,6 +320,7 @@ mod tests {
         ];
         let predicted_node_kinds = get_ordered_node_kinds(&parser.tree_builder.tree.arena);
         assert_eq!(&expected_node_kinds[..], predicted_node_kinds);
+        assert_eq!(parser.tree_builder.tree.root_node_id, Some(1));
     }
 
     #[test]
@@ -345,6 +349,7 @@ mod tests {
         ];
         let predicted_node_kinds = get_ordered_node_kinds(&parser.tree_builder.tree.arena);
         assert_eq!(&expected_node_kinds[..], predicted_node_kinds);
+        assert_eq!(parser.tree_builder.tree.root_node_id, Some(7));
     }
 
     #[test]
@@ -353,5 +358,6 @@ mod tests {
         assert!(parser.prepare().is_err());
         assert!(parser.tree_builder.tree.arena.is_empty());
         assert_eq!(parser.tree_builder.next_node_id, 0);
+        assert_eq!(parser.tree_builder.tree.root_node_id, None);
     }
 }

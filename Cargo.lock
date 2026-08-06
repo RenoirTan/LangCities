@@ -60,14 +60,14 @@ name = "langcities-auth"
 version = "0.1.0"
 
 [[package]]
-name = "langcities-dsl"
+name = "langcities-lcdcdsl"
 version = "0.1.0"
 
 [[package]]
-name = "langcities-parser"
+name = "langcities-lcdcdsl-parser"
 version = "0.1.0"
 dependencies = [
- "langcities-dsl",
+ "langcities-lcdcdsl",
  "tree-sitter",
  "tree-sitter-lcdcdsl",
 ]

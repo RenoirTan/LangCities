@@ -1,5 +1,5 @@
 [package]
-name = "langcities-parser"
+name = "langcities-lcdcdsl-parser"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -10,4 +10,4 @@ repository.workspace = true
 [dependencies]
 tree-sitter = "0.26.11"
 tree-sitter-lcdcdsl = { version = "0.1.0", path = "../../tree-sitter-lcdcdsl" }
-langcities-dsl = { path = "../langcities-dsl" }
+langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }

@@ -1,5 +1,5 @@
 [package]
-name = "langcities-dsl"
+name = "langcities-lcdcdsl"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

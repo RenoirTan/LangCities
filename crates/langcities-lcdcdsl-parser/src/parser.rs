@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use langcities_dsl::{
+use langcities_lcdcdsl::{
     node::{
         BinaryExpr, BinaryOp, FunctionCallExpr, IdentifierExpr, IdentifierPrim, Node, NodeContext,
         NodeId, NodeKind, StringLiteralExpr, StringLiteralKind,

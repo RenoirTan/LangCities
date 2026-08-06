@@ -89,7 +89,7 @@ impl<'t> DependencyBuilder<'t> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tree::tests::create_tree;
+    use crate::tests::create_tree;
 
     use super::*;
 

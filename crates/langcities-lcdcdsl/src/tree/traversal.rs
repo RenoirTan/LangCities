@@ -158,13 +158,13 @@ impl<'t> TreeTraverser<'t> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::tests::create_tree;
+    use crate::tests::{create_tree_0, create_tree_1};
 
     use super::*;
 
     #[test]
-    fn test_bfs() {
-        let tree = create_tree();
+    fn test_bfs_0() {
+        let tree = create_tree_0();
         let mut traverser =
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Bfs).unwrap();
         let path = traverser.try_collect().unwrap();
@@ -172,8 +172,8 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_preorder() {
-        let tree = create_tree();
+    fn test_preorder_0() {
+        let tree = create_tree_0();
         let mut traverser =
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Preorder).unwrap();
         let path = traverser.try_collect().unwrap();
@@ -181,12 +181,40 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_postorder() {
-        let tree = create_tree();
+    fn test_postorder_0() {
+        let tree = create_tree_0();
         let mut traverser =
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Postorder)
                 .unwrap();
         let path = traverser.try_collect().unwrap();
         assert_eq!(path, [0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn test_bfs_1() {
+        let tree = create_tree_1();
+        let mut traverser =
+            TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Bfs).unwrap();
+        let path = traverser.try_collect().unwrap();
+        assert_eq!(path, [9, 5, 8, 1, 4, 6, 7, 2, 3]);
+    }
+
+    #[test]
+    fn test_preorder_1() {
+        let tree = create_tree_1();
+        let mut traverser =
+            TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Preorder).unwrap();
+        let path = traverser.try_collect().unwrap();
+        assert_eq!(path, [9, 5, 1, 4, 2, 3, 8, 6, 7]);
+    }
+
+    #[test]
+    fn test_postorder_1() {
+        let tree = create_tree_1();
+        let mut traverser =
+            TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Postorder)
+                .unwrap();
+        let path = traverser.try_collect().unwrap();
+        assert_eq!(path, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
     }
 }

@@ -89,17 +89,28 @@ impl<'t> DependencyBuilder<'t> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::create_tree;
+    use crate::tests::{create_tree_0, create_tree_1};
 
     use super::*;
 
     #[test]
-    fn test_dependency_stream() {
-        let tree = create_tree();
+    fn test_dependency_stream_0() {
+        let tree = create_tree_0();
         let mut builder = DependencyBuilder::new(&tree).unwrap();
         let dependencies = builder.find().unwrap();
         assert_eq!(dependencies.len(), 2);
         assert!(dependencies.contains(&Dependency::new("$f", DependencyKind::Func)));
         assert!(dependencies.contains(&Dependency::new("$g", DependencyKind::Func)));
+    }
+
+    #[test]
+    fn test_dependency_stream_1() {
+        let tree = create_tree_1();
+        let mut builder = DependencyBuilder::new(&tree).unwrap();
+        let dependencies = builder.find().unwrap();
+        assert_eq!(dependencies.len(), 3);
+        assert!(dependencies.contains(&Dependency::new("$mt.sc.ot_mt", DependencyKind::Func,)));
+        assert!(dependencies.contains(&Dependency::new("$ot.sc.pd_ot", DependencyKind::Func,)));
+        assert!(dependencies.contains(&Dependency::new("$identifier", DependencyKind::Var,)));
     }
 }

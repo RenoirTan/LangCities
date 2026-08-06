@@ -12,7 +12,7 @@ pub struct NodeContext {
 }
 
 impl NodeContext {
-    pub fn new<I, S, C>(node_id: I, span: S) -> Self
+    pub fn new<I, S>(node_id: I, span: S) -> Self
     where
         I: Into<NodeId>,
         S: Into<Range<usize>>,

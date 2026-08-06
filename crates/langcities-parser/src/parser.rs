@@ -92,47 +92,20 @@ impl Parser {
         Self::new(tree_builder, ts_parser)
     }
 
-    /// Collect all top-level instructions into tasks
+    /// Collect the root expression into tasks
     pub fn prepare(&mut self) -> Result<(), ParserError> {
         if self.started {
             return Ok(());
         }
 
         let root = self.raw_tree.root_node();
-        if root.has_error() || root.kind() != "source_file" {
+        if root.has_error() || root.kind() != "source_file" || root.named_child_count() != 1 {
             return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
         }
 
-        if root.named_child_count() != 1
-            || root
-                .named_child(0)
-                .is_none_or(|child| child.kind() != "multi_expression")
-        {
-            return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
-        }
-
-        let multi_expression = root.named_child(0).unwrap();
-        let multi_expression_path = RawNodePath::root().with_child(0);
-        let mut expression_count = 0;
-        let mut tasks = Vec::new();
-
-        for index in (0..multi_expression.named_child_count()).rev() {
-            let child = multi_expression.named_child(index as u32).unwrap();
-            if child.kind() == "expression_sep" {
-                continue;
-            }
-
-            tasks.push(TraversalTask::Expression(
-                multi_expression_path.with_child(index as u32),
-            ));
-            expression_count += 1;
-        }
-
-        if expression_count == 0 {
-            return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
-        }
-
-        self.tasks = tasks;
+        self.tasks = vec![TraversalTask::Expression(
+            RawNodePath::root().with_child(0),
+        )];
         self.started = true;
         Ok(())
     }

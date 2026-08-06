@@ -38,8 +38,9 @@ export default grammar({
 
   rules: {
     // TODO: add the actual grammar rules
-    source_file: $ => $.multi_expression,
+    source_file: $ => $.expression,
 
+    /*
     multi_expression: $ => seq(
       repeat($.expression_sep),
       field("first", $.expression),
@@ -52,6 +53,7 @@ export default grammar({
       repeat($.expression_sep),
     ),
     expression_sep: $ => /\r\n|[\n\r]/,
+    */
     expression: $ => choice(
       $.function_call,
       $.identifier,

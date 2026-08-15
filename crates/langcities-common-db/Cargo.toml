@@ -1,0 +1,13 @@
+[package]
+name = "langcities-common-db"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+log = "0.4.33"
+serde = { version = "1.0.229", features = ["derive"] }
+langcities-config = { path = "../langcities-config"}

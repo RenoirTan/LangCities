@@ -1,11 +1,12 @@
-use std::{env, time::Duration};
+use std::error::Error;
 
-use sea_orm::{ConnectOptions, Database};
+use crate::config::{Config, PartialConfig};
 
+pub mod config;
 pub mod entity;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello, world!");
 
     tracing_subscriber::fmt()
@@ -13,6 +14,11 @@ async fn main() {
         .with_test_writer()
         .init();
 
+    let partial_config = PartialConfig::collect()?;
+    let config = Config::from_partial(partial_config)?;
+    println!("config = {:?}", config);
+
+    /*
     let db_url = env::var("DATABASE_URL").unwrap();
     println!("Connecting to database: {}", db_url);
 
@@ -28,4 +34,7 @@ async fn main() {
     // .set_schema_search_path("auth_schema"); // set default Postgres schema
 
     let db = Database::connect(opt).await.unwrap();
+    */
+
+    Ok(())
 }

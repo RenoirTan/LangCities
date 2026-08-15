@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use figment::{providers::Env, value::Uncased};
 use langcities_config::{
     datatype::{Milliseconds, ms_to_dur},
     error::{LcConfigError, LcConfigErrorTrait},
@@ -8,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PartialDbConfig {
-    pub db_url: Option<String>,
+    pub url: Option<String>,
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,
     pub connect_timeout: Option<Milliseconds>,
@@ -29,9 +30,23 @@ pub struct PartialDbConfig {
     pub connect_lazy: Option<bool>,
 }
 
+impl PartialDbConfig {
+    pub fn modify_env_provider(base: Env) -> Env {
+        base.map(|k| {
+            if k.starts_with("DB_") {
+                Uncased::new(format!("db.{}", &k[3..]))
+            } else if k.starts_with("DATABASE_") {
+                Uncased::new(format!("db.{}", &k[9..]))
+            } else {
+                k.into()
+            }
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DbConfig {
-    pub db_url: String,
+    pub url: String,
     pub max_connections: Option<u32>,
     pub min_connections: Option<u32>,
     pub connect_timeout: Option<Duration>,
@@ -55,11 +70,11 @@ pub struct DbConfig {
 impl DbConfig {
     pub fn from_partial(partial: impl Into<PartialDbConfig>) -> Result<Self, LcConfigError> {
         let partial = partial.into();
-        let db_url = partial
-            .db_url
-            .ok_or_else(|| LcConfigError::missing_key("db_url"))?;
+        let url = partial
+            .url
+            .ok_or_else(|| LcConfigError::missing_key("url"))?;
         let me = Self {
-            db_url,
+            url,
             max_connections: partial.max_connections,
             min_connections: partial.min_connections,
             connect_timeout: partial.connect_timeout.map(ms_to_dur),

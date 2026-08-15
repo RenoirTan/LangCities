@@ -11,3 +11,4 @@ repository.workspace = true
 log = "0.4.33"
 serde = { version = "1.0.229", features = ["derive"] }
 langcities-config = { path = "../langcities-config"}
+figment = { version = "0.10.19", features = ["env"] }

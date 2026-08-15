@@ -1454,6 +1454,7 @@ version = "0.1.0"
 name = "langcities-common-db"
 version = "0.1.0"
 dependencies = [
+ "figment",
  "langcities-config",
  "log",
  "serde",

@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartialConfig {
-    #[serde(flatten)]
     pub db: PartialDbConfig,
 }
 
@@ -21,7 +20,9 @@ impl PartialConfig {
     pub fn collect() -> Result<Self, LcConfigError> {
         let config: Self = Figment::new()
             .merge(Json::file("lcauth.json"))
-            .merge(Env::prefixed("LCAUTH_"))
+            .merge(PartialDbConfig::modify_env_provider(Env::prefixed(
+                "LCAUTH_",
+            )))
             .extract()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?;
         Ok(config)
@@ -30,7 +31,6 @@ impl PartialConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
-    #[serde(flatten)]
     pub db: DbConfig,
 }
 

@@ -2,6 +2,8 @@ use std::{env, time::Duration};
 
 use sea_orm::{ConnectOptions, Database};
 
+pub mod entity;
+
 #[tokio::main]
 async fn main() {
     println!("Hello, world!");

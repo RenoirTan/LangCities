@@ -1,7 +1,8 @@
 use clap::Parser;
 use figment::{
     Figment,
-    providers::{Env, Format, Json},
+    providers::{Env, Format, Json, Serialized},
+    util::map,
 };
 use langcities_common::merge::Merge;
 use langcities_common_db::config::{DbConfig, PartialDbConfig};
@@ -21,15 +22,17 @@ impl PartialConfig {
 
     pub fn collect() -> Result<Self, LcConfigError> {
         let cli = PartialCli::parse();
-        println!("cli: {:?}", cli);
+        // db must be set to something otherwise the following error occurs:
+        // Error: LcError { source: Some(Error { tag: Tag::Default, profile: Some(Profile(Uncased { string: "default" })), metadata: None, path: [], kind: MissingField("db"), prev: None }), kind: BadParse }
+        let default = map!["db" => map!["url" => Option::<String>::None]];
         let mut config: Self = Figment::new()
+            .merge(Serialized::from(default, "default"))
             .merge(Json::file("lcauth.json"))
             .merge(PartialDbConfig::modify_env_provider(Env::prefixed(
                 "LCAUTH_",
             )))
             .extract()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?;
-        println!("config: {:?}", config);
         config.merge_with(cli.into());
         Ok(config)
     }

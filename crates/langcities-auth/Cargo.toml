@@ -24,6 +24,7 @@ langcities-common-db = { path = "../langcities-common-db" }
 langcities-config = { path = "../langcities-config" }
 serde = { version = "1.0.229", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "json"] }
+clap = { version = "4.6.6", features = ["derive"] }
 
 [dependencies.log]
 version = "0.4.33"

@@ -1427,6 +1427,7 @@ name = "langcities-auth"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "clap",
  "figment",
  "langcities-common-db",
  "langcities-config",
@@ -1454,6 +1455,7 @@ version = "0.1.0"
 name = "langcities-common-db"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "figment",
  "langcities-config",
  "log",

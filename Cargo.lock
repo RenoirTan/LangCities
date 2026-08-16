@@ -1429,6 +1429,7 @@ dependencies = [
  "axum",
  "clap",
  "figment",
+ "langcities-common",
  "langcities-common-db",
  "langcities-config",
  "log",
@@ -1457,6 +1458,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "figment",
+ "langcities-common",
  "langcities-config",
  "log",
  "serde",

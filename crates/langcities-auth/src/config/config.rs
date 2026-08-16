@@ -1,8 +1,9 @@
 use clap::Parser;
 use figment::{
     Figment,
-    providers::{Env, Format, Json, Serialized},
+    providers::{Env, Format, Json},
 };
+use langcities_common::merge::Merge;
 use langcities_common_db::config::{DbConfig, PartialDbConfig};
 use langcities_config::error::{LcConfigError, LcConfigErrorTrait};
 use serde::{Deserialize, Serialize};
@@ -20,15 +21,23 @@ impl PartialConfig {
 
     pub fn collect() -> Result<Self, LcConfigError> {
         let cli = PartialCli::parse();
-        let config: Self = Figment::new()
+        println!("cli: {:?}", cli);
+        let mut config: Self = Figment::new()
             .merge(Json::file("lcauth.json"))
             .merge(PartialDbConfig::modify_env_provider(Env::prefixed(
                 "LCAUTH_",
             )))
-            .merge(Serialized::from(&cli, "default"))
             .extract()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?;
+        println!("config: {:?}", config);
+        config.merge_with(cli.into());
         Ok(config)
+    }
+}
+
+impl Merge<PartialConfig> for PartialConfig {
+    fn merge_with(&mut self, rhs: PartialConfig) {
+        self.db.merge_with(rhs.db);
     }
 }
 
@@ -36,6 +45,12 @@ impl PartialConfig {
 pub struct PartialCli {
     #[clap(flatten)]
     pub db: PartialDbConfig,
+}
+
+impl Into<PartialConfig> for PartialCli {
+    fn into(self) -> PartialConfig {
+        PartialConfig::new(self.db)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

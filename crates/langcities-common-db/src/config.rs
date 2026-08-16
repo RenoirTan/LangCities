@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use clap::{Arg, ArgAction::SetTrue, Args, FromArgMatches, value_parser};
 use figment::{providers::Env, value::Uncased};
+use langcities_common::merge::Merge;
 use langcities_config::{
     datatype::{Milliseconds, ms_to_dur},
     error::{LcConfigError, LcConfigErrorTrait},
@@ -211,6 +212,34 @@ impl FromArgMatches for PartialDbConfig {
             self.connect_lazy.replace(true);
         }
         Ok(())
+    }
+}
+
+impl Merge<PartialDbConfig> for PartialDbConfig {
+    fn merge_with(&mut self, rhs: PartialDbConfig) {
+        self.url.merge_with(rhs.url);
+        self.max_connections.merge_with(rhs.max_connections);
+        self.min_connections.merge_with(rhs.min_connections);
+        self.connect_timeout.merge_with(rhs.connect_timeout);
+        self.idle_timeout.merge_with(rhs.idle_timeout);
+        self.acquire_timeout.merge_with(rhs.acquire_timeout);
+        self.max_lifetime.merge_with(rhs.max_lifetime);
+        self.sqlx_logging.merge_with(rhs.sqlx_logging);
+        self.record_stmt_in_spans
+            .merge_with(rhs.record_stmt_in_spans);
+        self.sqlx_logging_level.merge_with(rhs.sqlx_logging_level);
+        self.sqlx_slow_statements_logging_level
+            .merge_with(rhs.sqlx_slow_statements_logging_level);
+        self.sqlx_slow_statements_logging_threshold
+            .merge_with(rhs.sqlx_slow_statements_logging_threshold);
+        self.sqlcipher_key.merge_with(rhs.sqlcipher_key);
+        self.schema_search_path.merge_with(rhs.schema_search_path);
+        self.application_name.merge_with(rhs.application_name);
+        self.statement_timeout.merge_with(rhs.statement_timeout);
+        self.test_before_acquire.merge_with(rhs.test_before_acquire);
+        self.test_before_acquire_if_idle_for
+            .merge_with(rhs.test_before_acquire_if_idle_for);
+        self.connect_lazy.merge_with(rhs.connect_lazy);
     }
 }
 

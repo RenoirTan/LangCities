@@ -1,6 +1,9 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
+
+use sea_orm::{ConnectOptions, Database, EntityTrait};
 
 use crate::config::{Config, PartialConfig};
+use crate::entity::prelude::*;
 
 pub mod config;
 pub mod entity;
@@ -16,13 +19,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let partial_config = PartialConfig::collect()?;
     let config = Config::from_partial(partial_config)?;
-    println!("config = {:?}", config);
+    println!("config = {:#?}", config);
 
-    /*
-    let db_url = env::var("DATABASE_URL").unwrap();
+    let db_url = &config.db.url;
+
     println!("Connecting to database: {}", db_url);
 
-    let mut opt = ConnectOptions::new(&db_url);
+    let mut opt = ConnectOptions::new(db_url);
     opt.max_connections(100)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
@@ -33,8 +36,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .sqlx_logging_level(log::LevelFilter::Info);
     // .set_schema_search_path("auth_schema"); // set default Postgres schema
 
-    let db = Database::connect(opt).await.unwrap();
-    */
+    let db = Database::connect(opt).await?;
+
+    let users = Users::find().all(&db).await?;
+
+    println!("Users: {:?}", users);
 
     Ok(())
 }

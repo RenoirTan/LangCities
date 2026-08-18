@@ -14,12 +14,15 @@ impl MigrationTrait for Migration {
                     .table("users")
                     .if_not_exists()
                     .col(pk_auto("id"))
-                    .col(string("username"))
+                    .col(string("username").unique_key())
+                    .col(string("password_hash").null())
                     .col(timestamp("created_at"))
                     .col(timestamp("updated_at"))
                     .to_owned(),
             )
-            .await
+            .await?;
+
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -27,6 +30,8 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().table("users").to_owned())
-            .await
+            .await?;
+
+        Ok(())
     }
 }

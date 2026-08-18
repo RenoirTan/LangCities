@@ -28,4 +28,4 @@ features = [
     # "sqlx-postgres",         # `DATABASE_DRIVER` feature
   "runtime-tokio-rustls",
 ]
-version = "2.0.0"
+version = "^2.0.2"

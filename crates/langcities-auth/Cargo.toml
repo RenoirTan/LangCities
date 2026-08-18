@@ -33,7 +33,7 @@ version = "0.4.33"
 features = ["std", "serde"]
 
 [dependencies.sea-orm]
-version = "2.0.1"
+version = "^2.0.2"
 default-features = false
 features = ["macros", "runtime-tokio-rustls", "with-chrono"]
 

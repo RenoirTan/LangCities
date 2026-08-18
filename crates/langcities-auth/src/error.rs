@@ -42,18 +42,18 @@ impl AuthAppErrorTrait for AuthAppError {
     }
 
     fn to_response(self) -> AuthAppErrorResponseDto {
-        let source = match self.source() {
+        let error = match self.source() {
             Some(s) => format!("{}", s),
             None => "An error occurred".into(),
         };
         let kind = self.kind;
-        AuthAppErrorResponseDto { source, kind }
+        AuthAppErrorResponseDto { error, kind }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthAppErrorResponseDto {
-    pub source: String,
+    pub error: String,
     pub kind: AuthAppErrorKind,
 }
 
@@ -65,7 +65,7 @@ impl IntoResponse for AuthAppErrorResponseDto {
             AuthAppErrorKind::Other => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let body = Json(json!({
-            "error": self.source,
+            "error": self.error,
         }));
         (status, body).into_response()
     }

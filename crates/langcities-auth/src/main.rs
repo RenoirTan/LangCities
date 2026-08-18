@@ -1,12 +1,19 @@
 use std::{error::Error, time::Duration};
 
-use sea_orm::{ConnectOptions, Database, EntityTrait};
+use axum::Router;
+use axum::routing::post;
+use sea_orm::{ConnectOptions, Database};
 
 use crate::config::{Config, PartialConfig};
-use crate::entity::prelude::*;
+use crate::route::login::password_login;
+use crate::state::AppState;
 
 pub mod config;
+pub mod dto;
 pub mod entity;
+pub mod error;
+pub mod route;
+pub mod state;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -38,9 +45,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let db = Database::connect(opt).await?;
 
-    let users = Users::find().all(&db).await?;
+    let app = Router::new()
+        .route("/v1/login/password", post(password_login))
+        .with_state(AppState::new(db));
 
-    println!("Users: {:?}", users);
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
+
+    tracing::debug!("listening on {}", listener.local_addr()?);
+
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

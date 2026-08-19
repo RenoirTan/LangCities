@@ -7,6 +7,7 @@ use langcities_config::{
     datatype::{Milliseconds, ms_to_dur},
     error::{LcConfigError, LcConfigErrorTrait},
 };
+use sea_orm::ConnectOptions;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -299,5 +300,36 @@ impl DbConfig {
             connect_lazy: partial.connect_lazy.unwrap_or(false),
         };
         Ok(me)
+    }
+
+    pub fn to_connection_options(self) -> ConnectOptions {
+        let mut o = ConnectOptions::new(self.url);
+        self.max_connections.map(|c| o.max_connections(c));
+        self.min_connections.map(|c| o.min_connections(c));
+        self.connect_timeout.map(|t| o.connect_timeout(t));
+        self.idle_timeout.map(|t| o.idle_timeout(t));
+        self.acquire_timeout.map(|t| o.acquire_timeout(t));
+        self.max_lifetime.map(|l| o.max_lifetime(l));
+        o.sqlx_logging(self.sqlx_logging);
+        o.record_stmt_in_spans(self.record_stmt_in_spans);
+        o.sqlx_logging_level(self.sqlx_logging_level);
+        o.sqlx_slow_statements_logging_settings(
+            self.sqlx_slow_statements_logging_level,
+            self.sqlx_slow_statements_logging_threshold,
+        );
+        self.sqlcipher_key.map(|k| o.sqlcipher_key(k));
+        self.schema_search_path.map(|p| o.set_schema_search_path(p));
+        self.application_name.map(|n| o.set_application_name(n));
+        self.test_before_acquire.map(|b| o.test_before_acquire(b));
+        self.test_before_acquire_if_idle_for
+            .map(|t| o.test_before_acquire_if_idle_for(t));
+        o.connect_lazy(self.connect_lazy);
+        o
+    }
+}
+
+impl Into<ConnectOptions> for DbConfig {
+    fn into(self) -> ConnectOptions {
+        self.to_connection_options()
     }
 }

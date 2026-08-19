@@ -14,3 +14,4 @@ langcities-common = { path = "../langcities-common" }
 langcities-config = { path = "../langcities-config"}
 figment = { version = "0.10.19", features = ["env"] }
 clap = { version = "4.6.6", features = ["string"] }
+sea-orm = { version = "2.0.2", default-features = false, features = ["macros", "runtime-tokio-rustls", "with-chrono"] }

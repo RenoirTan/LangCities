@@ -1,11 +1,10 @@
 use std::error::Error;
 
 use axum::Router;
-use axum::routing::post;
 use sea_orm::Database;
 
 use crate::config::{Config, PartialConfig};
-use crate::route::login::password_login;
+use crate::route::v1::get_v1_router;
 use crate::state::AppState;
 
 pub mod config;
@@ -33,7 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let opt = config.db.to_connection_options();
     let db = Database::connect(opt).await?;
     let app = Router::new()
-        .route("/v1/login/password", post(password_login))
+        .nest("/v1", get_v1_router())
         .with_state(AppState::new(db));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
     tracing::debug!("listening on {}", listener.local_addr()?);

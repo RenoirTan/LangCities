@@ -10,6 +10,7 @@ pub enum AuthAppErrorKind {
     Database,
     InvalidCredentials,
     PasswordHashing,
+    FailedInit,
     Other,
 }
 
@@ -27,6 +28,7 @@ pub trait AuthAppErrorTrait {
     ) -> Self;
     fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 
     fn to_response(self) -> AuthAppErrorResponseDto;
@@ -45,6 +47,10 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::PasswordHashing)
+    }
+
+    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), AuthAppErrorKind::FailedInit)
     }
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
@@ -73,6 +79,7 @@ impl IntoResponse for AuthAppErrorResponseDto {
             AuthAppErrorKind::InvalidCredentials => StatusCode::BAD_REQUEST,
             AuthAppErrorKind::Database => StatusCode::INTERNAL_SERVER_ERROR,
             AuthAppErrorKind::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
+            AuthAppErrorKind::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
             AuthAppErrorKind::Other => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let body = Json(json!({

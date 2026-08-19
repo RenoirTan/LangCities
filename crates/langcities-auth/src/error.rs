@@ -9,6 +9,7 @@ use serde_json::json;
 pub enum AuthAppErrorKind {
     Database,
     InvalidCredentials,
+    PasswordHashing,
     Other,
 }
 
@@ -21,23 +22,32 @@ impl Display for AuthAppErrorKind {
 pub type AuthAppError = LcError<AuthAppErrorKind>;
 
 pub trait AuthAppErrorTrait {
-    fn invalid_credentials(source: impl Into<Option<Box<dyn Error>>>) -> Self;
-    fn database(source: impl Into<Option<Box<dyn Error>>>) -> Self;
-    fn other(source: impl Into<Option<Box<dyn Error>>>) -> Self;
+    fn invalid_credentials(
+        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
+    ) -> Self;
+    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 
     fn to_response(self) -> AuthAppErrorResponseDto;
 }
 
 impl AuthAppErrorTrait for AuthAppError {
-    fn invalid_credentials(source: impl Into<Option<Box<dyn Error>>>) -> Self {
+    fn invalid_credentials(
+        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
+    ) -> Self {
         Self::new(source.into(), AuthAppErrorKind::InvalidCredentials)
     }
 
-    fn database(source: impl Into<Option<Box<dyn Error>>>) -> Self {
+    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::Database)
     }
 
-    fn other(source: impl Into<Option<Box<dyn Error>>>) -> Self {
+    fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), AuthAppErrorKind::PasswordHashing)
+    }
+
+    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::Other)
     }
 
@@ -62,6 +72,7 @@ impl IntoResponse for AuthAppErrorResponseDto {
         let status = match self.kind {
             AuthAppErrorKind::InvalidCredentials => StatusCode::BAD_REQUEST,
             AuthAppErrorKind::Database => StatusCode::INTERNAL_SERVER_ERROR,
+            AuthAppErrorKind::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
             AuthAppErrorKind::Other => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let body = Json(json!({

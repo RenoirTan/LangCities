@@ -14,9 +14,9 @@ pub type LcConfigError = LcError<LcConfigErrorKind>;
 pub trait LcConfigErrorTrait {
     fn missing_key(key: impl Into<String>) -> Self;
 
-    fn bad_parse(source: impl Into<Option<Box<dyn Error>>>) -> Self;
+    fn bad_parse(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self;
 
-    fn other(source: impl Into<Option<Box<dyn Error>>>) -> Self;
+    fn other(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self;
 }
 
 impl LcConfigErrorTrait for LcConfigError {
@@ -25,11 +25,11 @@ impl LcConfigErrorTrait for LcConfigError {
         Self::new(Some(msg.into()), LcConfigErrorKind::MissingKey)
     }
 
-    fn bad_parse(source: impl Into<Option<Box<dyn Error>>>) -> Self {
+    fn bad_parse(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self {
         Self::new(source.into(), LcConfigErrorKind::BadParse)
     }
 
-    fn other(source: impl Into<Option<Box<dyn Error>>>) -> Self {
+    fn other(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self {
         Self::new(source.into(), LcConfigErrorKind::Other)
     }
 }

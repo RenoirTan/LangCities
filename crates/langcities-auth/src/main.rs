@@ -3,6 +3,7 @@ use std::error::Error;
 use axum::Router;
 use sea_orm::Database;
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;
@@ -46,9 +47,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         seeder.seed_testing().await?;
     }
 
-    println!("{}", ApiDoc::openapi().to_pretty_json()?);
-
-    let app = Router::new().nest("/v1", get_v1_router()).with_state(state);
+    let swagger = SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi());
+    let app = Router::new()
+        .nest("/v1", get_v1_router())
+        .merge(swagger)
+        .with_state(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
     tracing::debug!("listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;

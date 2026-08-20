@@ -2,8 +2,10 @@ use std::error::Error;
 
 use axum::Router;
 use sea_orm::Database;
+use utoipa::OpenApi;
 
 use crate::config::{Config, PartialConfig};
+use crate::openapi::ApiDoc;
 use crate::pre::seed::Seeder;
 use crate::route::v1::get_v1_router;
 use crate::state::AppState;
@@ -13,6 +15,7 @@ pub mod config;
 pub mod dto;
 pub mod entity;
 pub mod error;
+pub mod openapi;
 pub mod pre;
 pub mod route;
 pub mod state;
@@ -42,6 +45,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if config.auth.seed_testing {
         seeder.seed_testing().await?;
     }
+
+    println!("{}", ApiDoc::openapi().to_pretty_json()?);
 
     let app = Router::new().nest("/v1", get_v1_router()).with_state(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;

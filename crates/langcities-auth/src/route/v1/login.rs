@@ -7,6 +7,7 @@ use crate::{
     state::AppState,
 };
 
+#[utoipa::path(post, path = "/v1/login/password")]
 pub async fn password_login(
     State(state): State<AppState>,
     Json(dto): Json<PasswordLoginDto>,

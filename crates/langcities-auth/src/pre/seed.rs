@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::value::prelude::chrono;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, Set};
 
 use crate::entity::users;
 use crate::error::{AuthAppError, AuthAppErrorTrait};
@@ -30,7 +30,7 @@ impl<'a> Seeder<'a> {
             updated_at: Set(now),
             ..Default::default()
         });
-        users::Entity::insert_many(users)
+        match users::Entity::insert_many(users)
             .on_conflict(
                 OnConflict::column(users::Column::Username)
                     .do_nothing()
@@ -38,7 +38,13 @@ impl<'a> Seeder<'a> {
             )
             .exec(&self.state.db)
             .await
-            .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
+        {
+            Err(DbErr::RecordNotInserted) => {}
+            Err(e) => {
+                return Err(AuthAppError::failed_init(Some(e.into())));
+            }
+            _ => {}
+        };
         let user_records = users::Entity::find()
             .filter(
                 users::Column::Username

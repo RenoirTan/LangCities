@@ -9,7 +9,7 @@ use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;
 use crate::pre::seed::Seeder;
 use crate::route::v1::get_v1_router;
-use crate::sessions::build_session_layer;
+use crate::session::build_session_layer;
 use crate::state::AppState;
 use crate::util::password::PasswordChecker;
 
@@ -20,7 +20,7 @@ pub mod error;
 pub mod openapi;
 pub mod pre;
 pub mod route;
-pub mod sessions;
+pub mod session;
 pub mod state;
 pub mod util;
 

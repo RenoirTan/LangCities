@@ -5,6 +5,7 @@ use crate::{
     dto::login::{PasswordLoginDto, PasswordLoginResponseDto},
     entity::prelude::*,
     error::{AuthAppError, AuthAppErrorResponseDto, AuthAppErrorTrait},
+    session::SessionWrapper,
     state::AppState,
 };
 
@@ -19,6 +20,7 @@ pub async fn password_login(
         .one(&state.db)
         .await
         .map_err(|e| AuthAppError::database(Some(e.into())).to_response())?;
+    let session = SessionWrapper::new(session);
     if let Some(user) = user {
         if let Some(hashed) = user.password_hash {
             let ok = state

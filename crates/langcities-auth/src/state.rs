@@ -1,20 +1,26 @@
 use sea_orm::DatabaseConnection;
 
-use crate::util::password::PasswordChecker;
+use crate::{config::Config, util::password::PasswordChecker};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
+    pub config: Config,
     pub db: DatabaseConnection,
     pub pw_checker: PasswordChecker,
 }
 
 impl AppState {
-    pub fn new<D, P>(db: D, pw_checker: P) -> Self
+    pub fn new<C, D, P>(config: C, db: D, pw_checker: P) -> Self
     where
+        C: Into<Config>,
         D: Into<DatabaseConnection>,
         P: Into<PasswordChecker>,
     {
-        let (db, pw_checker) = (db.into(), pw_checker.into());
-        Self { db, pw_checker }
+        let (config, db, pw_checker) = (config.into(), db.into(), pw_checker.into());
+        Self {
+            config,
+            db,
+            pw_checker,
+        }
     }
 }

@@ -28,6 +28,7 @@ pub async fn password_login(
                 .map_err(|e| e.to_response())?;
             if ok {
                 session_user.get_mut_user().id = Some(user.id);
+                session_user.set_expiry(state.config.auth.get_expiry());
                 session_user
                     .update_user_session()
                     .await

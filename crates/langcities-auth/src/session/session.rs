@@ -1,6 +1,6 @@
 use axum::extract::FromRequestParts;
 use serde::{Deserialize, Serialize};
-use tower_sessions::Session;
+use tower_sessions::{Expiry, Session};
 
 use crate::error::{AuthAppError, AuthAppErrorResponseDto, AuthAppErrorTrait};
 
@@ -35,6 +35,10 @@ impl SessionUserWrapper {
             .insert(Self::USER_KEY, self.user.clone())
             .await
             .map_err(|e| AuthAppError::failed_session(Some(e.into())))
+    }
+
+    pub fn set_expiry(&self, expiry: Expiry) {
+        self.session.set_expiry(Some(expiry));
     }
 }
 

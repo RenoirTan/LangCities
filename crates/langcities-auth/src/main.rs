@@ -39,10 +39,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let db_url = &config.db.url;
     println!("Connecting to database: {}", db_url);
 
-    let opt = config.db.to_connection_options();
+    let opt = config.db.clone().to_connection_options();
     let db = Database::connect(opt).await?;
     let pw_checker = PasswordChecker::default();
-    let state = AppState::new(db, pw_checker);
+    let state = AppState::new(config.clone(), db, pw_checker);
 
     let seeder = Seeder::new(&state);
     if config.auth.seed_testing {

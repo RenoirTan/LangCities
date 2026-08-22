@@ -32,7 +32,7 @@ argon2 = "0.5.3" # Update to 0.6 to fix dependency errors when it releases
 password-hash = { version = "0.6.1", features = ["getrandom"] }
 utoipa = { version = "5.5.0", features = ["axum_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-tower-sessions = "0.15.0"
+tower-sessions = { version = "0.15.0", features = ["signed", "private"] }
 # Replace git commit with actual semver when they release the fixed Cargo.toml with updated deps >:(
 tower-sessions-sqlx-store = {
     git = "https://github.com/maxcountryman/tower-sessions-stores.git",

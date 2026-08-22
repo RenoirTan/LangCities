@@ -97,6 +97,13 @@ impl BoxedSessionStore {
 
 #[async_trait::async_trait]
 impl SessionStore for BoxedSessionStore {
+    async fn create(
+        &self,
+        session_record: &mut Record,
+    ) -> Result<(), tower_sessions::session_store::Error> {
+        self.inner.create(session_record).await
+    }
+
     async fn save(&self, session: &Record) -> Result<(), tower_sessions::session_store::Error> {
         self.inner.save(session).await
     }

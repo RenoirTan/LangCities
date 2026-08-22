@@ -6,6 +6,7 @@ use figment::{
 };
 use langcities_common::merge::Merge;
 use langcities_common_db::config::{DbConfig, PartialDbConfig};
+use langcities_common_server::config::{PartialServerConfig, ServerConfig};
 use langcities_config::error::{LcConfigError, LcConfigErrorTrait};
 use serde::{Deserialize, Serialize};
 
@@ -28,13 +29,19 @@ impl Merge<PartialAuthConfig> for PartialAuthConfig {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartialConfig {
     pub auth: PartialAuthConfig,
+    pub server: PartialServerConfig,
     pub db: PartialDbConfig,
 }
 
 impl PartialConfig {
-    pub fn new(auth: impl Into<PartialAuthConfig>, db: impl Into<PartialDbConfig>) -> Self {
-        let (auth, db) = (auth.into(), db.into());
-        Self { auth, db }
+    pub fn new<A, S, D>(auth: A, server: S, db: D) -> Self
+    where
+        A: Into<PartialAuthConfig>,
+        S: Into<PartialServerConfig>,
+        D: Into<PartialDbConfig>,
+    {
+        let (auth, server, db) = (auth.into(), server.into(), db.into());
+        Self { auth, server, db }
     }
 
     pub fn collect() -> Result<Self, LcConfigError> {
@@ -43,12 +50,16 @@ impl PartialConfig {
         // Error: LcError { source: Some(Error { tag: Tag::Default, profile: Some(Profile(Uncased { string: "default" })), metadata: None, path: [], kind: MissingField("db"), prev: None }), kind: BadParse }
         let default = map![
             "auth" => map!["disable_seeding" => Option::<String>::None],
+            "server" => map![],
             "db" => map!["url" => Option::<String>::None]
         ];
         let mut config: Self = Figment::new()
             .merge(Serialized::from(default, "default"))
             .merge(Json::file("lcauth.json"))
             .merge(PartialDbConfig::modify_env_provider(Env::prefixed(
+                "LCAUTH_",
+            )))
+            .merge(PartialServerConfig::modify_env_provider(Env::prefixed(
                 "LCAUTH_",
             )))
             .extract()
@@ -61,6 +72,7 @@ impl PartialConfig {
 impl Merge<PartialConfig> for PartialConfig {
     fn merge_with(&mut self, rhs: PartialConfig) {
         self.auth.merge_with(rhs.auth);
+        self.server.merge_with(rhs.server);
         self.db.merge_with(rhs.db);
     }
 }
@@ -71,12 +83,15 @@ pub struct PartialCli {
     pub auth: PartialAuthConfig,
 
     #[clap(flatten)]
+    pub server: PartialServerConfig,
+
+    #[clap(flatten)]
     pub db: PartialDbConfig,
 }
 
 impl Into<PartialConfig> for PartialCli {
     fn into(self) -> PartialConfig {
-        PartialConfig::new(self.auth, self.db)
+        PartialConfig::new(self.auth, self.server, self.db)
     }
 }
 
@@ -98,19 +113,26 @@ impl AuthConfig {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     pub auth: AuthConfig,
+    pub server: ServerConfig,
     pub db: DbConfig,
 }
 
 impl Config {
-    pub fn new(auth: impl Into<AuthConfig>, db: impl Into<DbConfig>) -> Self {
-        let (auth, db) = (auth.into(), db.into());
-        Self { auth, db }
+    pub fn new<A, S, D>(auth: A, server: S, db: D) -> Self
+    where
+        A: Into<AuthConfig>,
+        S: Into<ServerConfig>,
+        D: Into<DbConfig>,
+    {
+        let (auth, server, db) = (auth.into(), server.into(), db.into());
+        Self { auth, server, db }
     }
 
     pub fn from_partial(partial: impl Into<PartialConfig>) -> Result<Self, LcConfigError> {
         let partial = partial.into();
         let db = DbConfig::from_partial(partial.db)?;
+        let server = ServerConfig::from_partial(partial.server)?;
         let auth = AuthConfig::from_partial(partial.auth)?;
-        Ok(Self::new(auth, db))
+        Ok(Self::new(auth, server, db))
     }
 }

@@ -1563,6 +1563,7 @@ dependencies = [
  "figment",
  "langcities-common",
  "langcities-common-db",
+ "langcities-common-server",
  "langcities-config",
  "log",
  "password-hash 0.6.1",
@@ -1601,6 +1602,17 @@ dependencies = [
  "langcities-config",
  "log",
  "sea-orm",
+ "serde",
+]
+
+[[package]]
+name = "langcities-common-server"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "figment",
+ "langcities-common",
+ "langcities-config",
  "serde",
 ]
 

@@ -1,0 +1,15 @@
+[package]
+name = "langcities-common-server"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+langcities-common = { path = "../langcities-common" }
+langcities-config = { path = "../langcities-config" }
+clap = { version = "4.6.6", features = ["string"] }
+figment = { version = "0.10.19", features = ["env"] }
+serde = { version = "1.0.229", features = ["derive"] }

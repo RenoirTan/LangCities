@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .merge(swagger)
         .layer(session_layer)
         .with_state(state);
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
+    let listener = tokio::net::TcpListener::bind(config.server.bind_host()).await?;
     tracing::debug!("listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;
 

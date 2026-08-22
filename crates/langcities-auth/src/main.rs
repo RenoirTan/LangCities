@@ -9,6 +9,7 @@ use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;
 use crate::pre::seed::Seeder;
 use crate::route::v1::get_v1_router;
+use crate::sessions::build_session_layer;
 use crate::state::AppState;
 use crate::util::password::PasswordChecker;
 
@@ -19,6 +20,7 @@ pub mod error;
 pub mod openapi;
 pub mod pre;
 pub mod route;
+pub mod sessions;
 pub mod state;
 pub mod util;
 
@@ -47,10 +49,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         seeder.seed_testing().await?;
     }
 
+    let session_layer = build_session_layer(&config.auth, &state.db).await?;
+
     let swagger = SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi());
     let app = Router::new()
         .nest("/v1", get_v1_router())
         .merge(swagger)
+        .layer(session_layer)
         .with_state(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
     tracing::debug!("listening on {}", listener.local_addr()?);

@@ -1,4 +1,5 @@
 use axum::{Json, extract::State};
+use tower_sessions::Session;
 
 use crate::{
     dto::login::{PasswordLoginDto, PasswordLoginResponseDto},
@@ -8,8 +9,10 @@ use crate::{
 };
 
 #[utoipa::path(post, path = "/v1/login/password")]
+#[axum::debug_handler]
 pub async fn password_login(
     State(state): State<AppState>,
+    session: Session,
     Json(dto): Json<PasswordLoginDto>,
 ) -> Result<Json<PasswordLoginResponseDto>, AuthAppErrorResponseDto> {
     let user = Users::find_by_username(&dto.username)
@@ -24,6 +27,10 @@ pub async fn password_login(
                 .await
                 .map_err(|e| e.to_response())?;
             if ok {
+                session
+                    .insert("user_id", user.id)
+                    .await
+                    .map_err(|e| AuthAppError::failed_session(Some(e.into())).to_response())?;
                 return Ok(Json(PasswordLoginResponseDto {
                     message: "ok".into(),
                 }));

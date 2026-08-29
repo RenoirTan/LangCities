@@ -1,7 +1,6 @@
 use std::error::Error;
 
 use axum::Router;
-use sea_orm::Database;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -11,7 +10,6 @@ use crate::pre::seed::Seeder;
 use crate::route::v1::get_v1_router;
 use crate::session::build_session_layer;
 use crate::state::AppState;
-use crate::util::password::PasswordChecker;
 
 pub mod config;
 pub mod dto;
@@ -39,10 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let db_url = &config.db.url;
     println!("Connecting to database: {}", db_url);
 
-    let opt = config.db.clone().to_connection_options();
-    let db = Database::connect(opt).await?;
-    let pw_checker = PasswordChecker::default();
-    let state = AppState::new(config.clone(), db, pw_checker);
+    let state = AppState::create(config.clone()).await?;
 
     let seeder = Seeder::new(&state);
     if config.auth.seed_testing {

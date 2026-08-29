@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use uuid::Uuid;
 
 use crate::{
     config::JwtConfig,
@@ -10,38 +11,31 @@ use crate::{
 pub struct ClaimsGenerator {
     pub expiry: Duration,
     pub issuer: String,
-    pub jti_counter: usize,
 }
 
 impl ClaimsGenerator {
-    pub fn new<E, I, J>(expiry: E, issuer: I, jti_counter: J) -> Self
+    pub fn new<E, I>(expiry: E, issuer: I) -> Self
     where
         E: Into<Duration>,
         I: Into<String>,
-        J: Into<usize>,
     {
-        let (expiry, issuer, jti_counter) = (expiry.into(), issuer.into(), jti_counter.into());
-        Self {
-            expiry,
-            issuer,
-            jti_counter,
-        }
+        let (expiry, issuer) = (expiry.into(), issuer.into());
+        Self { expiry, issuer }
     }
 
     pub fn from_config(config: &JwtConfig) -> Result<Self, JwtError> {
         let duration =
             Duration::from_std(config.expiry).map_err(|e| JwtError::bad_config(Some(e.into())))?;
-        Ok(Self::new(duration, config.issuer.clone(), 0_usize))
+        Ok(Self::new(duration, config.issuer.clone()))
     }
 
     pub fn generate_claims<A>(
-        &mut self,
+        &self,
         audience: impl Into<String>,
         subject: impl Into<String>,
         additional: A,
     ) -> BaseClaims<A> {
-        let jti = self.jti_counter.to_string();
-        self.jti_counter += 1;
+        let jti = Uuid::new_v4().to_string();
         let aud = audience.into();
         let iat = Utc::now().timestamp();
         let exp = iat + self.expiry.num_seconds();

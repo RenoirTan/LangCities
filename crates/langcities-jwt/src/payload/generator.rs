@@ -1,6 +1,10 @@
 use chrono::{Duration, Utc};
 
-use crate::payload::BaseClaims;
+use crate::{
+    config::JwtConfig,
+    error::{JwtError, JwtErrorTrait},
+    payload::BaseClaims,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClaimsGenerator {
@@ -22,6 +26,12 @@ impl ClaimsGenerator {
             issuer,
             jti_counter,
         }
+    }
+
+    pub fn from_config(config: &JwtConfig) -> Result<Self, JwtError> {
+        let duration =
+            Duration::from_std(config.expiry).map_err(|e| JwtError::bad_config(Some(e.into())))?;
+        Ok(Self::new(duration, config.issuer.clone(), 0_usize))
     }
 
     pub fn generate_claims<A>(

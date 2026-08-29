@@ -4,7 +4,7 @@ use langcities_common::error::LcError;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum JwtErrorKind {
-    BadSecret,
+    BadConfig,
     Unencodeable,
     Undecodeable,
     Unverifiable,
@@ -20,7 +20,7 @@ impl Display for JwtErrorKind {
 pub type JwtError = LcError<JwtErrorKind>;
 
 pub trait JwtErrorTrait {
-    fn bad_secret(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn bad_config(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unencodeable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn undecodeable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unverifiable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
@@ -28,8 +28,8 @@ pub trait JwtErrorTrait {
 }
 
 impl JwtErrorTrait for JwtError {
-    fn bad_secret(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), JwtErrorKind::BadSecret)
+    fn bad_config(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), JwtErrorKind::BadConfig)
     }
 
     fn unencodeable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {

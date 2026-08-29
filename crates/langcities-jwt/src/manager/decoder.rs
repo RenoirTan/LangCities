@@ -2,6 +2,7 @@ use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
 use serde::de::DeserializeOwned;
 
 use crate::{
+    config::{JwtConfig, KeyParams},
     error::{JwtError, JwtErrorTrait},
     payload::claims::BaseClaims,
 };
@@ -23,6 +24,17 @@ impl JwtDecoder {
             decoding_key,
             validation,
         }
+    }
+
+    pub fn from_config(config: &JwtConfig) -> Result<Self, JwtError> {
+        let key_config = config
+            .key_config
+            .as_ref()
+            .ok_or_else(|| JwtError::bad_config(Some("key_config is None".into())))?;
+        let decoding_key = match &key_config.params {
+            KeyParams::Hmac(hmac) => DecodingKey::from_secret(&hmac.secret),
+        };
+        Ok(Self::new(decoding_key, Validation::default()))
     }
 
     pub fn decode_token<A>(&self, token: &str) -> Result<TokenData<BaseClaims<A>>, JwtError>

@@ -2,6 +2,7 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::Serialize;
 
 use crate::{
+    config::{JwtConfig, KeyParams},
     error::{JwtError, JwtErrorTrait},
     payload::claims::BaseClaims,
 };
@@ -18,6 +19,17 @@ impl JwtEncoder {
     {
         let encoding_key = encoding_key.into();
         Self { encoding_key }
+    }
+
+    pub fn from_config(config: &JwtConfig) -> Result<Self, JwtError> {
+        let key_config = config
+            .key_config
+            .as_ref()
+            .ok_or_else(|| JwtError::bad_config(Some("key_config is None".into())))?;
+        let encoding_key = match &key_config.params {
+            KeyParams::Hmac(hmac) => EncodingKey::from_secret(&hmac.secret),
+        };
+        Ok(Self::new(encoding_key))
     }
 
     pub fn get_header(&self) -> Header {

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use clap::{Parser, ValueEnum};
 use figment::{
     Figment,
@@ -11,6 +13,7 @@ use langcities_config::{
     datatype::Milliseconds,
     error::{LcConfigError, LcConfigErrorTrait},
 };
+use langcities_jwt::config::{JwtConfig, PartialJwtConfig};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use tower_sessions::{
@@ -112,27 +115,35 @@ pub struct PartialConfig {
     pub auth: PartialAuthConfig,
     pub server: PartialServerConfig,
     pub db: PartialDbConfig,
+    pub jwt: PartialJwtConfig,
 }
 
 impl PartialConfig {
-    pub fn new<A, S, D>(auth: A, server: S, db: D) -> Self
+    pub fn new<A, S, D, J>(auth: A, server: S, db: D, jwt: J) -> Self
     where
         A: Into<PartialAuthConfig>,
         S: Into<PartialServerConfig>,
         D: Into<PartialDbConfig>,
+        J: Into<PartialJwtConfig>,
     {
-        let (auth, server, db) = (auth.into(), server.into(), db.into());
-        Self { auth, server, db }
+        let (auth, server, db, jwt) = (auth.into(), server.into(), db.into(), jwt.into());
+        Self {
+            auth,
+            server,
+            db,
+            jwt,
+        }
     }
 
     pub fn collect() -> Result<Self, LcConfigError> {
         let cli = PartialCli::parse();
         // db must be set to something otherwise the following error occurs:
         // Error: LcError { source: Some(Error { tag: Tag::Default, profile: Some(Profile(Uncased { string: "default" })), metadata: None, path: [], kind: MissingField("db"), prev: None }), kind: BadParse }
-        let default = map![
-            "auth" => map!["disable_seeding" => Option::<String>::None],
+        let default: BTreeMap<&str, BTreeMap<&str, Option<String>>> = map![
+            "auth" => map![],
             "server" => map![],
-            "db" => map!["url" => Option::<String>::None]
+            "db" => map![],
+            "jwt" => map![],
         ];
         let mut config: Self = Figment::new()
             .merge(Serialized::from(default, "default"))
@@ -141,6 +152,9 @@ impl PartialConfig {
                 "LCAUTH_",
             )))
             .merge(PartialServerConfig::modify_env_provider(Env::prefixed(
+                "LCAUTH_",
+            )))
+            .merge(PartialJwtConfig::modify_env_provider(Env::prefixed(
                 "LCAUTH_",
             )))
             .extract()
@@ -155,6 +169,7 @@ impl Merge<PartialConfig> for PartialConfig {
         self.auth.merge_with(rhs.auth);
         self.server.merge_with(rhs.server);
         self.db.merge_with(rhs.db);
+        self.jwt.merge_with(rhs.jwt);
     }
 }
 
@@ -168,11 +183,14 @@ pub struct PartialCli {
 
     #[clap(flatten)]
     pub db: PartialDbConfig,
+
+    #[clap(flatten)]
+    pub jwt: PartialJwtConfig,
 }
 
 impl Into<PartialConfig> for PartialCli {
     fn into(self) -> PartialConfig {
-        PartialConfig::new(self.auth, self.server, self.db)
+        PartialConfig::new(self.auth, self.server, self.db, self.jwt)
     }
 }
 
@@ -293,17 +311,24 @@ pub struct Config {
     pub auth: AuthConfig,
     pub server: ServerConfig,
     pub db: DbConfig,
+    pub jwt: JwtConfig,
 }
 
 impl Config {
-    pub fn new<A, S, D>(auth: A, server: S, db: D) -> Self
+    pub fn new<A, S, D, J>(auth: A, server: S, db: D, jwt: J) -> Self
     where
         A: Into<AuthConfig>,
         S: Into<ServerConfig>,
         D: Into<DbConfig>,
+        J: Into<JwtConfig>,
     {
-        let (auth, server, db) = (auth.into(), server.into(), db.into());
-        Self { auth, server, db }
+        let (auth, server, db, jwt) = (auth.into(), server.into(), db.into(), jwt.into());
+        Self {
+            auth,
+            server,
+            db,
+            jwt,
+        }
     }
 
     pub fn from_partial(partial: impl Into<PartialConfig>) -> Result<Self, LcConfigError> {
@@ -311,6 +336,7 @@ impl Config {
         let db = DbConfig::from_partial(partial.db)?;
         let server = ServerConfig::from_partial(partial.server)?;
         let auth = AuthConfig::from_partial(partial.auth)?;
-        Ok(Self::new(auth, server, db))
+        let jwt = JwtConfig::from_partial(partial.jwt)?;
+        Ok(Self::new(auth, server, db, jwt))
     }
 }

@@ -116,22 +116,29 @@ pub struct HmacConfig {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum KeyConfig {
-    HmacConfig(HmacConfig),
+pub enum KeyParams {
+    Hmac(HmacConfig),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KeyConfig {
+    pub params: KeyParams,
+    pub algorithm: Algorithm,
 }
 
 impl KeyConfig {
-    pub fn from_partial(partial: &PartialJwtConfig) -> Result<Self, LcConfigError> {
-        let algorithm = partial
-            .algorithm
-            .ok_or_else(|| LcConfigError::missing_key("algorithm"))?
-            .to_algorithm();
+    pub fn from_partial(partial: &PartialJwtConfig) -> Result<Option<Self>, LcConfigError> {
+        let algorithm = match partial.algorithm {
+            Some(a) => a.to_algorithm(),
+            None => return Ok(None),
+        };
         match algorithm.family() {
             AlgorithmFamily::Hmac => {
                 if let Some(s) = &partial.hmac_secret {
-                    Ok(Self::HmacConfig(HmacConfig {
+                    let params = KeyParams::Hmac(HmacConfig {
                         secret: s.as_bytes().to_vec(),
-                    }))
+                    });
+                    Ok(Some(Self { params, algorithm }))
                 } else {
                     Err(LcConfigError::missing_key("hmac-secret"))
                 }
@@ -143,25 +150,27 @@ impl KeyConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JwtConfig {
-    pub key_config: KeyConfig,
-    pub algorithm: Algorithm,
+    pub key_config: Option<KeyConfig>,
     pub expiry: Duration,
     pub issuer: String,
 }
 
 impl JwtConfig {
-    pub fn from_partial(partial: impl Into<PartialJwtConfig>) -> Result<Self, LcConfigError> {
+    pub fn from_partial(
+        partial: impl Into<PartialJwtConfig>,
+        require_key_config: bool,
+    ) -> Result<Self, LcConfigError> {
         let partial = partial.into();
         let key_config = KeyConfig::from_partial(&partial)?;
-        // none should have been caught by key_config
-        let algorithm = partial.algorithm.unwrap().to_algorithm();
+        if require_key_config && let None = key_config {
+            return Err(LcConfigError::missing_key("algorithm"));
+        }
         let expiry = ms_to_dur(partial.expiry.unwrap_or(86400000)); // 1 day
         let issuer = partial
             .issuer
             .unwrap_or_else(|| "http://localhost:8000".into());
         Ok(Self {
             key_config,
-            algorithm,
             expiry,
             issuer,
         })

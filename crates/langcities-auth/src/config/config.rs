@@ -336,7 +336,7 @@ impl Config {
         let db = DbConfig::from_partial(partial.db)?;
         let server = ServerConfig::from_partial(partial.server)?;
         let auth = AuthConfig::from_partial(partial.auth)?;
-        let jwt = JwtConfig::from_partial(partial.jwt)?;
+        let jwt = JwtConfig::from_partial(partial.jwt, true)?;
         Ok(Self::new(auth, server, db, jwt))
     }
 }

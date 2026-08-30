@@ -24,7 +24,6 @@ impl JwtAlgorithm {
             Self::HS256 => Algorithm::HS256,
             Self::HS384 => Algorithm::HS384,
             Self::HS512 => Algorithm::HS512,
-            _ => panic!("Unhandled algorithm: {:?}", self),
         }
     }
 }
@@ -165,7 +164,7 @@ impl JwtConfig {
         if require_key_config && let None = key_config {
             return Err(LcConfigError::missing_key("algorithm"));
         }
-        let expiry = ms_to_dur(partial.expiry.unwrap_or(86400000)); // 1 day
+        let expiry = ms_to_dur(partial.expiry.unwrap_or(600000)); // 10 min
         let issuer = partial
             .issuer
             .unwrap_or_else(|| "http://localhost:8000".into());

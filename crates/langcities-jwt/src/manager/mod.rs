@@ -33,7 +33,7 @@ mod tests {
         let encoder = JwtEncoder::from_config(&config).unwrap();
         let decoder = JwtDecoder::from_config(&config, &["generic"]).unwrap();
 
-        let claims = generator.generate_generic_claims("generic", "123");
+        let claims = generator.generate_claims("generic", "123", "", vec![]);
         let token = encoder.encode_claims(encoder.get_header(), claims).unwrap();
         let decoded = decoder.decode_token::<()>(&token).unwrap();
         println!("{:#?}", decoded);

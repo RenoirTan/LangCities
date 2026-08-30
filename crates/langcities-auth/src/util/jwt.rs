@@ -1,4 +1,4 @@
-use langcities_jwt::payload::{Claims, ClaimsGenerator, GenericClaims};
+use langcities_jwt::payload::{Claims, ClaimsGenerator};
 
 use crate::{
     dto::token::AccessTokenResponseDto,
@@ -75,17 +75,12 @@ impl Access {
 
     pub fn generate_claims(self, generator: &ClaimsGenerator) -> Result<Claims, AuthAppError> {
         match self.microservice {
-            Microservice::Generic => self
-                .generate_generic_claims(generator)
-                .map(|c| Claims::Generic(c)),
+            Microservice::Generic => self.generate_generic_claims(generator),
         }
     }
 
-    fn generate_generic_claims(
-        self,
-        generator: &ClaimsGenerator,
-    ) -> Result<GenericClaims, AuthAppError> {
-        Ok(generator.generate_generic_claims("generic", self.authorization.get_sub()))
+    fn generate_generic_claims(self, generator: &ClaimsGenerator) -> Result<Claims, AuthAppError> {
+        Ok(generator.generate_claims("generic", self.authorization.get_sub(), "", vec![]))
     }
 
     pub fn mint(self, state: &AppState) -> Result<AccessTokenResponseDto, AuthAppError> {
@@ -93,7 +88,7 @@ impl Access {
         let header = state.jwt_encoder.get_header();
         let token = state
             .jwt_encoder
-            .encode_claims_enum(header, claims)
+            .encode_claims(header, claims)
             .map_err(|e| AuthAppError::other(Some(e.into())))?;
         let expiry = state.claims_generator.expiry.num_seconds();
         Ok(AccessTokenResponseDto::new(token, "Bearer", expiry))

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::{
     config::JwtConfig,
     error::{JwtError, JwtErrorTrait},
-    payload::BaseClaims,
+    payload::Claims,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,19 +29,22 @@ impl ClaimsGenerator {
         Ok(Self::new(duration, config.issuer.clone()))
     }
 
-    pub fn generate_claims<A>(
+    pub fn generate_claims(
         &self,
         audience: impl Into<String>,
         subject: impl Into<String>,
-        additional: A,
-    ) -> BaseClaims<A> {
+        scope: impl Into<String>,
+        resources: impl Into<Vec<String>>,
+    ) -> Claims {
         let jti = Uuid::new_v4().to_string();
         let aud = audience.into();
         let iat = Utc::now().timestamp();
         let exp = iat + self.expiry.num_seconds();
         let iss = self.issuer.clone();
         let sub = subject.into();
-        BaseClaims {
+        let scope = scope.into();
+        let resources = resources.into();
+        Claims {
             jti,
             aud,
             exp,
@@ -49,18 +52,8 @@ impl ClaimsGenerator {
             nbf: iat,
             iss,
             sub,
-            add: additional,
+            scope,
+            resources,
         }
-    }
-
-    /// Generate the claims for an access token.
-    ///
-    /// Owns the choice of which claims struct to use (currently [`BaseClaims<()>`]).
-    pub fn generate_generic_claims(
-        &self,
-        audience: impl Into<String>,
-        subject: impl Into<String>,
-    ) -> BaseClaims<()> {
-        self.generate_claims(audience, subject, ())
     }
 }

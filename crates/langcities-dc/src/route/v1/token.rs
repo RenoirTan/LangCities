@@ -13,10 +13,10 @@ use crate::{
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
-use langcities_jwt::payload::GenericClaims;
+use langcities_jwt::payload::Claims;
 
 #[derive(Clone, Debug)]
-pub struct DcClaimsWrapper(pub GenericClaims);
+pub struct DcClaimsWrapper(pub Claims);
 
 impl<S> FromRequestParts<S> for DcClaimsWrapper
 where

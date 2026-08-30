@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     config::{JwtConfig, KeyParams},
     error::{JwtError, JwtErrorTrait},
-    payload::claims::BaseClaims,
+    payload::Claims,
 };
 
 #[derive(Clone, Debug)]
@@ -43,11 +43,11 @@ impl JwtDecoder {
         Ok(Self::new(decoding_key, validation))
     }
 
-    pub fn decode_token<A>(&self, token: &str) -> Result<TokenData<BaseClaims<A>>, JwtError>
+    pub fn decode_token<A>(&self, token: &str) -> Result<TokenData<Claims>, JwtError>
     where
         A: DeserializeOwned,
     {
-        let data = decode::<BaseClaims<A>>(token, &self.decoding_key, &self.validation)
+        let data = decode::<Claims>(token, &self.decoding_key, &self.validation)
             .map_err(|e| JwtError::undecodeable(Some(e.into())))?;
         Ok(data)
     }

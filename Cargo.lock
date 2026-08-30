@@ -1801,6 +1801,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "langcities-dc"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "figment",
+ "langcities-common",
+ "langcities-common-db",
+ "langcities-common-server",
+ "langcities-config",
+ "langcities-jwt",
+ "log",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-swagger-ui",
+]
+
+[[package]]
 name = "langcities-jwt"
 version = "0.1.0"
 dependencies = [

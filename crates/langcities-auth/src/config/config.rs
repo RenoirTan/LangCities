@@ -334,7 +334,7 @@ impl Config {
     pub fn from_partial(partial: impl Into<PartialConfig>) -> Result<Self, LcConfigError> {
         let partial = partial.into();
         let db = DbConfig::from_partial(partial.db)?;
-        let server = ServerConfig::from_partial(partial.server)?;
+        let server = ServerConfig::from_partial(partial.server, 8000)?;
         let auth = AuthConfig::from_partial(partial.auth)?;
         let jwt = JwtConfig::from_partial(partial.jwt, true)?;
         Ok(Self::new(auth, server, db, jwt))

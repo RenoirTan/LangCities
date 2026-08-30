@@ -81,7 +81,10 @@ pub struct ServerConfig {
 }
 
 impl ServerConfig {
-    pub fn from_partial(partial: impl Into<PartialServerConfig>) -> Result<Self, LcConfigError> {
+    pub fn from_partial(
+        partial: impl Into<PartialServerConfig>,
+        default_port: u16,
+    ) -> Result<Self, LcConfigError> {
         let partial = partial.into();
         let bind_address = partial
             .bind_address
@@ -89,7 +92,7 @@ impl ServerConfig {
             .transpose()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?
             .unwrap_or_else(|| Ipv4Addr::new(0, 0, 0, 0).into());
-        let bind_port = partial.bind_port.unwrap_or(8000);
+        let bind_port = partial.bind_port.unwrap_or(default_port);
         Ok(Self {
             bind_address,
             bind_port,

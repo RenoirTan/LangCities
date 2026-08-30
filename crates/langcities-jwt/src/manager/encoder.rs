@@ -4,7 +4,7 @@ use serde::Serialize;
 use crate::{
     config::{JwtConfig, KeyParams},
     error::{JwtError, JwtErrorTrait},
-    payload::claims::BaseClaims,
+    payload::{Claims, claims::BaseClaims},
 };
 
 #[derive(Clone, Debug)]
@@ -47,5 +47,11 @@ impl JwtEncoder {
         let token = encode(&header, &claims, &self.encoding_key)
             .map_err(|e| JwtError::unencodeable(Some(e.into())))?;
         Ok(token)
+    }
+
+    pub fn encode_claims_enum(&self, header: Header, claims: Claims) -> Result<String, JwtError> {
+        match claims {
+            Claims::Generic(c) => self.encode_claims(header, c),
+        }
     }
 }

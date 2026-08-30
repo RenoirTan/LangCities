@@ -11,7 +11,8 @@ repository.workspace = true
 chrono = "0.4.45"
 clap = { version = "4.6.6", features = ["derive", "string"] }
 figment = { version = "0.10.19", features = ["env"] }
-jsonwebtoken = "11.0.0"
+# aws_lc_rs is less portable, maybe add a feature if necessary
+jsonwebtoken = { version = "11.0.0", features = ["aws_lc_rs"] }
 langcities-common = { path = "../langcities-common" }
 langcities-config = { path = "../langcities-config" }
 serde = { version = "1.0.229", features = ["derive"] }

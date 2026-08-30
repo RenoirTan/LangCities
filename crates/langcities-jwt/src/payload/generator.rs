@@ -52,4 +52,15 @@ impl ClaimsGenerator {
             add: additional,
         }
     }
+
+    /// Generate the claims for an access token.
+    ///
+    /// Owns the choice of which claims struct to use (currently [`BaseClaims<()>`]).
+    pub fn generate_generic_claims(
+        &self,
+        audience: impl Into<String>,
+        subject: impl Into<String>,
+    ) -> BaseClaims<()> {
+        self.generate_claims(audience, subject, ())
+    }
 }

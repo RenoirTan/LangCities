@@ -19,3 +19,10 @@ pub struct BaseClaims<A> {
     /// Additional Data
     pub add: A,
 }
+
+pub type GenericClaims = BaseClaims<()>;
+
+#[derive(Clone, Debug)]
+pub enum Claims {
+    Generic(GenericClaims),
+}

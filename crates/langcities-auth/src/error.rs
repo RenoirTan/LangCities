@@ -13,6 +13,7 @@ pub enum AuthAppErrorKind {
     FailedInit,
     Other,
     FailedSession,
+    Unauthorized,
 }
 
 impl Display for AuthAppErrorKind {
@@ -31,6 +32,7 @@ pub trait AuthAppErrorTrait {
     fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 
     fn to_response(self) -> AuthAppErrorResponseDto;
@@ -57,6 +59,10 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::FailedSession)
+    }
+
+    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), AuthAppErrorKind::Unauthorized)
     }
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
@@ -88,6 +94,7 @@ impl IntoResponse for AuthAppErrorResponseDto {
             AuthAppErrorKind::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
             AuthAppErrorKind::Other => StatusCode::INTERNAL_SERVER_ERROR,
             AuthAppErrorKind::FailedSession => StatusCode::INTERNAL_SERVER_ERROR,
+            AuthAppErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
         };
         let body = Json(json!({
             "error": self.error,

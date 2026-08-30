@@ -1,0 +1,19 @@
+[package]
+name = "langcities-jwt"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono = "0.4.45"
+clap = { version = "4.6.6", features = ["derive", "string"] }
+figment = { version = "0.10.19", features = ["env"] }
+# aws_lc_rs is less portable, maybe add a feature if necessary
+jsonwebtoken = { version = "11.0.0", features = ["aws_lc_rs"] }
+langcities-common = { path = "../langcities-common" }
+langcities-config = { path = "../langcities-config" }
+serde = { version = "1.0.229", features = ["derive"] }
+uuid = { version = "1.26.0", features = ["v4"] }

@@ -1,11 +1,10 @@
-use std::any::Any;
-
 use axum::{RequestPartsExt, extract::FromRequestParts, http::request::Parts};
 use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
 use langcities_jwt::payload::Claims;
+use std::any::Any;
 
 use crate::{
     error::{DcAppError, DcAppErrorTrait},
@@ -29,7 +28,7 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|_| DcAppError::unauthorized(None))?;
+            .map_err(|r| DcAppError::unauthorized(Some(r.into())))?;
 
         let token_data = app_state
             .jwt_decoder

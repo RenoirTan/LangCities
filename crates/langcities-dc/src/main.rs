@@ -5,6 +5,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod config;
+pub mod entity;
 pub mod error;
 pub mod openapi;
 pub mod route;

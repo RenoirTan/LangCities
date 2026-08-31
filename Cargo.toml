@@ -3,6 +3,7 @@ resolver = "3"
 members = [
   "crates/*",
   "crates/langcities-auth/migration",
+  "crates/langcities-dc/migration",
   "experiments/tree-sitter-lcdcdsl/rust",
 ]
 

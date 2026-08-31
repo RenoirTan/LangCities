@@ -1,12 +1,12 @@
 [package]
 edition      = "2024"
-name         = "langcities-auth-migration"
+name         = "langcities-dc-migration"
 publish      = false
 rust-version = "1.85.0"
 version      = "0.1.0"
 
 [lib]
-name = "langcities_auth_migration"
+name = "langcities_dc_migration"
 path = "src/lib.rs"
 
 [features]

@@ -1876,6 +1876,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "langcities-dc-migration"
+version = "0.1.0"
+dependencies = [
+ "sea-orm-migration",
+ "tokio",
+]
+
+[[package]]
 name = "langcities-jwt"
 version = "0.1.0"
 dependencies = [

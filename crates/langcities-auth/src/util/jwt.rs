@@ -1,3 +1,4 @@
+pub use langcities_jwt::microservice::Microservice;
 use langcities_jwt::payload::{Claims, ClaimsGenerator};
 
 use crate::{
@@ -50,11 +51,6 @@ impl Authorization {
 }
 
 #[derive(Clone, Debug)]
-pub enum Microservice {
-    Generic,
-}
-
-#[derive(Clone, Debug)]
 pub struct Access {
     pub authorization: Authorization,
     pub microservice: Microservice,
@@ -74,13 +70,12 @@ impl Access {
     }
 
     pub fn generate_claims(self, generator: &ClaimsGenerator) -> Result<Claims, AuthAppError> {
-        match self.microservice {
-            Microservice::Generic => self.generate_generic_claims(generator),
-        }
-    }
-
-    fn generate_generic_claims(self, generator: &ClaimsGenerator) -> Result<Claims, AuthAppError> {
-        Ok(generator.generate_claims("generic", self.authorization.get_sub(), "", vec![]))
+        Ok(generator.generate_claims(
+            self.microservice.first_allowed_audience(),
+            self.authorization.get_sub(),
+            "all",
+            vec![],
+        ))
     }
 
     pub fn mint(self, state: &AppState) -> Result<AccessTokenResponseDto, AuthAppError> {

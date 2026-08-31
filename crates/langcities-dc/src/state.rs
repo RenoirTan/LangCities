@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use langcities_jwt::manager::JwtDecoder;
+use langcities_jwt::{manager::JwtDecoder, microservice::Microservice};
 use sea_orm::{Database, DatabaseConnection};
 
 use crate::{
@@ -37,8 +37,9 @@ impl AppState {
         let db = Database::connect(config.db.clone().to_connection_options())
             .await
             .map_err(|e| DcAppError::database(Some(e.into())))?;
-        let jwt_decoder = JwtDecoder::from_config(&config.jwt, &["generic"])
-            .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
+        let jwt_decoder =
+            JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences())
+                .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
         Ok(Self::new(config, db, jwt_decoder))
     }
 }

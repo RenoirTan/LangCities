@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 use langcities_common::error::LcError;
 
@@ -7,6 +7,12 @@ pub enum LcConfigErrorKind {
     MissingKey,
     BadParse,
     Other,
+}
+
+impl Display for LcConfigErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub type LcConfigError = LcError<LcConfigErrorKind>;

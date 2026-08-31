@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BaseClaims<A> {
+pub struct Claims {
     /// JWT ID
     pub jti: String,
     /// Audience
@@ -16,13 +16,8 @@ pub struct BaseClaims<A> {
     pub nbf: i64,
     /// Subject
     pub sub: String,
-    /// Additional Data
-    pub add: A,
-}
-
-pub type GenericClaims = BaseClaims<()>;
-
-#[derive(Clone, Debug)]
-pub enum Claims {
-    Generic(GenericClaims),
+    /// Scope
+    pub scope: String,
+    /// Resources
+    pub resources: Vec<String>,
 }

@@ -11,6 +11,7 @@ pub fn get_v1_router() -> Router<AppState> {
         .route(
             "/token/access/generic",
             post(token::issue_generic_access_token),
-        );
+        )
+        .route("/token/access/dc", post(token::issue_dc_access_token));
     router
 }

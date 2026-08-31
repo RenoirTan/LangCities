@@ -1,9 +1,8 @@
 use std::{error::Error, fmt::Display};
 
-use axum::{Json, http::StatusCode, response::IntoResponse};
+use axum::http::StatusCode;
 use langcities_common::error::LcError;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AuthAppErrorKind {
@@ -22,6 +21,20 @@ impl Display for AuthAppErrorKind {
     }
 }
 
+impl Into<StatusCode> for AuthAppErrorKind {
+    fn into(self) -> StatusCode {
+        match self {
+            Self::InvalidCredentials => StatusCode::BAD_REQUEST,
+            Self::Database => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Other => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::FailedSession => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+        }
+    }
+}
+
 pub type AuthAppError = LcError<AuthAppErrorKind>;
 
 pub trait AuthAppErrorTrait {
@@ -34,8 +47,6 @@ pub trait AuthAppErrorTrait {
     fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-
-    fn to_response(self) -> AuthAppErrorResponseDto;
 }
 
 impl AuthAppErrorTrait for AuthAppError {
@@ -67,38 +78,5 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::Other)
-    }
-
-    fn to_response(self) -> AuthAppErrorResponseDto {
-        let error = match self.source() {
-            Some(s) => format!("{}", s),
-            None => "An error occurred".into(),
-        };
-        let kind = self.kind;
-        AuthAppErrorResponseDto { error, kind }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AuthAppErrorResponseDto {
-    pub error: String,
-    pub kind: AuthAppErrorKind,
-}
-
-impl IntoResponse for AuthAppErrorResponseDto {
-    fn into_response(self) -> axum::response::Response {
-        let status = match self.kind {
-            AuthAppErrorKind::InvalidCredentials => StatusCode::BAD_REQUEST,
-            AuthAppErrorKind::Database => StatusCode::INTERNAL_SERVER_ERROR,
-            AuthAppErrorKind::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
-            AuthAppErrorKind::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
-            AuthAppErrorKind::Other => StatusCode::INTERNAL_SERVER_ERROR,
-            AuthAppErrorKind::FailedSession => StatusCode::INTERNAL_SERVER_ERROR,
-            AuthAppErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
-        };
-        let body = Json(json!({
-            "error": self.error,
-        }));
-        (status, body).into_response()
     }
 }

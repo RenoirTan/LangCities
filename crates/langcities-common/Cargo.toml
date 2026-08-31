@@ -7,4 +7,11 @@ keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+axum = ["dep:axum", "serde_json"]
+serde_json = ["dep:serde_json"]
+
 [dependencies]
+axum = { version = "0.8.9", optional = true }
+serde_json = { version = "1.0.151", optional = true }

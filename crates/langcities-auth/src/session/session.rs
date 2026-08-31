@@ -2,7 +2,7 @@ use axum::extract::FromRequestParts;
 use serde::{Deserialize, Serialize};
 use tower_sessions::{Expiry, Session};
 
-use crate::error::{AuthAppError, AuthAppErrorResponseDto, AuthAppErrorTrait};
+use crate::error::{AuthAppError, AuthAppErrorTrait};
 
 #[derive(Clone, Debug)]
 pub struct SessionUserWrapper {
@@ -63,7 +63,7 @@ impl<S> FromRequestParts<S> for SessionUserWrapper
 where
     S: Send + Sync,
 {
-    type Rejection = AuthAppErrorResponseDto;
+    type Rejection = AuthAppError;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
@@ -71,11 +71,11 @@ where
     ) -> Result<Self, Self::Rejection> {
         let session = Session::from_request_parts(parts, state)
             .await
-            .map_err(|(_s, c)| AuthAppError::failed_session(Some(c.into())).to_response())?;
+            .map_err(|(_s, c)| AuthAppError::failed_session(Some(c.into())))?;
         let dto: SessionUserDto = session
             .get(Self::USER_KEY)
             .await
-            .map_err(|e| AuthAppError::failed_session(Some(e.into())).to_response())?
+            .map_err(|e| AuthAppError::failed_session(Some(e.into())))?
             .unwrap_or_default();
         Ok(SessionUserWrapper::new(session, dto))
     }

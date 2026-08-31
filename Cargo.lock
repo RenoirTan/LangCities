@@ -1814,6 +1814,10 @@ dependencies = [
 [[package]]
 name = "langcities-common"
 version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde_json",
+]
 
 [[package]]
 name = "langcities-common-db"

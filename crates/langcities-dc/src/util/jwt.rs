@@ -31,11 +31,11 @@ where
             .await
             .map_err(|_| DcAppError::unauthorized(None))?;
 
-        let claims = app_state
+        let token_data = app_state
             .jwt_decoder
             .decode_token::<()>(&bearer.token())
             .map_err(|e| DcAppError::unauthorized(Some(e.into())))?;
 
-        Ok(DcClaimsWrapper(claims.claims))
+        Ok(DcClaimsWrapper(token_data.claims))
     }
 }

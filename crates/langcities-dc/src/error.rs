@@ -1,12 +1,7 @@
-use std::{error::Error, fmt::Display};
-
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::http::StatusCode;
+use langcities_common::error::LcError;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use std::{error::Error, fmt::Display};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DcAppErrorKind {
@@ -21,32 +16,16 @@ impl Display for DcAppErrorKind {
     }
 }
 
-#[derive(Debug)]
-pub struct DcAppError {
-    pub source: Option<Box<dyn Error + Send + Sync + 'static>>,
-    pub kind: DcAppErrorKind,
-}
-
-impl DcAppError {
-    pub fn new(
-        source: Option<Box<dyn Error + Send + Sync + 'static>>,
-        kind: DcAppErrorKind,
-    ) -> Self {
-        Self { source, kind }
+impl Into<StatusCode> for DcAppErrorKind {
+    fn into(self) -> StatusCode {
+        match self {
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
     }
 }
 
-impl Display for DcAppError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DcAppError({:?})", self.kind)
-    }
-}
-
-impl Error for DcAppError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.source.as_deref().map(|e| e as &(dyn Error + 'static))
-    }
-}
+pub type DcAppError = LcError<DcAppErrorKind>;
 
 pub trait DcAppErrorTrait {
     fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
@@ -65,18 +44,5 @@ impl DcAppErrorTrait for DcAppError {
 
     fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), DcAppErrorKind::Unauthorized)
-    }
-}
-
-impl IntoResponse for DcAppError {
-    fn into_response(self) -> Response {
-        let status = match self.kind {
-            DcAppErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        let body = Json(json!({
-            "error": &self.source.map(|s| s.to_string()).unwrap_or_else(|| "".into()),
-        }));
-        (status, body).into_response()
     }
 }

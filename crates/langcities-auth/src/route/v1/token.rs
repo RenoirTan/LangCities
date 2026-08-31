@@ -2,7 +2,7 @@ use axum::{Json, extract::State};
 
 use crate::{
     dto::token::AccessTokenResponseDto,
-    error::{AuthAppErrorResponseDto, AuthAppErrorTrait},
+    error::AuthAppError,
     session::SessionUserWrapper,
     state::AppState,
     util::jwt::{Access, Authorization, Microservice},
@@ -13,15 +13,12 @@ use crate::{
 pub async fn issue_generic_access_token(
     State(state): State<AppState>,
     session_user: SessionUserWrapper,
-) -> Result<Json<AccessTokenResponseDto>, AuthAppErrorResponseDto> {
+) -> Result<Json<AccessTokenResponseDto>, AuthAppError> {
     let access = Access::new(
         Authorization::session(session_user.get_user().clone()),
         Microservice::Generic,
     );
-    access
-        .mint(&state)
-        .map(|d| Json(d))
-        .map_err(|e| e.to_response())
+    access.mint(&state).map(|d| Json(d))
 }
 
 #[utoipa::path(post, path = "/v1/token/access/dc")]
@@ -29,13 +26,10 @@ pub async fn issue_generic_access_token(
 pub async fn issue_dc_access_token(
     State(state): State<AppState>,
     session_user: SessionUserWrapper,
-) -> Result<Json<AccessTokenResponseDto>, AuthAppErrorResponseDto> {
+) -> Result<Json<AccessTokenResponseDto>, AuthAppError> {
     let access = Access::new(
         Authorization::session(session_user.get_user().clone()),
         Microservice::Dc,
     );
-    access
-        .mint(&state)
-        .map(|d| Json(d))
-        .map_err(|e| e.to_response())
+    access.mint(&state).map(|d| Json(d))
 }

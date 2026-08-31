@@ -1,0 +1,33 @@
+{
+  "server": {
+    "bind_address": "0.0.0.0",
+    "bind_port": 8032
+  },
+  "db": {
+    "url": "sqlite:///data/dc.sqlite?mode=rwc",
+    "max_connections": 10,
+    "min_connections": 1,
+    "connect_timeout": 30000,
+    "idle_timeout": 600000,
+    "acquire_timeout": 30000,
+    "max_lifetime": 1800000,
+    "sqlx_logging": true,
+    "record_stmt_in_spans": true,
+    "sqlx_logging_level": "Info",
+    "sqlx_slow_statements_logging_level": "Off",
+    "sqlx_slow_statements_logging_threshold": 1000,
+    "sqlcipher_key": null,
+    "schema_search_path": null,
+    "application_name": "langcities-dc",
+    "statement_timeout": null,
+    "test_before_acquire": true,
+    "test_before_acquire_if_idle_for": 60000,
+    "connect_lazy": false
+  },
+  "jwt": {
+    "hmac_secret": "replace-this-with-a-long-random-development-jwt-secret",
+    "algorithm": "HS256",
+    "expiry": 600000,
+    "issuer": "http://localhost:8000"
+  }
+}

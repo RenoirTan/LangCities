@@ -1,0 +1,31 @@
+services:
+  dev-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev-build
+    restart: "no"
+    command: cargo build --workspace --features dev,sqlite,mysql,postgres
+    volumes:
+      - .:/app
+      - ./data/cargo/target/:/app/target
+      - ./data/cargo/registry/:/usr/local/cargo/registry
+      - ./data/cargo/git/:/usr/local/cargo/git
+
+  langcities-auth:
+    build:
+      target: dev-auth
+    depends_on:
+      dev-build:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/cargo/target/:/app/target:ro
+
+  langcities-dc:
+    build:
+      target: dev-dc
+    depends_on:
+      dev-build:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/cargo/target/:/app/target:ro

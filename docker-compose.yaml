@@ -1,0 +1,18 @@
+services:
+  langcities-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${LCAUTH_CONFIG_PATH}:/app/lcauth.json:ro
+
+  langcities-dc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8032:8032"
+    volumes:
+      - ${LCDC_CONFIG_PATH}:/app/lcdc.json:ro

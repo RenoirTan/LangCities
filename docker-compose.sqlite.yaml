@@ -1,0 +1,8 @@
+services:
+  langcities-auth:
+    volumes:
+      - ${LCAUTH_SQLITE_PATH}:/data/auth.sqlite
+
+  langcities-dc:
+    volumes:
+      - ${LCDC_SQLITE_PATH}:/data/dc.sqlite

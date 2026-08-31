@@ -161,6 +161,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Configs
+lc*.json
+!templates/**/*
+
 # Spyder project settings
 .spyderproject
 .spyproject

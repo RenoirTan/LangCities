@@ -9,6 +9,7 @@ pub mod error;
 pub mod openapi;
 pub mod route;
 pub mod state;
+pub mod util;
 
 use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;

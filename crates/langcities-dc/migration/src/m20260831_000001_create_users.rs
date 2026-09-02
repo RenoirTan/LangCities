@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                     .table("dc_users")
                     .if_not_exists()
                     .col(pk_auto("id"))
-                    .col(integer("auth_user_id"))
+                    .col(integer("auth_user_id").unique_key())
                     .to_owned(),
             )
             .await

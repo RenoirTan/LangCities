@@ -8,6 +8,7 @@ pub enum JwtErrorKind {
     Unencodeable,
     Undecodeable,
     Unverifiable,
+    InvalidData,
     Other,
 }
 
@@ -24,6 +25,7 @@ pub trait JwtErrorTrait {
     fn unencodeable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn undecodeable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unverifiable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn invalid_data(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 }
 
@@ -42,6 +44,10 @@ impl JwtErrorTrait for JwtError {
 
     fn unverifiable(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), JwtErrorKind::Unverifiable)
+    }
+
+    fn invalid_data(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), JwtErrorKind::InvalidData)
     }
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {

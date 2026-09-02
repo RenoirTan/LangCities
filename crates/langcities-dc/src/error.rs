@@ -8,6 +8,8 @@ pub enum DcAppErrorKind {
     Database,
     FailedInit,
     Unauthorized,
+    InvalidAccessToken,
+    Other,
 }
 
 impl Display for DcAppErrorKind {
@@ -31,6 +33,10 @@ pub trait DcAppErrorTrait {
     fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn invalid_access_token(
+        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
+    ) -> Self;
+    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 }
 
 impl DcAppErrorTrait for DcAppError {
@@ -44,5 +50,15 @@ impl DcAppErrorTrait for DcAppError {
 
     fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), DcAppErrorKind::Unauthorized)
+    }
+
+    fn invalid_access_token(
+        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
+    ) -> Self {
+        Self::new(source.into(), DcAppErrorKind::InvalidAccessToken)
+    }
+
+    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), DcAppErrorKind::Other)
     }
 }

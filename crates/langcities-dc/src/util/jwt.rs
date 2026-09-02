@@ -4,7 +4,10 @@ use axum_extra::{
     headers::{Authorization, authorization::Bearer},
 };
 use langcities_jwt::payload::Claims;
-use std::any::Any;
+use std::{
+    any::Any,
+    ops::{Deref, DerefMut},
+};
 
 use crate::{
     error::{DcAppError, DcAppErrorTrait},
@@ -13,6 +16,38 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct DcClaimsWrapper(pub Claims);
+
+impl DcClaimsWrapper {
+    pub fn new(claims: impl Into<Claims>) -> Self {
+        Self(claims.into())
+    }
+}
+
+impl AsRef<Claims> for DcClaimsWrapper {
+    fn as_ref(&self) -> &Claims {
+        &self
+    }
+}
+
+impl AsMut<Claims> for DcClaimsWrapper {
+    fn as_mut(&mut self) -> &mut Claims {
+        &mut *self
+    }
+}
+
+impl Deref for DcClaimsWrapper {
+    type Target = Claims;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for DcClaimsWrapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl<S> FromRequestParts<S> for DcClaimsWrapper
 where

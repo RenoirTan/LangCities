@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::error::{JwtError, JwtErrorTrait};
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Claims {
     /// JWT ID
@@ -20,4 +22,17 @@ pub struct Claims {
     pub scope: String,
     /// Resources
     pub resources: Vec<String>,
+}
+
+impl Claims {
+    pub fn sub_to_id(&self) -> Result<Option<i64>, JwtError> {
+        let sub = &self.sub;
+        if sub.len() <= 0 {
+            Ok(None)
+        } else {
+            sub.parse::<i64>()
+                .map(|id| Some(id))
+                .map_err(|e| JwtError::invalid_data(Some(e.into())))
+        }
+    }
 }

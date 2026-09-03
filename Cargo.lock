@@ -1887,6 +1887,8 @@ dependencies = [
 name = "langcities-jwt"
 version = "0.1.0"
 dependencies = [
+ "axum",
+ "axum-extra",
  "chrono",
  "clap",
  "figment",

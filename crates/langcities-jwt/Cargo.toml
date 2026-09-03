@@ -7,7 +7,12 @@ keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
 
+[features]
+axum = ["dep:axum", "dep:axum-extra"]
+
 [dependencies]
+axum = { version = "0.8.9", optional = true , features = ["macros"] }
+axum-extra = { version = "0.12.6", optional = true, features = ["typed-header"] }
 chrono = "0.4.45"
 clap = { version = "4.6.6", features = ["derive", "string"] }
 figment = { version = "0.10.19", features = ["env"] }

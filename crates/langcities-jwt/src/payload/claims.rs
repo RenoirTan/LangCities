@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use serde::{Deserialize, Serialize};
 
 use crate::error::{JwtError, JwtErrorTrait};
@@ -33,6 +35,38 @@ impl Claims {
             sub.parse::<i64>()
                 .map(|id| Some(id))
                 .map_err(|e| JwtError::invalid_data(Some(e.into())))
+        }
+    }
+}
+
+pub trait ParseJwtClaims {
+    type Error: Error;
+
+    fn parse_jwt_claims(&self, token: &str) -> Result<Claims, Self::Error>;
+    fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error;
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ParsedClaims<E: Error + Send + Sync> {
+    Valid(Claims),
+    Invalid(E),
+    Missing,
+}
+
+impl<E: Error + Send + Sync> ParsedClaims<E> {
+    pub fn from_result(ro: Result<Option<Claims>, E>) -> Self {
+        match ro {
+            Ok(Some(claims)) => Self::Valid(claims),
+            Ok(None) => Self::Missing,
+            Err(error) => Self::Invalid(error),
+        }
+    }
+
+    pub fn to_result(self) -> Result<Option<Claims>, E> {
+        match self {
+            Self::Valid(claims) => Ok(Some(claims)),
+            Self::Invalid(error) => Err(error),
+            Self::Missing => Ok(None),
         }
     }
 }

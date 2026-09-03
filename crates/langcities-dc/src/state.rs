@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
-use langcities_jwt::{manager::JwtDecoder, microservice::Microservice};
+use langcities_jwt::{
+    manager::JwtDecoder,
+    microservice::Microservice,
+    payload::{Claims, ParseJwtClaims},
+};
 use sea_orm::{Database, DatabaseConnection};
 
 use crate::{
@@ -41,5 +45,22 @@ impl AppState {
             JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences())
                 .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
         Ok(Self::new(config, db, jwt_decoder))
+    }
+}
+
+impl ParseJwtClaims for AppState {
+    type Error = DcAppError;
+
+    fn parse_jwt_claims(&self, token: &str) -> Result<Claims, Self::Error> {
+        let token_data = self
+            .jwt_decoder
+            .decode_token::<()>(token)
+            .map_err(|e| DcAppError::unauthorized(Some(e.into())))?;
+
+        Ok(token_data.claims)
+    }
+
+    fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error {
+        DcAppError::invalid_access_token(Some(error.into()))
     }
 }

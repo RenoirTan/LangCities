@@ -1,3 +1,5 @@
+#[cfg(feature = "axum")]
+pub mod axum;
 pub mod config;
 pub mod error;
 pub mod manager;

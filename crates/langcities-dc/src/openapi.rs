@@ -23,7 +23,10 @@ impl Modify for SecurityAddon {
 #[derive(OpenApi)]
 #[openapi(
     modifiers(&SecurityAddon),
-    paths(crate::route::v1::token::validate_token),
+    paths(
+        crate::route::v1::token::validate_token,
+        crate::route::v1::users::get_user
+    ),
     security(("bearer" = []))
 )]
 pub struct ApiDoc;

@@ -10,6 +10,8 @@ pub struct Model {
     pub id: i64,
     #[sea_orm(unique)]
     pub auth_user_id: i64,
+    #[sea_orm(has_many)]
+    pub vernaculars: HasMany<super::vernaculars::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

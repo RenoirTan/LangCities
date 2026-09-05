@@ -33,6 +33,7 @@ utoipa = { version = "5.5.0", features = ["axum_extras", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 time = "0.3.55"
 axum-extra = { version = "0.12.6", features = ["typed-header"] }
+chrono = { version = "0.4.45", features = ["serde"] }
 
 [dependencies.log]
 version = "0.4.33"

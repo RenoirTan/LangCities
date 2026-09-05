@@ -3,3 +3,4 @@
 pub mod prelude;
 
 pub mod dc_users;
+pub mod vernaculars;

@@ -1,6 +1,7 @@
 use std::error::Error;
 
-use axum::Router;
+use axum::{Router, middleware};
+use langcities_jwt::axum::claims::parse_token_and_extend_state;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -35,6 +36,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app = Router::new()
         .nest("/v1", route::v1::get_v1_router())
         .merge(swagger)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            parse_token_and_extend_state::<AppState>,
+        ))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind(bind_host).await?;
     tracing::debug!("listening on {}", listener.local_addr()?);

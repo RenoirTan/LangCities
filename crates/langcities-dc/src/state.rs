@@ -3,7 +3,7 @@ use std::{error::Error, sync::Arc};
 use langcities_jwt::{
     manager::JwtDecoder,
     microservice::Microservice,
-    payload::{Claims, ParseJwtClaims},
+    payload::{ParseJwtClaims, ParsedClaims},
 };
 use sea_orm::{Database, DatabaseConnection};
 
@@ -51,13 +51,14 @@ impl AppState {
 impl ParseJwtClaims for AppState {
     type Error = DcAppError;
 
-    fn parse_jwt_claims(&self, token: &str) -> Result<Claims, Self::Error> {
-        let token_data = self
-            .jwt_decoder
-            .decode_token::<()>(token)
-            .map_err(|e| DcAppError::unauthorized(Some(e.into())))?;
-
-        Ok(token_data.claims)
+    fn parse_jwt_claims(&self, token: &str) -> ParsedClaims<Self::Error> {
+        if token.len() == 0 {
+            return ParsedClaims::Missing;
+        }
+        match self.jwt_decoder.decode_token::<()>(token) {
+            Ok(t) => ParsedClaims::Valid(t.claims),
+            Err(e) => ParsedClaims::Invalid(DcAppError::unauthorized(Some(e.into()))),
+        }
     }
 
     fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error {

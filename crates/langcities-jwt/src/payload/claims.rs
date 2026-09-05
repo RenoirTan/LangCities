@@ -40,20 +40,20 @@ impl Claims {
 }
 
 pub trait ParseJwtClaims {
-    type Error: Error;
+    type Error: Error + Send + Sync + 'static;
 
-    fn parse_jwt_claims(&self, token: &str) -> Result<Claims, Self::Error>;
+    fn parse_jwt_claims(&self, token: &str) -> ParsedClaims<Self::Error>;
     fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ParsedClaims<E: Error + Send + Sync> {
+pub enum ParsedClaims<E: Error + Send + Sync + 'static> {
     Valid(Claims),
     Invalid(E),
     Missing,
 }
 
-impl<E: Error + Send + Sync> ParsedClaims<E> {
+impl<E: Error + Send + Sync + 'static> ParsedClaims<E> {
     pub fn from_result(ro: Result<Option<Claims>, E>) -> Self {
         match ro {
             Ok(Some(claims)) => Self::Valid(claims),

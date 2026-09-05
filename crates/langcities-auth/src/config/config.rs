@@ -274,35 +274,38 @@ impl AuthConfig {
         layer
     }
 
-    pub fn session_cookie_secret_to_key(&self) -> Key {
+    pub fn session_cookie_secret_to_key(&self) -> Result<Key, LcConfigError> {
         match &self.session_cookie_secret {
-            Some(secret) => Key::from(secret.as_bytes()),
-            None => Key::generate(),
+            Some(secret) => Key::try_from(secret.as_bytes())
+                .map_err(|e| LcConfigError::bad_parse(Some(e.into()))),
+            None => Key::try_generate().ok_or_else(|| {
+                LcConfigError::other(Some("Failed to generate a session cookie key".into()))
+            }),
         }
     }
 
     pub fn configure_signed_cookies<S, C>(
         &self,
         layer: SessionManagerLayer<S, C>,
-    ) -> SessionManagerLayer<S, SignedCookie>
+    ) -> Result<SessionManagerLayer<S, SignedCookie>, LcConfigError>
     where
         S: SessionStore,
         C: CookieController,
     {
-        let key = self.session_cookie_secret_to_key();
-        layer.with_signed(key)
+        let key = self.session_cookie_secret_to_key()?;
+        Ok(layer.with_signed(key))
     }
 
     pub fn configure_private_cookies<S, C>(
         &self,
         layer: SessionManagerLayer<S, C>,
-    ) -> SessionManagerLayer<S, PrivateCookie>
+    ) -> Result<SessionManagerLayer<S, PrivateCookie>, LcConfigError>
     where
         S: SessionStore,
         C: CookieController,
     {
-        let key = self.session_cookie_secret_to_key();
-        layer.with_private(key)
+        let key = self.session_cookie_secret_to_key()?;
+        Ok(layer.with_private(key))
     }
 }
 
@@ -338,5 +341,46 @@ impl Config {
         let auth = AuthConfig::from_partial(partial.auth)?;
         let jwt = JwtConfig::from_partial(partial.jwt, true)?;
         Ok(Self::new(auth, server, db, jwt))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AuthConfig, PartialAuthConfig};
+
+    fn auth_config_with_secret(secret: Option<String>) -> AuthConfig {
+        AuthConfig::from_partial(PartialAuthConfig {
+            session_cookie_secret: secret,
+            ..Default::default()
+        })
+        .expect("auth config should be valid")
+    }
+
+    #[test]
+    fn empty_session_cookie_secret_is_rejected() {
+        let config = auth_config_with_secret(Some(String::new()));
+
+        assert!(config.session_cookie_secret_to_key().is_err());
+    }
+
+    #[test]
+    fn short_session_cookie_secret_is_rejected() {
+        let config = auth_config_with_secret(Some("a".repeat(63)));
+
+        assert!(config.session_cookie_secret_to_key().is_err());
+    }
+
+    #[test]
+    fn sixty_four_byte_session_cookie_secret_is_accepted() {
+        let config = auth_config_with_secret(Some("a".repeat(64)));
+
+        assert!(config.session_cookie_secret_to_key().is_ok());
+    }
+
+    #[test]
+    fn missing_session_cookie_secret_generates_a_key() {
+        let config = auth_config_with_secret(None);
+
+        assert!(config.session_cookie_secret_to_key().is_ok());
     }
 }

@@ -17,6 +17,7 @@ pub mod util;
 use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;
 use crate::state::AppState;
+use crate::util::setup::extract_current_user;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -36,6 +37,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app = Router::new()
         .nest("/v1", route::v1::get_v1_router())
         .merge(swagger)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            extract_current_user,
+        ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             parse_token_and_extend_state::<AppState>,

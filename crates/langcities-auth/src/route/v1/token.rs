@@ -27,6 +27,7 @@ pub async fn issue_dc_access_token(
     State(state): State<AppState>,
     session_user: SessionUserWrapper,
 ) -> Result<Json<AccessTokenResponseDto>, AuthAppError> {
+    println!("{:?}", session_user);
     let access = Access::new(
         Authorization::session(session_user.get_user().clone()),
         Microservice::Dc,

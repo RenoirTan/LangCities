@@ -31,6 +31,7 @@ impl SessionUserWrapper {
     }
 
     pub async fn update_user_session(&self) -> Result<(), AuthAppError> {
+        println!("{:?}", self);
         self.session
             .insert(Self::USER_KEY, self.user.clone())
             .await

@@ -1,7 +1,11 @@
 use sea_orm::DatabaseConnection;
 use tower_sessions::{SessionManagerLayer, service::CookieController};
 
-use crate::{config::AuthConfig, error::AuthAppError, session::BoxedSessionStore};
+use crate::{
+    config::AuthConfig,
+    error::{AuthAppError, AuthAppErrorTrait},
+    session::BoxedSessionStore,
+};
 
 /// Build the auth session [`SessionManagerLayer`] from the ORM-managed pool.
 pub async fn build_session_layer(
@@ -11,6 +15,8 @@ pub async fn build_session_layer(
     let store = BoxedSessionStore::store_from_sea(db).await?;
     let mut layer = SessionManagerLayer::new(store);
     layer = auth.configure_session_manager_layer_basics(layer);
-    let signed_layer = auth.configure_signed_cookies(layer);
+    let signed_layer = auth
+        .configure_signed_cookies(layer)
+        .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
     Ok(signed_layer)
 }

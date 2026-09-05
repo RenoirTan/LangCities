@@ -1,5 +1,12 @@
-use crate::entity::{dc_users, prelude::*};
+use std::sync::Arc;
+
+use crate::entity::dc_users;
 use crate::error::{DcAppError, DcAppErrorTrait};
+use crate::state::AppState;
+use axum::extract::{Request, State};
+use axum::middleware::Next;
+use axum::response::{IntoResponse, Response};
+use langcities_jwt::payload::{ParseJwtClaims, ParsedClaims};
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ConnectionTrait, EntityTrait, TransactionTrait, TryInsertResult};
 
@@ -41,4 +48,29 @@ pub async fn get_or_create_user<C: ConnectionTrait + TransactionTrait>(
         Ok(None) => create_user_if_not_exists(conn, id).await,
         Err(e) => Err(DcAppError::database(Some(e.into()))),
     }
+}
+
+pub async fn extract_current_user(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    let parsed_claims = request
+        .extensions()
+        .get::<Arc<ParsedClaims<<AppState as ParseJwtClaims>::Error>>>()
+        .cloned();
+    // println!("{:?}", parsed_claims);
+    if let Some(parsed_claims) = parsed_claims {
+        if let ParsedClaims::Valid(claims) = &*parsed_claims {
+            if let Ok(Some(id)) = claims.sub_to_id() {
+                match get_or_create_user(&state.db, id).await {
+                    Ok(user) => {
+                        request.extensions_mut().insert(user);
+                    }
+                    Err(error) => return error.into_response(),
+                }
+            }
+        }
+    }
+    next.run(request).await
 }

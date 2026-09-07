@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use clap::{Arg, ArgAction::SetTrue, Args, FromArgMatches, value_parser};
+use clap::{Arg, ArgAction::Set, Args, FromArgMatches, value_parser};
 use figment::{providers::Env, value::Uncased};
 use langcities_common::merge::Merge;
 use langcities_config::{
@@ -88,12 +88,20 @@ impl PartialDbConfig {
         .arg(
             Arg::new("disable_sqlx_logging")
                 .long(p("disable-sqlx-logging"))
-                .action(SetTrue),
+                .action(Set)
+                .value_parser(value_parser!(bool))
+                .num_args(0..=1)
+                .require_equals(true)
+                .default_missing_value("true"),
         )
         .arg(
             Arg::new("disable_record_stmt_in_spans")
                 .long(p("disable-record-stmt-in-spans"))
-                .action(SetTrue),
+                .action(Set)
+                .value_parser(value_parser!(bool))
+                .num_args(0..=1)
+                .require_equals(true)
+                .default_missing_value("true"),
         )
         .arg(Arg::new("sqlx_logging_level").long(p("sqlx-logging-level")))
         .arg(
@@ -116,7 +124,11 @@ impl PartialDbConfig {
         .arg(
             Arg::new("test_before_acquire")
                 .long(p("test-before-acquire"))
-                .action(SetTrue),
+                .action(Set)
+                .value_parser(value_parser!(bool))
+                .num_args(0..=1)
+                .require_equals(true)
+                .default_missing_value("true"),
         )
         .arg(
             Arg::new("test_before_acquire_if_idle_for")
@@ -126,7 +138,11 @@ impl PartialDbConfig {
         .arg(
             Arg::new("connect_lazy")
                 .long(p("connect-lazy"))
-                .action(SetTrue),
+                .action(Set)
+                .value_parser(value_parser!(bool))
+                .num_args(0..=1)
+                .require_equals(true)
+                .default_missing_value("true"),
         )
     }
 }
@@ -176,12 +192,12 @@ impl FromArgMatches for PartialDbConfig {
                 t => Some(t),
             })
         });
-        if matches.get_flag("disable_sqlx_logging") {
-            self.sqlx_logging.replace(false);
-        }
-        if matches.get_flag("disable_record_stmt_in_spans") {
-            self.record_stmt_in_spans.replace(false);
-        }
+        matches
+            .get_one::<bool>("disable_sqlx_logging")
+            .map(|disable| self.sqlx_logging.replace(!*disable));
+        matches
+            .get_one::<bool>("disable_record_stmt_in_spans")
+            .map(|disable| self.record_stmt_in_spans.replace(!*disable));
         matches
             .get_one::<log::LevelFilter>("sqlx_logging_level")
             .map(|l| self.sqlx_logging_level.replace(l.clone()));
@@ -203,15 +219,15 @@ impl FromArgMatches for PartialDbConfig {
         matches
             .get_one::<Milliseconds>("statement_timeout")
             .map(|t| self.statement_timeout.replace(*t));
-        if matches.get_flag("test_before_acquire") {
-            self.test_before_acquire.replace(true);
-        }
+        matches
+            .get_one::<bool>("test_before_acquire")
+            .map(|value| self.test_before_acquire.replace(*value));
         matches
             .get_one::<Milliseconds>("test_before_acquire_if_idle_for")
             .map(|t| self.test_before_acquire_if_idle_for.replace(*t));
-        if matches.get_flag("connect_lazy") {
-            self.connect_lazy.replace(true);
-        }
+        matches
+            .get_one::<bool>("connect_lazy")
+            .map(|value| self.connect_lazy.replace(*value));
         Ok(())
     }
 }
@@ -331,5 +347,62 @@ impl DbConfig {
 impl Into<ConnectOptions> for DbConfig {
     fn into(self) -> ConnectOptions {
         self.to_connection_options()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::{Args, Command, FromArgMatches};
+
+    use super::PartialDbConfig;
+
+    fn parse(args: &[&str]) -> PartialDbConfig {
+        let matches = PartialDbConfig::augment_args(Command::new("test"))
+            .try_get_matches_from(args.iter().copied())
+            .unwrap();
+
+        PartialDbConfig::from_arg_matches(&matches).unwrap()
+    }
+
+    #[test]
+    fn omitted_optional_boolean_flags_are_none() {
+        let config = parse(&["test"]);
+
+        assert_eq!(config.sqlx_logging, None);
+        assert_eq!(config.record_stmt_in_spans, None);
+        assert_eq!(config.test_before_acquire, None);
+        assert_eq!(config.connect_lazy, None);
+    }
+
+    #[test]
+    fn bare_optional_boolean_flags_are_true() {
+        let config = parse(&[
+            "test",
+            "--db-disable-sqlx-logging",
+            "--db-disable-record-stmt-in-spans",
+            "--db-test-before-acquire",
+            "--db-connect-lazy",
+        ]);
+
+        assert_eq!(config.sqlx_logging, Some(false));
+        assert_eq!(config.record_stmt_in_spans, Some(false));
+        assert_eq!(config.test_before_acquire, Some(true));
+        assert_eq!(config.connect_lazy, Some(true));
+    }
+
+    #[test]
+    fn explicit_optional_boolean_flags_can_be_false() {
+        let config = parse(&[
+            "test",
+            "--db-disable-sqlx-logging=false",
+            "--db-disable-record-stmt-in-spans=false",
+            "--db-test-before-acquire=false",
+            "--db-connect-lazy=false",
+        ]);
+
+        assert_eq!(config.sqlx_logging, Some(true));
+        assert_eq!(config.record_stmt_in_spans, Some(true));
+        assert_eq!(config.test_before_acquire, Some(false));
+        assert_eq!(config.connect_lazy, Some(false));
     }
 }

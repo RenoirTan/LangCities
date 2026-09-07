@@ -1864,6 +1864,7 @@ dependencies = [
  "langcities-common-server",
  "langcities-config",
  "langcities-jwt",
+ "langcities-lcdcdsl",
  "log",
  "sea-orm",
  "serde",
@@ -1903,6 +1904,9 @@ dependencies = [
 [[package]]
 name = "langcities-lcdcdsl"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "langcities-lcdcdsl-parser"

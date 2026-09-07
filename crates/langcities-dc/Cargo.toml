@@ -25,6 +25,7 @@ langcities-common-db = { path = "../langcities-common-db" }
 langcities-common-server = { path = "../langcities-common-server" }
 langcities-config = { path = "../langcities-config" }
 langcities-jwt = { path = "../langcities-jwt", features = ["axum"] }
+langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }
 serde = { version = "1.0.229", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "json"] }
 clap = { version = "4.6.6", features = ["derive"] }

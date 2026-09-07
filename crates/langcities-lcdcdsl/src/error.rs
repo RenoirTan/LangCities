@@ -11,6 +11,7 @@ pub struct DslError {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DslErrorKind {
     NodeNotFound,
+    BadValue,
 }
 
 impl DslError {
@@ -23,6 +24,13 @@ impl DslError {
         Self::new(
             Some(format!("Node {} not found", node_id.into()).into()),
             DslErrorKind::NodeNotFound,
+        )
+    }
+
+    pub fn bad_value(value: impl Display) -> Self {
+        Self::new(
+            Some(format!("Invalid value: {}", value).into()),
+            DslErrorKind::BadValue,
         )
     }
 }

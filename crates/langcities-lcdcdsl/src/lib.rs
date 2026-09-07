@@ -1,3 +1,4 @@
+pub mod component;
 pub mod dependency;
 pub mod error;
 pub mod node;

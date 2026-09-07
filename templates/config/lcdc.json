@@ -1,4 +1,7 @@
 {
+  "dc": {
+    "seed_testing": false
+  },
   "server": {
     "bind_address": "0.0.0.0",
     "bind_port": 8032

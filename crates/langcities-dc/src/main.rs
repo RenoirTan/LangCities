@@ -10,12 +10,14 @@ pub mod dto;
 pub mod entity;
 pub mod error;
 pub mod openapi;
+pub mod pre;
 pub mod route;
 pub mod state;
 pub mod util;
 
 use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;
+use crate::pre::seed::Seeder;
 use crate::state::AppState;
 use crate::util::setup::extract_current_user;
 
@@ -32,6 +34,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let bind_host = config.server.bind_host();
     let state = AppState::create(config).await?;
+
+    if state.config.dc.seed_testing {
+        Seeder::new(&state).seed_testing().await?;
+    }
 
     let swagger = SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi());
     let app = Router::new()

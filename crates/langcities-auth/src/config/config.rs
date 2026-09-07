@@ -48,10 +48,20 @@ impl Into<SameSite> for SameSiteArg {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
 pub struct PartialAuthConfig {
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub disable_seeding: Option<bool>,
 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub seed_testing: Option<bool>,
 
     #[arg(long)]
@@ -60,7 +70,12 @@ pub struct PartialAuthConfig {
     #[arg(long)]
     pub session_cookie_secret: Option<String>,
 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub disable_session_cookie_http_only: Option<bool>,
 
     #[arg(long)]
@@ -72,7 +87,12 @@ pub struct PartialAuthConfig {
     #[arg(long)]
     pub session_cookie_reset_expiry_on_active: Option<bool>,
 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub disable_session_cookie_secure: Option<bool>,
 
     #[arg(long)]
@@ -81,7 +101,12 @@ pub struct PartialAuthConfig {
     #[arg(long)]
     pub session_cookie_domain: Option<String>,
 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub session_cookie_always_save: Option<bool>,
 }
 
@@ -346,6 +371,8 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    use clap::Parser;
+
     use super::{AuthConfig, PartialAuthConfig};
 
     fn auth_config_with_secret(secret: Option<String>) -> AuthConfig {
@@ -382,5 +409,54 @@ mod tests {
         let config = auth_config_with_secret(None);
 
         assert!(config.session_cookie_secret_to_key().is_ok());
+    }
+
+    #[test]
+    fn omitted_optional_boolean_flags_are_none() {
+        let config = PartialAuthConfig::try_parse_from(["test"]).unwrap();
+
+        assert_eq!(config.disable_seeding, None);
+        assert_eq!(config.seed_testing, None);
+        assert_eq!(config.disable_session_cookie_http_only, None);
+        assert_eq!(config.disable_session_cookie_secure, None);
+        assert_eq!(config.session_cookie_always_save, None);
+    }
+
+    #[test]
+    fn bare_optional_boolean_flags_are_true() {
+        let config = PartialAuthConfig::try_parse_from([
+            "test",
+            "--disable-seeding",
+            "--seed-testing",
+            "--disable-session-cookie-http-only",
+            "--disable-session-cookie-secure",
+            "--session-cookie-always-save",
+        ])
+        .unwrap();
+
+        assert_eq!(config.disable_seeding, Some(true));
+        assert_eq!(config.seed_testing, Some(true));
+        assert_eq!(config.disable_session_cookie_http_only, Some(true));
+        assert_eq!(config.disable_session_cookie_secure, Some(true));
+        assert_eq!(config.session_cookie_always_save, Some(true));
+    }
+
+    #[test]
+    fn explicit_optional_boolean_flags_can_be_false() {
+        let config = PartialAuthConfig::try_parse_from([
+            "test",
+            "--disable-seeding=false",
+            "--seed-testing=false",
+            "--disable-session-cookie-http-only=false",
+            "--disable-session-cookie-secure=false",
+            "--session-cookie-always-save=false",
+        ])
+        .unwrap();
+
+        assert_eq!(config.disable_seeding, Some(false));
+        assert_eq!(config.seed_testing, Some(false));
+        assert_eq!(config.disable_session_cookie_http_only, Some(false));
+        assert_eq!(config.disable_session_cookie_secure, Some(false));
+        assert_eq!(config.session_cookie_always_save, Some(false));
     }
 }

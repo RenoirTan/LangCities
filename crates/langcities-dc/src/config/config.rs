@@ -15,7 +15,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
 pub struct PartialDcConfig {
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
     pub seed_testing: Option<bool>,
 }
 
@@ -72,8 +77,6 @@ impl PartialConfig {
             )))
             .extract()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?;
-        println!("{:#?}", config);
-        println!("{:#?}", cli);
         config.merge_with(cli.into());
         Ok(config)
     }
@@ -154,5 +157,33 @@ impl Config {
         let db = DbConfig::from_partial(partial.db)?;
         let jwt = JwtConfig::from_partial(partial.jwt, true)?;
         Ok(Self::new(dc, server, db, jwt))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::PartialDcConfig;
+
+    #[test]
+    fn omitted_seed_testing_is_none() {
+        let config = PartialDcConfig::try_parse_from(["test"]).unwrap();
+
+        assert_eq!(config.seed_testing, None);
+    }
+
+    #[test]
+    fn bare_seed_testing_is_true() {
+        let config = PartialDcConfig::try_parse_from(["test", "--seed-testing"]).unwrap();
+
+        assert_eq!(config.seed_testing, Some(true));
+    }
+
+    #[test]
+    fn explicit_seed_testing_false_is_false() {
+        let config = PartialDcConfig::try_parse_from(["test", "--seed-testing=false"]).unwrap();
+
+        assert_eq!(config.seed_testing, Some(false));
     }
 }

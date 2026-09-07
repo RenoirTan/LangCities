@@ -18,17 +18,24 @@ impl MigrationTrait for Migration {
                     .table("vernaculars")
                     .if_not_exists()
                     .col(pk_auto("id"))
-                    .col(string("slug").unique_key())
+                    .col(string("slug"))
                     .col(string("name"))
                     .col(timestamp("updated_at"))
                     .col(timestamp("created_at"))
-                    .col(integer_null("owner_id"))
+                    .col(integer("owner_id"))
+                    .index(
+                        Index::create()
+                            .unique()
+                            .name("idx_unique_vernaculars_slug_owner_id")
+                            .col("slug")
+                            .col("owner_id"),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_vernaculars_owner_id_dc_users")
                             .from("vernaculars", "owner_id")
                             .to("dc_users", "id")
-                            .on_delete(ForeignKeyAction::SetNull)
+                            .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),

@@ -8,20 +8,19 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
-    #[sea_orm(unique)]
     pub slug: String,
     pub name: String,
     pub updated_at: DateTimeUtc,
     pub created_at: DateTimeUtc,
-    pub owner_id: Option<i64>,
+    pub owner_id: i64,
     #[sea_orm(
         belongs_to,
         from = "owner_id",
         to = "id",
         on_update = "Cascade",
-        on_delete = "SetNull"
+        on_delete = "Cascade"
     )]
-    pub dc_users: BelongsTo<Option<super::dc_users::Entity>>,
+    pub dc_users: BelongsTo<super::dc_users::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -2,6 +2,7 @@ use utoipa::{
     Modify, OpenApi,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
 };
+use utoipauto::utoipauto;
 
 struct SecurityAddon;
 
@@ -20,18 +21,10 @@ impl Modify for SecurityAddon {
     }
 }
 
+#[utoipauto(paths = "./crates/langcities-dc/src")]
 #[derive(OpenApi)]
 #[openapi(
     modifiers(&SecurityAddon),
-    paths(
-        crate::route::v1::token::validate_token,
-        crate::route::v1::users::get_user,
-        crate::route::v1::vernaculars::get_vernacular,
-        crate::route::v1::vernaculars::create_vernacular
-    ),
-    components(schemas(
-        crate::dto::vernaculars::VernacularAliasDto
-    )),
     security(("bearer" = []))
 )]
 pub struct ApiDoc;

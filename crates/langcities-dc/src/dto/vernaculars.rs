@@ -1,11 +1,17 @@
 use std::fmt::Display;
 
-use langcities_lcdcdsl::component::AliasedResourceId;
-use sea_orm::{ActiveValue, entity::prelude::DateTimeUtc};
+use langcities_lcdcdsl::component::{Alias, AliasedResourceId, SlugOwnerId};
+use sea_orm::{
+    ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter,
+    entity::prelude::DateTimeUtc,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::entity::vernaculars;
+use crate::{
+    entity::vernaculars,
+    error::{DcAppError, DcAppErrorTrait},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
 #[schema(value_type = String)]
@@ -26,6 +32,51 @@ impl<'de> Deserialize<'de> for VernacularAliasDto {
 impl Display for VernacularAliasDto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl VernacularAliasDto {
+    pub async fn resolve<C: ConnectionTrait>(
+        &self,
+        conn: &C,
+    ) -> Result<Option<vernaculars::Model>, DcAppError> {
+        match &self.0 {
+            AliasedResourceId::Id(id) => Self::resolve_id(**id, conn).await,
+            AliasedResourceId::Alias(aliased) => Self::resolve_aliased(aliased.clone(), conn).await,
+        }
+    }
+
+    async fn resolve_id<C: ConnectionTrait>(
+        id: i64,
+        conn: &C,
+    ) -> Result<Option<vernaculars::Model>, DcAppError> {
+        vernaculars::Entity::find_by_id(id)
+            .one(conn)
+            .await
+            // .map(|o| o.map(|m| m.id))
+            .map_err(|e| DcAppError::database(Some(e.into())))
+    }
+
+    async fn resolve_aliased<C: ConnectionTrait>(
+        aliased: SlugOwnerId,
+        conn: &C,
+    ) -> Result<Option<vernaculars::Model>, DcAppError> {
+        let slug: String = aliased.slug.into();
+        let user_id = match aliased.user_alias {
+            Alias::Id(id) => id,
+            Alias::Slug(_) => {
+                return Err(DcAppError::bad_request(Some(
+                    "user slug not implemented".into(),
+                )));
+            }
+        };
+        vernaculars::Entity::find()
+            .filter(vernaculars::Column::Slug.eq(slug))
+            .filter(vernaculars::Column::OwnerId.eq(*user_id))
+            .one(conn)
+            .await
+            // .map(|o| o.map(|m| m.id))
+            .map_err(|e| DcAppError::database(Some(e.into())))
     }
 }
 

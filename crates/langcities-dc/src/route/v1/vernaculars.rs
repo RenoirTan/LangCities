@@ -4,12 +4,10 @@ use axum::{
     routing::{get, post},
 };
 use langcities_jwt::payload::Claims;
-use langcities_lcdcdsl::component::AliasedResourceId;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, DbErr};
 
 use crate::{
     dto::vernaculars::{VernacularAliasDto, VernacularsCreateDto, VernacularsDto},
-    entity::*,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
@@ -30,22 +28,15 @@ pub async fn get_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularsDto>, DcAppError> {
-    let id = match &alias.0 {
-        AliasedResourceId::Id(id) => id.clone(),
-        AliasedResourceId::Alias(_) => {
-            return Err(DcAppError::other(Some("alias unsupported!".into())));
-        }
-    };
-    println!("Id={:?}", id);
-    let vernacular = vernaculars::Entity::find_by_id(id)
-        .one(&state.db)
+    alias
+        .resolve(&state.db)
         .await
-        .map_err(|e| DcAppError::database(Some(e.into())))
         .map(|o| {
-            o.ok_or_else(|| DcAppError::not_found(Some(format!("could not find {}", alias).into())))
+            o.map(|m| Json(m.into())).ok_or_else(|| {
+                DcAppError::not_found(Some(format!("vernacular {} not found", alias).into()))
+            })
         })
-        .flatten()?;
-    Ok(Json(VernacularsDto::from(vernacular)))
+        .flatten()
 }
 
 #[utoipa::path(post, path = "/v1/vernaculars")]

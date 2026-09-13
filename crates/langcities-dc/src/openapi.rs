@@ -26,7 +26,8 @@ impl Modify for SecurityAddon {
     paths(
         crate::route::v1::token::validate_token,
         crate::route::v1::users::get_user,
-        crate::route::v1::vernaculars::get_vernacular
+        crate::route::v1::vernaculars::get_vernacular,
+        crate::route::v1::vernaculars::create_vernacular
     ),
     components(schemas(
         crate::dto::vernaculars::VernacularAliasDto

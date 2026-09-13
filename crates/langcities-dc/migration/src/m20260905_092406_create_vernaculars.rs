@@ -20,8 +20,8 @@ impl MigrationTrait for Migration {
                     .col(pk_auto("id"))
                     .col(string("slug"))
                     .col(string("name"))
-                    .col(timestamp("updated_at"))
-                    .col(timestamp("created_at"))
+                    .col(timestamp_default_now("updated_at"))
+                    .col(timestamp_default_now("created_at"))
                     .col(integer("owner_id"))
                     .index(
                         Index::create()

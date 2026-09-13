@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use langcities_lcdcdsl::component::AliasedResourceId;
-use sea_orm::entity::prelude::DateTimeUtc;
+use sea_orm::{ActiveValue, entity::prelude::DateTimeUtc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -55,6 +55,23 @@ impl From<vernaculars::Model> for VernacularsDto {
             updated_at: model.updated_at,
             created_at: model.created_at,
             owner_id: model.owner_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct VernacularsCreateDto {
+    pub slug: String,
+    pub name: String,
+}
+
+impl VernacularsCreateDto {
+    pub fn to_active_model(self, owner_id: i64) -> vernaculars::ActiveModel {
+        vernaculars::ActiveModel {
+            slug: ActiveValue::Set(self.slug),
+            name: ActiveValue::Set(self.name),
+            owner_id: ActiveValue::Set(owner_id),
+            ..Default::default()
         }
     }
 }

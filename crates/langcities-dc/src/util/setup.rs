@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::entity::dc_users;
 use crate::error::{DcAppError, DcAppErrorTrait};
 use crate::state::AppState;
@@ -9,6 +7,7 @@ use axum::response::{IntoResponse, Response};
 use langcities_jwt::payload::{ParseJwtClaims, ParsedClaims};
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ConnectionTrait, EntityTrait, TransactionTrait, TryInsertResult};
+use std::sync::Arc;
 
 pub async fn create_user_if_not_exists<C: TransactionTrait>(
     conn: &C,

@@ -3,11 +3,11 @@ use axum::{
     extract::{Path, State},
     routing::{get, post},
 };
-use langcities_jwt::payload::Claims;
 use sea_orm::{ActiveModelTrait, DbErr};
 
 use crate::{
     dto::vernaculars::{VernacularAliasDto, VernacularsCreateDto, VernacularsDto},
+    entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
@@ -43,15 +43,11 @@ pub async fn get_vernacular(
 #[axum::debug_handler]
 pub async fn create_vernacular(
     State(state): State<AppState>,
-    claims: Claims,
+    user: dc_users::Model,
     Json(dto): Json<VernacularsCreateDto>,
 ) -> Result<Json<VernacularsDto>, DcAppError> {
     println!("{:#?}", dto);
-    let owner_id = claims
-        .sub_to_id()
-        .map(|o| o.ok_or_else(|| DcAppError::unauthorized(Some("Login required".into()))))
-        .map_err(|e| DcAppError::invalid_access_token(Some(e.into())))
-        .flatten()?;
+    let owner_id = user.id;
     let active_model = dto.to_active_model(owner_id);
     match active_model.insert(&state.db).await {
         Ok(model) => Ok(Json(model.into())),

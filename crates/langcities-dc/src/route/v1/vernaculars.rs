@@ -6,7 +6,7 @@ use axum::{
 use sea_orm::{ActiveModelTrait, DbErr};
 
 use crate::{
-    dto::vernaculars::{VernacularAliasDto, VernacularsCreateDto, VernacularsDto},
+    dto::vernaculars::{CreateVernacularDto, VernacularAliasDto, VernacularDto},
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
@@ -21,13 +21,16 @@ use crate::{
             Path,
             description = "Unique vernacular identifier, such as its numeric ID or alias"
         )
+    ),
+    responses(
+        (status = 200, body = VernacularDto, description = "vernacular details")
     )
 )]
 #[axum::debug_handler]
 pub async fn get_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     State(state): State<AppState>,
-) -> Result<Json<VernacularsDto>, DcAppError> {
+) -> Result<Json<VernacularDto>, DcAppError> {
     alias
         .resolve(&state.db)
         .await
@@ -39,13 +42,20 @@ pub async fn get_vernacular(
         .flatten()
 }
 
-#[utoipa::path(post, path = "/v1/vernaculars")]
+#[utoipa::path(
+    post,
+    path = "/v1/vernaculars",
+    request_body = CreateVernacularDto,
+    responses(
+        (status = 200, body = VernacularDto, description = "new vernacular details")
+    )
+)]
 #[axum::debug_handler]
 pub async fn create_vernacular(
     State(state): State<AppState>,
     user: dc_users::Model,
-    Json(dto): Json<VernacularsCreateDto>,
-) -> Result<Json<VernacularsDto>, DcAppError> {
+    Json(dto): Json<CreateVernacularDto>,
+) -> Result<Json<VernacularDto>, DcAppError> {
     println!("{:#?}", dto);
     let owner_id = user.id;
     let active_model = dto.to_active_model(owner_id);

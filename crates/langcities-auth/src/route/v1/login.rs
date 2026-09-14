@@ -8,7 +8,14 @@ use crate::{
     state::AppState,
 };
 
-#[utoipa::path(post, path = "/v1/login/password")]
+#[utoipa::path(
+    post,
+    path = "/v1/login/password",
+    request_body = PasswordLoginDto,
+    responses(
+        (status = 200, body = PasswordLoginResponseDto, description = "successful login")
+    )
+)]
 #[axum::debug_handler]
 pub async fn password_login(
     State(state): State<AppState>,

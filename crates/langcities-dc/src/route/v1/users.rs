@@ -1,5 +1,5 @@
 use crate::{
-    dto::users::{UserDto, UsersGetParamsDto, UsersGetQueryDto},
+    dto::users::{GetUserParamsDto, GetUsersQueryDto, UserDto},
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
@@ -12,10 +12,17 @@ use axum::{
 use langcities_lcdcdsl::component::Alias;
 use sea_orm::EntityTrait;
 
-#[utoipa::path(get, path = "/v1/users", params(UsersGetQueryDto))]
+#[utoipa::path(
+    get,
+    path = "/v1/users",
+    params(GetUsersQueryDto),
+    responses(
+        (status = 200, body = UserDto, description = "user details")
+    )
+)]
 #[axum::debug_handler]
 pub async fn get_user(
-    Query(query): Query<UsersGetQueryDto>,
+    Query(query): Query<GetUsersQueryDto>,
     State(state): State<AppState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     dc_users::Entity::find_by_auth_user_id(query.auth_user_id)
@@ -33,17 +40,14 @@ pub async fn get_user(
 #[utoipa::path(
     get,
     path = "/v1/users/{alias}",
-    params(
-        (
-            "alias" = UsersGetParamsDto,
-            Path,
-        )
+    params(("alias" = GetUserParamsDto, Path)),
+    responses(
+        (status = 200, body = UserDto, description = "user details")
     )
-
 )]
 #[axum::debug_handler]
 pub async fn get_user_by_alias(
-    Path(alias): Path<UsersGetParamsDto>,
+    Path(alias): Path<GetUserParamsDto>,
     State(state): State<AppState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     let user = match alias.0.clone() {

@@ -43,6 +43,7 @@ tower-sessions-sqlx-store = {
 }
 async-trait = "0.1.92"
 time = "0.3.55"
+utoipauto = "0.3.1"
 
 [dependencies.log]
 version = "0.4.33"

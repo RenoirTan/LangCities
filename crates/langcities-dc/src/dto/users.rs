@@ -11,15 +11,15 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, IntoParams)]
-pub struct UsersGetQueryDto {
+pub struct GetUsersQueryDto {
     pub auth_user_id: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
 #[schema(value_type = String)]
-pub struct UsersGetParamsDto(pub Alias);
+pub struct GetUserParamsDto(pub Alias);
 
-impl<'de> Deserialize<'de> for UsersGetParamsDto {
+impl<'de> Deserialize<'de> for GetUserParamsDto {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -31,7 +31,7 @@ impl<'de> Deserialize<'de> for UsersGetParamsDto {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {
     pub id: i64,
     pub auth_user_id: i64,

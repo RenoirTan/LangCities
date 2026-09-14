@@ -8,7 +8,13 @@ use crate::{
     util::jwt::{Access, Authorization, Microservice},
 };
 
-#[utoipa::path(post, path = "/v1/token/access/generic")]
+#[utoipa::path(
+    post,
+    path = "/v1/token/access/generic",
+    responses(
+        (status = 200, body = AccessTokenResponseDto, description = "generic access token")
+    )
+)]
 #[axum::debug_handler]
 pub async fn issue_generic_access_token(
     State(state): State<AppState>,
@@ -21,7 +27,13 @@ pub async fn issue_generic_access_token(
     access.mint(&state).map(|d| Json(d))
 }
 
-#[utoipa::path(post, path = "/v1/token/access/dc")]
+#[utoipa::path(
+    post,
+    path = "/v1/token/access/dc",
+    responses(
+        (status = 200, body = AccessTokenResponseDto, description = "access token for dc microservice")
+    )
+)]
 #[axum::debug_handler]
 pub async fn issue_dc_access_token(
     State(state): State<AppState>,

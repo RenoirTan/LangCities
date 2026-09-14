@@ -87,17 +87,19 @@ pub struct VernacularsGetQueryDto {
 }
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VernacularsDto {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct VernacularDto {
     pub id: i64,
     pub slug: String,
     pub name: String,
+    #[schema(value_type = String, format = DateTime)]
     pub updated_at: DateTimeUtc,
+    #[schema(value_type = String, format = DateTime)]
     pub created_at: DateTimeUtc,
     pub owner_id: i64,
 }
 
-impl From<vernaculars::Model> for VernacularsDto {
+impl From<vernaculars::Model> for VernacularDto {
     fn from(model: vernaculars::Model) -> Self {
         Self {
             id: model.id,
@@ -111,12 +113,12 @@ impl From<vernaculars::Model> for VernacularsDto {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct VernacularsCreateDto {
+pub struct CreateVernacularDto {
     pub slug: String,
     pub name: String,
 }
 
-impl VernacularsCreateDto {
+impl CreateVernacularDto {
     pub fn to_active_model(self, owner_id: i64) -> vernaculars::ActiveModel {
         vernaculars::ActiveModel {
             slug: ActiveValue::Set(self.slug),

@@ -1930,6 +1930,7 @@ dependencies = [
  "chrono",
  "clap",
  "figment",
+ "langcities-cache",
  "langcities-common",
  "langcities-common-db",
  "langcities-common-server",

@@ -8,7 +8,7 @@ use moka::{Expiry as MokaExpiry, future::Cache, ops::compute::Op};
 
 use crate::common::{CacheBackend, Expiry};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct MokaValue<V> {
     value: V,
     expiry: Option<Expiry>,
@@ -44,6 +44,7 @@ fn duration_from_expiry(expiry: Option<Expiry>) -> Option<Duration> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct MokaWrapper<K, V, S = RandomState>
 where
     K: Eq + Hash + Send + Sync + 'static,

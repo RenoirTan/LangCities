@@ -2,7 +2,7 @@ use std::error::Error;
 
 use langcities_config::datatype::Milliseconds;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Expiry {
     /// Keep the entry indefinitely, subject to normal cache eviction.
     None,

@@ -29,12 +29,17 @@ pub struct PartialDcConfig {
 
     #[arg(long)]
     pub username_cache_ttl: Option<Milliseconds>,
+
+    #[arg(long)]
+    pub username_cache_max_capacity: Option<u64>,
 }
 
 impl Merge<PartialDcConfig> for PartialDcConfig {
     fn merge_with(&mut self, rhs: PartialDcConfig) {
         self.seed_testing.merge_with(rhs.seed_testing);
         self.username_cache_ttl.merge_with(rhs.username_cache_ttl);
+        self.username_cache_max_capacity
+            .merge_with(rhs.username_cache_max_capacity);
     }
 }
 
@@ -122,6 +127,7 @@ impl Into<PartialConfig> for PartialCli {
 pub struct DcConfig {
     pub seed_testing: bool,
     pub username_cache_ttl: Duration,
+    pub username_cache_max_capacity: u64,
 }
 
 impl DcConfig {
@@ -131,6 +137,7 @@ impl DcConfig {
             username_cache_ttl: Duration::milliseconds(
                 partial.username_cache_ttl.unwrap_or(600000) as i64, // 10 minutes
             ),
+            username_cache_max_capacity: partial.username_cache_max_capacity.unwrap_or(10000),
         }
     }
 }
@@ -195,5 +202,20 @@ mod tests {
         let config = PartialDcConfig::try_parse_from(["test", "--seed-testing=false"]).unwrap();
 
         assert_eq!(config.seed_testing, Some(false));
+    }
+
+    #[test]
+    fn username_cache_options_are_parsed() {
+        let config = PartialDcConfig::try_parse_from([
+            "test",
+            "--username-cache-ttl",
+            "30000",
+            "--username-cache-max-capacity",
+            "250",
+        ])
+        .unwrap();
+
+        assert_eq!(config.username_cache_ttl, Some(30000));
+        assert_eq!(config.username_cache_max_capacity, Some(250));
     }
 }

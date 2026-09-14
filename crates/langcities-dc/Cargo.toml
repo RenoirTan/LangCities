@@ -23,6 +23,7 @@ tracing-subscriber = "0.3.23"
 langcities-common = { path = "../langcities-common", features = ["axum"] }
 langcities-common-db = { path = "../langcities-common-db" }
 langcities-common-server = { path = "../langcities-common-server" }
+langcities-cache = { path = "../langcities-cache" }
 langcities-config = { path = "../langcities-config" }
 langcities-jwt = { path = "../langcities-jwt", features = ["axum"] }
 langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }

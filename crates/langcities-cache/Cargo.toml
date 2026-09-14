@@ -1,0 +1,19 @@
+[package]
+name = "langcities-cache"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[features]
+default = ["moka"]
+moka = ["dep:moka"]
+
+[dependencies]
+langcities-config = { path = "../langcities-config" }
+moka = { version = "0.12", features = ["future"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "time"] }

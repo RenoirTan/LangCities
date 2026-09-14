@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use chrono::Duration;
 use clap::Parser;
 use figment::{
     Figment,
@@ -9,7 +10,10 @@ use figment::{
 use langcities_common::merge::Merge;
 use langcities_common_db::config::{DbConfig, PartialDbConfig};
 use langcities_common_server::config::{PartialServerConfig, ServerConfig};
-use langcities_config::error::{LcConfigError, LcConfigErrorTrait};
+use langcities_config::{
+    datatype::Milliseconds,
+    error::{LcConfigError, LcConfigErrorTrait},
+};
 use langcities_jwt::config::{JwtConfig, PartialJwtConfig};
 use serde::{Deserialize, Serialize};
 
@@ -22,11 +26,15 @@ pub struct PartialDcConfig {
         default_missing_value = "true"
     )]
     pub seed_testing: Option<bool>,
+
+    #[arg(long)]
+    pub username_cache_ttl: Option<Milliseconds>,
 }
 
 impl Merge<PartialDcConfig> for PartialDcConfig {
     fn merge_with(&mut self, rhs: PartialDcConfig) {
         self.seed_testing.merge_with(rhs.seed_testing);
+        self.username_cache_ttl.merge_with(rhs.username_cache_ttl);
     }
 }
 
@@ -65,16 +73,14 @@ impl PartialConfig {
             "db" => map![],
             "jwt" => map![],
         ];
+        let env_provider =
+            PartialDbConfig::modify_env_provider(PartialServerConfig::modify_env_provider(
+                PartialJwtConfig::modify_env_provider(Env::prefixed("LCDC_")),
+            ));
         let mut config: Self = Figment::new()
             .merge(Serialized::from(default, "default"))
             .merge(Json::file("lcdc.json"))
-            .merge(PartialDbConfig::modify_env_provider(Env::prefixed("LCDC_")))
-            .merge(PartialServerConfig::modify_env_provider(Env::prefixed(
-                "LCDC_",
-            )))
-            .merge(PartialJwtConfig::modify_env_provider(Env::prefixed(
-                "LCDC_",
-            )))
+            .merge(env_provider)
             .extract()
             .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?;
         config.merge_with(cli.into());
@@ -115,12 +121,16 @@ impl Into<PartialConfig> for PartialCli {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DcConfig {
     pub seed_testing: bool,
+    pub username_cache_ttl: Duration,
 }
 
 impl DcConfig {
     pub fn from_partial(partial: PartialDcConfig) -> Self {
         Self {
             seed_testing: partial.seed_testing.unwrap_or(false),
+            username_cache_ttl: Duration::milliseconds(
+                partial.username_cache_ttl.unwrap_or(600000) as i64, // 10 minutes
+            ),
         }
     }
 }

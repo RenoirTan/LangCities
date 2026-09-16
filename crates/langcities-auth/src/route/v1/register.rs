@@ -1,5 +1,4 @@
 use axum::{Json, extract::State};
-use chrono::Utc;
 use sea_orm::{ActiveValue, EntityTrait, TryInsertResult};
 
 use crate::{
@@ -23,12 +22,9 @@ pub async fn register(
     Json(dto): Json<RegisterDto>,
 ) -> Result<Json<UserDto>, AuthAppError> {
     let password_hash = state.pw_checker.hash_password(dto.password).await?;
-    let now = Utc::now();
     let user = users::ActiveModel {
         username: ActiveValue::Set(dto.username),
         password_hash: ActiveValue::Set(Some(password_hash)),
-        created_at: ActiveValue::Set(now.clone()),
-        updated_at: ActiveValue::Set(now),
         ..Default::default()
     };
     match users::Entity::insert(user)

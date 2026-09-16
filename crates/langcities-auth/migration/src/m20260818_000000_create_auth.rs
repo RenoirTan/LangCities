@@ -16,8 +16,8 @@ impl MigrationTrait for Migration {
                     .col(pk_auto("id"))
                     .col(string("username").unique_key())
                     .col(string("password_hash").null())
-                    .col(timestamp("created_at"))
-                    .col(timestamp("updated_at"))
+                    .col(timestamp_default_now("created_at"))
+                    .col(timestamp_default_now("updated_at"))
                     .to_owned(),
             )
             .await?;

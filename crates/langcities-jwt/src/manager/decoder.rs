@@ -38,8 +38,15 @@ impl JwtDecoder {
         let decoding_key = match &key_config.params {
             KeyParams::Hmac(hmac) => DecodingKey::from_secret(&hmac.secret),
         };
+        let issuer = match config.issuer.trim() {
+            s if s.len() >= 1 => Some(s),
+            _ => None,
+        };
         let mut validation = Validation::new(algorithm);
         validation.set_audience(audiences);
+        if let Some(issuer) = issuer {
+            validation.set_issuer(&[issuer]);
+        }
         Ok(Self::new(decoding_key, validation))
     }
 

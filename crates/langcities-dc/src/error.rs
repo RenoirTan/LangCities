@@ -11,6 +11,7 @@ pub enum DcAppErrorKind {
     InvalidAccessToken,
     BadRequest,
     NotFound,
+    AuthService,
     Other,
 }
 
@@ -26,6 +27,7 @@ impl Into<StatusCode> for DcAppErrorKind {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::BadRequest => StatusCode::BAD_REQUEST,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::AuthService => StatusCode::BAD_GATEWAY,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -42,6 +44,7 @@ pub trait DcAppErrorTrait {
     ) -> Self;
     fn bad_request(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn auth_service(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 }
 
@@ -74,5 +77,9 @@ impl DcAppErrorTrait for DcAppError {
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), DcAppErrorKind::Other)
+    }
+
+    fn auth_service(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), DcAppErrorKind::AuthService)
     }
 }

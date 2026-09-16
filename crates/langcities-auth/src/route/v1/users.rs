@@ -1,36 +1,30 @@
-use crate::{
-    dto::users::{ManyUserAliasDto, ManyUsersDto},
-    entity::*,
-    error::AuthAppErrorTrait,
-    session::SessionUserWrapper,
-};
+use crate::{entity::*, error::AuthAppErrorTrait, session::SessionUserWrapper};
 use axum::{
     Json,
     extract::{Path, State},
 };
 use axum_extra::extract::Query;
+use langcities_common_server::dto::users::{
+    AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto,
+};
 use langcities_lcdcdsl::component::Alias;
 use sea_orm::{ColumnTrait, Condition, EntityTrait, QueryFilter};
 
-use crate::{
-    dto::users::{UserAliasDto, UserDto},
-    error::AuthAppError,
-    state::AppState,
-};
+use crate::{error::AuthAppError, state::AppState};
 
 #[utoipa::path(
     get,
     path = "/v1/users/{alias}",
     params(UserAliasDto),
     responses(
-        (status = 200, body = UserDto, description = "user details")
+        (status = 200, body = AuthUserDto, description = "user details")
     )
 )]
 #[axum::debug_handler]
 pub async fn get_user(
     Path(alias): Path<UserAliasDto>,
     State(state): State<AppState>,
-) -> Result<Json<UserDto>, AuthAppError> {
+) -> Result<Json<AuthUserDto>, AuthAppError> {
     let sql = match &alias.0 {
         Alias::Id(id) => users::Entity::find_by_id(**id),
         Alias::Slug(username) => users::Entity::find_by_username(&**username),
@@ -51,15 +45,15 @@ pub async fn get_user(
     path = "/v1/users",
     params(ManyUserAliasDto),
     responses(
-        (status = 200, body = ManyUsersDto, description = "user details")
+        (status = 200, body = AuthUsersDto, description = "user details")
     )
 )]
 pub async fn get_many_users(
     Query(query): Query<ManyUserAliasDto>,
     State(state): State<AppState>,
-) -> Result<Json<ManyUsersDto>, AuthAppError> {
+) -> Result<Json<AuthUsersDto>, AuthAppError> {
     if query.aliases.len() == 0 {
-        return Ok(Json(ManyUsersDto { users: vec![] }));
+        return Ok(Json(AuthUsersDto { users: vec![] }));
     }
     let condition = query
         .aliases
@@ -80,18 +74,18 @@ pub async fn get_many_users(
     path = "/v1/users",
     description = "must be logged in to use",
     responses(
-        (status = 200, body = UserDto, description = "original user details")
+        (status = 200, body = AuthUserDto, description = "original user details")
     )
 )]
 pub async fn delete_user(
     session_user: SessionUserWrapper,
     State(state): State<AppState>,
-) -> Result<Json<UserDto>, AuthAppError> {
+) -> Result<Json<AuthUserDto>, AuthAppError> {
     let user_session = session_user.get_user();
     let id = user_session
         .id
         .ok_or_else(|| AuthAppError::unauthorized(Some("not logged in".into())))?;
-    let user: UserDto = users::Entity::delete_by_id(id)
+    let user: AuthUserDto = users::Entity::delete_by_id(id)
         .exec_with_returning(&state.db)
         .await
         .map(|o| {

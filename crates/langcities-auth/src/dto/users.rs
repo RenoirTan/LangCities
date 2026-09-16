@@ -1,33 +1,8 @@
-use langcities_lcdcdsl::component::Alias;
-use sea_orm::entity::prelude::DateTimeUtc;
-use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
+use langcities_common_server::dto::users::AuthUserDto;
 
 use crate::entity::users;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
-#[into_params(names("alias"))]
-#[schema(value_type = String)]
-pub struct UserAliasDto(#[param(value_type = String)] pub Alias);
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
-pub struct ManyUserAliasDto {
-    #[serde(default)]
-    #[param(value_type = Vec<String>, style = Form, explode = true)]
-    pub aliases: Vec<UserAliasDto>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct UserDto {
-    pub id: i64,
-    pub username: String,
-    #[schema(value_type = String, format = DateTime)]
-    pub created_at: DateTimeUtc,
-    #[schema(value_type = String, format = DateTime)]
-    pub updated_at: DateTimeUtc,
-}
-
-impl From<users::Model> for UserDto {
+impl From<users::Model> for AuthUserDto {
     fn from(value: users::Model) -> Self {
         Self {
             id: value.id,
@@ -38,15 +13,58 @@ impl From<users::Model> for UserDto {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct ManyUsersDto {
-    #[serde(default)]
-    pub users: Vec<UserDto>,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use langcities_common_server::dto::users::{AuthUsersDto, ManyUserAliasDto};
+    use serde_json::json;
 
-impl<U: Into<UserDto>> FromIterator<U> for ManyUsersDto {
-    fn from_iter<T: IntoIterator<Item = U>>(iter: T) -> Self {
-        let users = iter.into_iter().map(|u| u.into()).collect();
-        Self { users }
+    #[test]
+    fn shared_user_response_preserves_the_public_json_contract() {
+        let model = users::Model {
+            id: 42,
+            username: "alice".into(),
+            password_hash: Some("private-hash".into()),
+            created_at: "2026-01-01T00:00:00Z".parse().unwrap(),
+            updated_at: "2026-01-02T00:00:00Z".parse().unwrap(),
+        };
+        let dto: AuthUsersDto = [model].into_iter().collect();
+        let expected = json!({"users": [{
+            "id": 42,
+            "username": "alice",
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-02T00:00:00Z"
+        }]});
+        assert_eq!(serde_json::to_value(&dto).unwrap(), expected);
+        assert_eq!(
+            serde_json::from_value::<AuthUsersDto>(expected).unwrap(),
+            dto
+        );
+        assert!(
+            serde_json::from_value::<AuthUsersDto>(json!({}))
+                .unwrap()
+                .users
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn shared_alias_query_accepts_repeated_parameters() {
+        use axum::http::Uri;
+        use axum_extra::extract::Query;
+
+        let uri: Uri = "/v1/users?aliases=alice&aliases=bob".parse().unwrap();
+        let Query(query) = Query::<ManyUserAliasDto>::try_from_uri(&uri).unwrap();
+        assert_eq!(query.aliases.len(), 2);
+        assert_eq!(query.aliases[0].0.to_string(), "alice");
+        assert_eq!(query.aliases[1].0.to_string(), "bob");
+
+        let empty: Uri = "/v1/users".parse().unwrap();
+        assert!(
+            Query::<ManyUserAliasDto>::try_from_uri(&empty)
+                .unwrap()
+                .aliases
+                .is_empty()
+        );
     }
 }

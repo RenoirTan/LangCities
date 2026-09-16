@@ -1,6 +1,9 @@
 {
   "dc": {
-    "seed_testing": false
+    "seed_testing": false,
+    "auth_base_url": "http://localhost:8000",
+    "username_cache_ttl": 30000,
+    "username_cache_max_capacity": 10000
   },
   "server": {
     "bind_address": "0.0.0.0",

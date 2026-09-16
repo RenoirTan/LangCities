@@ -1,8 +1,9 @@
 use axum::{Json, extract::State};
+use langcities_common_server::dto::users::AuthUserDto;
 use sea_orm::{ActiveValue, EntityTrait, TryInsertResult};
 
 use crate::{
-    dto::{register::RegisterDto, users::UserDto},
+    dto::register::RegisterDto,
     entity::users,
     error::{AuthAppError, AuthAppErrorTrait},
     state::AppState,
@@ -13,14 +14,14 @@ use crate::{
     path = "/v1/register",
     request_body = RegisterDto,
     responses(
-        (status = 200, body = UserDto, description = "successful registration")
+        (status = 200, body = AuthUserDto, description = "successful registration")
     )
 )]
 #[axum::debug_handler]
 pub async fn register(
     State(state): State<AppState>,
     Json(dto): Json<RegisterDto>,
-) -> Result<Json<UserDto>, AuthAppError> {
+) -> Result<Json<AuthUserDto>, AuthAppError> {
     let password_hash = state.pw_checker.hash_password(dto.password).await?;
     let user = users::ActiveModel {
         username: ActiveValue::Set(dto.username),

@@ -52,10 +52,11 @@ pub async fn get_user_by_alias(
 ) -> Result<Json<UserDto>, DcAppError> {
     let user = match alias.0.clone() {
         Alias::Id(id) => dc_users::Entity::find_by_id(*id).one(&state.db).await,
-        Alias::Slug(_username) => {
-            return Err(DcAppError::bad_request(Some(
-                "username not supported yet".into(),
-            )));
+        Alias::Slug(username) => {
+            let auth_id = state.resolve_auth_user_id(&**username).await?;
+            dc_users::Entity::find_by_auth_user_id(auth_id)
+                .one(&state.db)
+                .await
         }
     };
     match user {

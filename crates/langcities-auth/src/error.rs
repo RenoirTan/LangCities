@@ -13,6 +13,7 @@ pub enum AuthAppErrorKind {
     Other,
     FailedSession,
     Unauthorized,
+    NotFound,
 }
 
 impl Display for AuthAppErrorKind {
@@ -31,6 +32,7 @@ impl Into<StatusCode> for AuthAppErrorKind {
             Self::Other => StatusCode::INTERNAL_SERVER_ERROR,
             Self::FailedSession => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::NotFound => StatusCode::NOT_FOUND,
         }
     }
 }
@@ -47,6 +49,7 @@ pub trait AuthAppErrorTrait {
     fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
 }
 
 impl AuthAppErrorTrait for AuthAppError {
@@ -78,5 +81,9 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
         Self::new(source.into(), AuthAppErrorKind::Other)
+    }
+
+    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
+        Self::new(source.into(), AuthAppErrorKind::NotFound)
     }
 }

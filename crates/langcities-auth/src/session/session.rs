@@ -41,6 +41,10 @@ impl SessionUserWrapper {
     pub fn set_expiry(&self, expiry: Expiry) {
         self.session.set_expiry(Some(expiry));
     }
+
+    pub async fn delete(self) -> Result<(), tower_sessions::session::Error> {
+        self.session.delete().await
+    }
 }
 
 impl AsRef<SessionUserDto> for SessionUserWrapper {

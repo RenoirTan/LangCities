@@ -2,7 +2,7 @@ use axum::{Json, extract::State};
 use sea_orm::{ActiveValue, EntityTrait, TryInsertResult};
 
 use crate::{
-    dto::{register::RegisterDto, user::UserDto},
+    dto::{register::RegisterDto, users::UserDto},
     entity::users,
     error::{AuthAppError, AuthAppErrorTrait},
     state::AppState,

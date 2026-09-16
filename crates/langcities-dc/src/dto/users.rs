@@ -15,21 +15,9 @@ pub struct GetUsersQueryDto {
     pub auth_user_id: i64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String)]
 pub struct GetUserParamsDto(pub Alias);
-
-impl<'de> Deserialize<'de> for GetUserParamsDto {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse::<Alias>()
-            .map(Self)
-            .map_err(serde::de::Error::custom)
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {

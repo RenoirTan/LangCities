@@ -14,6 +14,7 @@ moka = ["dep:moka"]
 [dependencies]
 langcities-config = { path = "../langcities-config" }
 moka = { version = "0.12", features = ["future"], optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "time"] }

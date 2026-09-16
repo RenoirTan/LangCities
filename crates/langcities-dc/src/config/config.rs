@@ -1,10 +1,10 @@
-use chrono::Duration;
 use clap::Parser;
 use figment::{
     Figment,
     providers::{Env, Format, Json, Serialized},
     util::map,
 };
+use langcities_cache::common::Expiry;
 use langcities_common::merge::Merge;
 use langcities_common_db::config::{DbConfig, PartialDbConfig};
 use langcities_common_server::config::{PartialServerConfig, ServerConfig};
@@ -125,7 +125,7 @@ impl Into<PartialConfig> for PartialCli {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DcConfig {
     pub seed_testing: bool,
-    pub username_cache_ttl: Duration,
+    pub username_cache_expiry: Expiry,
     pub username_cache_max_capacity: u64,
 }
 
@@ -133,9 +133,10 @@ impl DcConfig {
     pub fn from_partial(partial: PartialDcConfig) -> Self {
         Self {
             seed_testing: partial.seed_testing.unwrap_or(false),
-            username_cache_ttl: Duration::milliseconds(
-                partial.username_cache_ttl.unwrap_or(600000) as i64, // 10 minutes
-            ),
+            username_cache_expiry: match partial.username_cache_ttl {
+                None => Expiry::None,
+                Some(ms) => Expiry::Ttl(ms),
+            },
             username_cache_max_capacity: partial.username_cache_max_capacity.unwrap_or(10000),
         }
     }

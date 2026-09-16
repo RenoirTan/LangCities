@@ -11,7 +11,7 @@ use crate::common::{CacheBackend, Expiry};
 #[derive(Clone, Debug)]
 struct MokaValue<V> {
     value: V,
-    expiry: Option<Expiry>,
+    expiry: Expiry,
 }
 
 struct MokaExpiryPolicy;
@@ -23,7 +23,7 @@ impl<K, V> MokaExpiry<K, MokaValue<V>> for MokaExpiryPolicy {
         value: &MokaValue<V>,
         _created_at: std::time::Instant,
     ) -> Option<Duration> {
-        duration_from_expiry(value.expiry)
+        value.expiry.to_duration()
     }
 
     fn expire_after_update(
@@ -33,14 +33,7 @@ impl<K, V> MokaExpiry<K, MokaValue<V>> for MokaExpiryPolicy {
         _updated_at: std::time::Instant,
         _duration_until_expiry: Option<Duration>,
     ) -> Option<Duration> {
-        duration_from_expiry(value.expiry)
-    }
-}
-
-fn duration_from_expiry(expiry: Option<Expiry>) -> Option<Duration> {
-    match expiry {
-        Some(Expiry::Ttl(milliseconds)) => Some(Duration::from_millis(milliseconds)),
-        None | Some(Expiry::None) => None,
+        value.expiry.to_duration()
     }
 }
 
@@ -97,7 +90,7 @@ where
         &self,
         key: K,
         value: V,
-        expiry: Option<Expiry>,
+        expiry: Expiry,
     ) -> Result<Option<V>, Box<dyn Error + Send + Sync + 'static>> {
         let mut previous = None;
         self.inner
@@ -129,10 +122,7 @@ mod tests {
     async fn ttl_expires_entries() {
         let cache = MokaWrapper::new(10);
 
-        cache
-            .set("key", "value", Some(Expiry::Ttl(25)))
-            .await
-            .unwrap();
+        cache.set("key", "value", Expiry::Ttl(25)).await.unwrap();
         assert_eq!(cache.get(&"key").await, Some("value"));
 
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -144,10 +134,13 @@ mod tests {
     async fn entries_without_expiry_remain_cached() {
         let cache = MokaWrapper::new(10);
 
-        assert_eq!(cache.set("none", "value", None).await.unwrap(), None);
+        assert_eq!(
+            cache.set("none", "value", Expiry::None).await.unwrap(),
+            None
+        );
         assert_eq!(
             cache
-                .set("explicit-none", "value", Some(Expiry::None))
+                .set("explicit-none", "value", Expiry::None)
                 .await
                 .unwrap(),
             None
@@ -164,17 +157,11 @@ mod tests {
         let cache = MokaWrapper::new(10);
 
         assert_eq!(
-            cache
-                .set("key", "short", Some(Expiry::Ttl(100)))
-                .await
-                .unwrap(),
+            cache.set("key", "short", Expiry::Ttl(100)).await.unwrap(),
             None
         );
         assert_eq!(
-            cache
-                .set("key", "long", Some(Expiry::Ttl(200)))
-                .await
-                .unwrap(),
+            cache.set("key", "long", Expiry::Ttl(200)).await.unwrap(),
             Some("short")
         );
 
@@ -189,9 +176,9 @@ mod tests {
     async fn set_returns_the_previous_value() {
         let cache = MokaWrapper::new(10);
 
-        assert_eq!(cache.set("key", "first", None).await.unwrap(), None);
+        assert_eq!(cache.set("key", "first", Expiry::None).await.unwrap(), None);
         assert_eq!(
-            cache.set("key", "second", None).await.unwrap(),
+            cache.set("key", "second", Expiry::None).await.unwrap(),
             Some("first")
         );
         assert_eq!(cache.get(&"key").await, Some("second"));

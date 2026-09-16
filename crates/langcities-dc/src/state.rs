@@ -1,20 +1,15 @@
-use std::{error::Error, sync::Arc};
-
-use langcities_cache::{
-    backend::moka::MokaWrapper,
-    common::{CacheBackend, Expiry},
+use crate::{
+    config::Config,
+    error::{DcAppError, DcAppErrorTrait},
 };
+use langcities_cache::{backend::moka::MokaWrapper, common::CacheBackend};
 use langcities_jwt::{
     manager::JwtDecoder,
     microservice::Microservice,
     payload::{ParseJwtClaims, ParsedClaims},
 };
 use sea_orm::{Database, DatabaseConnection};
-
-use crate::{
-    config::Config,
-    error::{DcAppError, DcAppErrorTrait},
-};
+use std::{error::Error, sync::Arc};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
@@ -46,16 +41,12 @@ impl AppState {
         username: String,
         id: i64,
     ) -> Result<Option<i64>, Box<dyn Error + Send + Sync + 'static>> {
-        let ttl = self
-            .config
-            .dc
-            .username_cache_ttl
-            .num_milliseconds()
-            .try_into()
-            .expect("username cache TTL must be non-negative");
-        self.username_cache
-            .set(username, id, Some(Expiry::Ttl(ttl)))
-            .await
+        let expiry = self.config.dc.username_cache_expiry.clone();
+        self.username_cache.set(username, id, expiry).await
+    }
+
+    pub async fn get_cached_id_from_username(&self, username: String) -> Option<i64> {
+        self.username_cache.get(&username).await
     }
 
     pub async fn create<C>(config: C) -> Result<Self, DcAppError>

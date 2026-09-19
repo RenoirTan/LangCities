@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, patch, post},
 };
+use langcities_lcdcdsl::component::Id;
 use sea_orm::{ActiveModelTrait, DbErr, ModelTrait};
 
 use crate::{
@@ -31,10 +32,16 @@ use crate::{
 #[axum::debug_handler]
 pub async fn get_vernacular(
     Path(alias): Path<VernacularAliasDto>,
+    caller_model: Option<dc_users::Model>,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
     alias
-        .resolve(&state.db, &state)
+        .resolve(
+            &state.db,
+            &state,
+            caller_model.map(|m| Id::from(m.id)),
+            false,
+        )
         .await
         .map(|o| {
             o.map(|m| Json(m.into())).ok_or_else(|| {
@@ -58,7 +65,6 @@ pub async fn create_vernacular(
     user: dc_users::Model,
     Json(dto): Json<CreateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    println!("{:#?}", dto);
     let owner_id = user.id;
     let active_model = dto.to_active_model(owner_id);
     match active_model.insert(&state.db).await {
@@ -88,11 +94,12 @@ pub async fn create_vernacular(
 #[axum::debug_handler]
 pub async fn update_vernacular(
     Path(alias): Path<VernacularAliasDto>,
+    caller_model: dc_users::Model,
     State(state): State<AppState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
     let mut active: vernaculars::ActiveModel = alias
-        .resolve(&state.db, &state)
+        .resolve(&state.db, &state, Some(Id::from(caller_model.id)), true)
         .await
         .map(|o| o.ok_or_else(|| DcAppError::not_found(Some(format!("{alias}").into()))))
         .flatten()?
@@ -122,10 +129,11 @@ pub async fn update_vernacular(
 #[axum::debug_handler]
 pub async fn delete_vernacular(
     Path(alias): Path<VernacularAliasDto>,
+    caller_model: dc_users::Model,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
     let model = alias
-        .resolve(&state.db, &state)
+        .resolve(&state.db, &state, Some(Id::from(caller_model.id)), true)
         .await
         .map(|o| {
             o.ok_or_else(|| {

@@ -268,6 +268,7 @@ impl<'de> Deserialize<'de> for SlugOwnerId {
 pub enum AliasedResourceId {
     Id(Id),
     Alias(SlugOwnerId),
+    Slug(Slug),
 }
 
 impl Display for AliasedResourceId {
@@ -275,6 +276,7 @@ impl Display for AliasedResourceId {
         match self {
             Self::Id(id) => id.fmt(f),
             Self::Alias(alias) => alias.fmt(f),
+            Self::Slug(slug) => slug.fmt(f),
         }
     }
 }
@@ -285,6 +287,7 @@ impl FromStr for AliasedResourceId {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.parse::<Id>()
             .map(Self::Id)
+            .or_else(|_| s.parse::<Slug>().map(Self::Slug))
             .or_else(|_| s.parse::<SlugOwnerId>().map(Self::Alias))
     }
 }

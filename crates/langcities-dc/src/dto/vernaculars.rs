@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use langcities_lcdcdsl::component::{Alias, AliasedResourceId, SlugOwnerId};
+use langcities_lcdcdsl::component::{Alias, AliasedResourceId, Id, SlugOwnerId};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter,
     entity::prelude::DateTimeUtc, sea_query::Query,
@@ -41,12 +41,38 @@ impl VernacularAliasDto {
         &self,
         conn: &C,
         state: &AppState,
+        caller_id: Option<Id>,
+        enforce_ownership: bool,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
-        match &self.0 {
+        let vernacular = match &self.0 {
             AliasedResourceId::Id(id) => Self::resolve_id(**id, conn).await,
             AliasedResourceId::Alias(aliased) => {
                 Self::resolve_aliased(aliased.clone(), conn, state).await
             }
+            AliasedResourceId::Slug(slug) => {
+                let owner_id = caller_id.as_ref().ok_or_else(|| {
+                    DcAppError::bad_request(Some(format!("pure slug '{slug}' needs login").into()))
+                })?;
+                let aliased = SlugOwnerId {
+                    slug: slug.clone(),
+                    user_alias: Alias::Id(owner_id.clone()),
+                };
+                Self::resolve_aliased(aliased, conn, state).await
+            }
+        }?;
+        match vernacular {
+            Some(v) if enforce_ownership => {
+                if let Some(caller_id) = caller_id
+                    && caller_id == v.owner_id.into()
+                {
+                    Ok(Some(v))
+                } else {
+                    Err(DcAppError::unauthorized(Some(
+                        format!("could not access '{self}'").into(),
+                    )))
+                }
+            }
+            otherwise => Ok(otherwise),
         }
     }
 

@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::{
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
+    state::AppState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, IntoParams)]
@@ -52,6 +53,17 @@ where
     }
 }
 
+impl FromRequestParts<AppState> for Option<dc_users::Model> {
+    type Rejection = DcAppError;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(dc_users::Model::from_request_parts(parts, state).await.ok())
+    }
+}
+
 impl<S> FromRequestParts<S> for UserDto
 where
     S: Any + Send + Sync,
@@ -65,5 +77,16 @@ where
         dc_users::Model::from_request_parts(parts, state)
             .await
             .map(|m| m.into())
+    }
+}
+
+impl FromRequestParts<AppState> for Option<UserDto> {
+    type Rejection = DcAppError;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(UserDto::from_request_parts(parts, state).await.ok())
     }
 }

@@ -129,6 +129,33 @@ impl CreateVernacularDto {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct UpdateVernacularDto {
+    pub slug: Option<String>,
+    pub name: Option<String>,
+}
+
+impl UpdateVernacularDto {
+    pub fn to_active_model(self) -> vernaculars::ActiveModel {
+        let mut am = vernaculars::ActiveModel::default();
+        self.update_active_model(&mut am);
+        am
+    }
+
+    pub fn update_active_model(
+        self,
+        am: &mut vernaculars::ActiveModel,
+    ) -> &mut vernaculars::ActiveModel {
+        if let Some(slug) = self.slug {
+            am.slug = ActiveValue::Set(slug);
+        }
+        if let Some(name) = self.name {
+            am.name = ActiveValue::Set(name);
+        }
+        am
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

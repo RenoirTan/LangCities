@@ -8,6 +8,13 @@ WORKDIR /app
 
 FROM dev-base AS dev-build
 
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/usr/local/cargo/target \
+  --mount=type=cache,target=/usr/local/cargo/git \
+  cargo install sea-orm-cli@^2
+
+RUN rustup component add rustfmt
+
 FROM dev-base AS dev-auth
 
 CMD ["/app/target/debug/langcities-auth"]

@@ -1,4 +1,5 @@
 use crate::{
+    entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
@@ -8,7 +9,7 @@ use axum_extra::{
     headers::{Authorization, authorization::Bearer},
 };
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
-use langcities_jwt::payload::{Claims, ParsedClaims};
+use langcities_jwt::payload::Claims;
 use langcities_lcdcdsl::component::Id;
 use std::{
     any::Any,
@@ -82,20 +83,10 @@ impl FromRequestParts<AppState> for RequestContext {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let parsed_claims: ParsedClaims<DcAppError> = parts.extract_with_state(state).await?;
-        match parsed_claims {
-            ParsedClaims::Valid(claims) => Ok(RequestContext {
-                caller_id: claims
-                    .sub_to_id()
-                    .map(|id| id.map(Id::from))
-                    .map_err(|e| DcAppError::invalid_access_token(Some(e.into())))?,
-                access_kind: RequestAccessKind::NormalUser,
-            }),
-            ParsedClaims::Invalid(e) => Err(e),
-            ParsedClaims::Missing => Ok(RequestContext {
-                caller_id: None,
-                access_kind: RequestAccessKind::NormalUser,
-            }),
-        }
+        let user: Option<dc_users::Model> = parts.extract_with_state(state).await?;
+        Ok(RequestContext {
+            caller_id: user.map(|m| Id::from(m.id)),
+            access_kind: RequestAccessKind::NormalUser,
+        })
     }
 }

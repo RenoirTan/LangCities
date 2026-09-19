@@ -40,11 +40,14 @@ pub async fn create_user_if_not_exists<C: TransactionTrait>(
 
 pub async fn get_or_create_user<C: ConnectionTrait + TransactionTrait>(
     conn: &C,
-    id: i64,
+    auth_user_id: i64,
 ) -> Result<dc_users::Model, DcAppError> {
-    match dc_users::Entity::find_by_auth_user_id(id).one(conn).await {
+    match dc_users::Entity::find_by_auth_user_id(auth_user_id)
+        .one(conn)
+        .await
+    {
         Ok(Some(u)) => Ok(u),
-        Ok(None) => create_user_if_not_exists(conn, id).await,
+        Ok(None) => create_user_if_not_exists(conn, auth_user_id).await,
         Err(e) => Err(DcAppError::database(Some(e.into()))),
     }
 }

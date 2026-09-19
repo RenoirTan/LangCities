@@ -3,14 +3,15 @@ use std::fmt::Display;
 use langcities_lcdcdsl::component::{Alias, AliasedResourceId, SlugOwnerId};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter,
-    entity::prelude::DateTimeUtc,
+    entity::prelude::DateTimeUtc, sea_query::Query,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    entity::vernaculars,
+    entity::{dc_users, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
+    state::AppState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
@@ -39,10 +40,13 @@ impl VernacularAliasDto {
     pub async fn resolve<C: ConnectionTrait>(
         &self,
         conn: &C,
+        state: &AppState,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
         match &self.0 {
             AliasedResourceId::Id(id) => Self::resolve_id(**id, conn).await,
-            AliasedResourceId::Alias(aliased) => Self::resolve_aliased(aliased.clone(), conn).await,
+            AliasedResourceId::Alias(aliased) => {
+                Self::resolve_aliased(aliased.clone(), conn, state).await
+            }
         }
     }
 
@@ -60,19 +64,25 @@ impl VernacularAliasDto {
     async fn resolve_aliased<C: ConnectionTrait>(
         aliased: SlugOwnerId,
         conn: &C,
+        state: &AppState,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
         let slug: String = aliased.slug.into();
-        let user_id = match aliased.user_alias {
-            Alias::Id(id) => id,
-            Alias::Slug(_) => {
-                return Err(DcAppError::bad_request(Some(
-                    "user slug not implemented".into(),
-                )));
+        let user_condition = match aliased.user_alias {
+            Alias::Id(id) => vernaculars::Column::OwnerId.eq(*id),
+            Alias::Slug(username) => {
+                let auth_user_id = state.resolve_auth_user_id(&**username).await?;
+                vernaculars::Column::OwnerId.in_subquery(
+                    Query::select()
+                        .column(dc_users::Column::Id)
+                        .and_where(dc_users::Column::AuthUserId.eq(auth_user_id))
+                        .from(dc_users::Entity)
+                        .to_owned(),
+                )
             }
         };
         vernaculars::Entity::find()
             .filter(vernaculars::Column::Slug.eq(slug))
-            .filter(vernaculars::Column::OwnerId.eq(*user_id))
+            .filter(user_condition)
             .one(conn)
             .await
             // .map(|o| o.map(|m| m.id))

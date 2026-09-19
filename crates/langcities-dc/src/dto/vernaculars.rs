@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use chrono::Utc;
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_lcdcdsl::component::{Alias, AliasedResourceId, Id, SlugOwnerId};
 use sea_orm::{
@@ -178,6 +179,7 @@ pub struct VernacularDto {
     #[schema(value_type = String, format = DateTime)]
     pub created_at: DateTimeUtc,
     pub owner_id: i64,
+    pub next_entry_id: i64,
 }
 
 impl From<vernaculars::Model> for VernacularDto {
@@ -189,6 +191,7 @@ impl From<vernaculars::Model> for VernacularDto {
             updated_at: model.updated_at,
             created_at: model.created_at,
             owner_id: model.owner_id,
+            next_entry_id: model.next_entry_id,
         }
     }
 }
@@ -233,6 +236,7 @@ impl UpdateVernacularDto {
         if let Some(name) = self.name {
             am.name = ActiveValue::Set(name);
         }
+        am.updated_at = ActiveValue::Set(Utc::now());
         am
     }
 }

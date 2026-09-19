@@ -13,6 +13,7 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
     pub created_at: DateTimeUtc,
     pub owner_id: i64,
+    pub next_entry_id: i64,
     #[sea_orm(
         belongs_to,
         from = "owner_id",

@@ -23,6 +23,7 @@ impl MigrationTrait for Migration {
                     .col(timestamp_default_now("updated_at"))
                     .col(timestamp_default_now("created_at"))
                     .col(integer("owner_id"))
+                    .col(integer("next_entry_id").default(0))
                     .index(
                         Index::create()
                             .unique()

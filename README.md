@@ -15,3 +15,13 @@ LangCities uses SeaORM to manage the data stored in databases. It uses the new d
 ```bash
 sea-orm-cli generate entity -u $LCAUTH_DB_URL -o crates/langcities-auth/src/entity --entity-format dense
 ```
+
+## Docker
+
+### dev
+
+```bash
+mkdir -p data/cargo/{target,git,registry}
+docker compose -f docker-compose.yaml -f docker-compose.sqlite.yaml -f docker-compose.dev.yaml build
+docker compose -f docker-compose.yaml -f docker-compose.sqlite.yaml -f docker-compose.dev.yaml up --remove-orphans
+```

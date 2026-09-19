@@ -1,4 +1,4 @@
-FROM rust:1.98.0-trixie AS dev-base
+FROM rust:1.98-trixie AS dev-base
 
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends git libsqlite3-dev pkg-config \

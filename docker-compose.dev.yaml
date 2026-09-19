@@ -6,6 +6,7 @@ services:
       target: dev-build
     restart: "no"
     command: cargo build --workspace --features dev,sqlite,mysql,postgres
+    user: ${LC_USER}
     volumes:
       - .:/app
       - ./data/cargo/target/:/app/target
@@ -18,6 +19,7 @@ services:
     depends_on:
       dev-build:
         condition: service_completed_successfully
+    user: ${LC_USER}
     volumes:
       - ./data/cargo/target/:/app/target:ro
 
@@ -27,5 +29,6 @@ services:
     depends_on:
       dev-build:
         condition: service_completed_successfully
+    user: ${LC_USER}
     volumes:
       - ./data/cargo/target/:/app/target:ro

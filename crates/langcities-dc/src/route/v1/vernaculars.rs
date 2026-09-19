@@ -3,12 +3,13 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, patch, post},
 };
-use langcities_lcdcdsl::component::Id;
+use langcities_common_server::dto::request::RequestContext;
 use sea_orm::{ActiveModelTrait, DbErr, ModelTrait};
 
 use crate::{
     dto::vernaculars::{
-        CreateVernacularDto, UpdateVernacularDto, VernacularAliasDto, VernacularDto,
+        CreateVernacularDto, UpdateVernacularDto, VernacularAccessDto, VernacularAliasDto,
+        VernacularDto,
     },
     entity::{dc_users, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
@@ -32,16 +33,11 @@ use crate::{
 #[axum::debug_handler]
 pub async fn get_vernacular(
     Path(alias): Path<VernacularAliasDto>,
-    caller_model: Option<dc_users::Model>,
+    request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    alias
-        .resolve(
-            &state.db,
-            &state,
-            caller_model.map(|m| Id::from(m.id)),
-            false,
-        )
+    VernacularAccessDto::read(alias.clone(), request_context)
+        .resolve(&state.db, &state)
         .await
         .map(|o| {
             o.map(|m| Json(m.into())).ok_or_else(|| {
@@ -94,16 +90,17 @@ pub async fn create_vernacular(
 #[axum::debug_handler]
 pub async fn update_vernacular(
     Path(alias): Path<VernacularAliasDto>,
-    caller_model: dc_users::Model,
+    request_context: RequestContext,
     State(state): State<AppState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    let mut active: vernaculars::ActiveModel = alias
-        .resolve(&state.db, &state, Some(Id::from(caller_model.id)), true)
-        .await
-        .map(|o| o.ok_or_else(|| DcAppError::not_found(Some(format!("{alias}").into()))))
-        .flatten()?
-        .into();
+    let mut active: vernaculars::ActiveModel =
+        VernacularAccessDto::write(alias.clone(), request_context)
+            .resolve(&state.db, &state)
+            .await
+            .map(|o| o.ok_or_else(|| DcAppError::not_found(Some(format!("{alias}").into()))))
+            .flatten()?
+            .into();
     dto.update_active_model(&mut active);
     active
         .update(&state.db)
@@ -129,11 +126,11 @@ pub async fn update_vernacular(
 #[axum::debug_handler]
 pub async fn delete_vernacular(
     Path(alias): Path<VernacularAliasDto>,
-    caller_model: dc_users::Model,
+    request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    let model = alias
-        .resolve(&state.db, &state, Some(Id::from(caller_model.id)), true)
+    let model = VernacularAccessDto::delete(alias.clone(), request_context)
+        .resolve(&state.db, &state)
         .await
         .map(|o| {
             o.ok_or_else(|| {

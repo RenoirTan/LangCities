@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_lcdcdsl::component::{Alias, AliasedResourceId, Id, SlugOwnerId};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter,
@@ -36,21 +37,75 @@ impl Display for VernacularAliasDto {
     }
 }
 
-impl VernacularAliasDto {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum VernacularAction {
+    Read,
+    Write,
+    Delete,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VernacularAccessDto {
+    pub alias: VernacularAliasDto,
+    pub request_context: RequestContext,
+    pub action: VernacularAction,
+}
+
+impl VernacularAccessDto {
+    pub fn read(alias: VernacularAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: VernacularAction::Read,
+        }
+    }
+
+    pub fn write(alias: VernacularAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: VernacularAction::Write,
+        }
+    }
+
+    pub fn delete(alias: VernacularAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: VernacularAction::Delete,
+        }
+    }
+
+    pub fn can_access(&self, vernacular: &vernaculars::Model) -> bool {
+        match &self.action {
+            VernacularAction::Read => true,
+            VernacularAction::Write | VernacularAction::Delete => {
+                match &self.request_context.access_kind {
+                    RequestAccessKind::NormalUser => {
+                        if let Some(caller_id) = &self.request_context.caller_id {
+                            Id::from(vernacular.owner_id) == *caller_id
+                        } else {
+                            false
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn resolve<C: ConnectionTrait>(
-        &self,
+        self,
         conn: &C,
         state: &AppState,
-        caller_id: Option<Id>,
-        enforce_ownership: bool,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
-        let vernacular = match &self.0 {
+        let vernacular = match &self.alias.0 {
             AliasedResourceId::Id(id) => Self::resolve_id(**id, conn).await,
             AliasedResourceId::Alias(aliased) => {
                 Self::resolve_aliased(aliased.clone(), conn, state).await
             }
             AliasedResourceId::Slug(slug) => {
-                let owner_id = caller_id.as_ref().ok_or_else(|| {
+                let owner_id = self.request_context.caller_id.as_ref().ok_or_else(|| {
                     DcAppError::bad_request(Some(format!("pure slug '{slug}' needs login").into()))
                 })?;
                 let aliased = SlugOwnerId {
@@ -60,19 +115,16 @@ impl VernacularAliasDto {
                 Self::resolve_aliased(aliased, conn, state).await
             }
         }?;
-        match vernacular {
-            Some(v) if enforce_ownership => {
-                if let Some(caller_id) = caller_id
-                    && caller_id == v.owner_id.into()
-                {
-                    Ok(Some(v))
-                } else {
-                    Err(DcAppError::unauthorized(Some(
-                        format!("could not access '{self}'").into(),
-                    )))
-                }
+        if let Some(vernacular) = vernacular {
+            if self.can_access(&vernacular) {
+                Ok(Some(vernacular))
+            } else {
+                Err(DcAppError::unauthorized(Some(
+                    format!("cannot access '{}'", self.alias).into(),
+                )))
             }
-            otherwise => Ok(otherwise),
+        } else {
+            Ok(None)
         }
     }
 
@@ -115,13 +167,6 @@ impl VernacularAliasDto {
             .map_err(|e| DcAppError::database(Some(e.into())))
     }
 }
-
-/*
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, IntoParams)]
-pub struct VernacularsGetQueryDto {
-    pub identifier: VernacularSlugOwnerIdDto,
-}
-*/
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct VernacularDto {

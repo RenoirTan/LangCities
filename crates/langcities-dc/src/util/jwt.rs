@@ -1,17 +1,18 @@
+use crate::{
+    error::{DcAppError, DcAppErrorTrait},
+    state::AppState,
+};
 use axum::{RequestPartsExt, extract::FromRequestParts, http::request::Parts};
 use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
-use langcities_jwt::payload::Claims;
+use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
+use langcities_jwt::payload::{Claims, ParsedClaims};
+use langcities_lcdcdsl::component::Id;
 use std::{
     any::Any,
     ops::{Deref, DerefMut},
-};
-
-use crate::{
-    error::{DcAppError, DcAppErrorTrait},
-    state::AppState,
 };
 
 #[derive(Clone, Debug)]
@@ -71,5 +72,30 @@ where
             .map_err(|e| DcAppError::unauthorized(Some(e.into())))?;
 
         Ok(DcClaimsWrapper(token_data.claims))
+    }
+}
+
+impl FromRequestParts<AppState> for RequestContext {
+    type Rejection = DcAppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let parsed_claims: ParsedClaims<DcAppError> = parts.extract_with_state(state).await?;
+        match parsed_claims {
+            ParsedClaims::Valid(claims) => Ok(RequestContext {
+                caller_id: claims
+                    .sub_to_id()
+                    .map(|id| id.map(Id::from))
+                    .map_err(|e| DcAppError::invalid_access_token(Some(e.into())))?,
+                access_kind: RequestAccessKind::NormalUser,
+            }),
+            ParsedClaims::Invalid(e) => Err(e),
+            ParsedClaims::Missing => Ok(RequestContext {
+                caller_id: None,
+                access_kind: RequestAccessKind::NormalUser,
+            }),
+        }
     }
 }

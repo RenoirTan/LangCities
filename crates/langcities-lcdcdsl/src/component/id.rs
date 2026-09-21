@@ -291,3 +291,97 @@ impl FromStr for AliasedResourceId {
             .or_else(|_| s.parse::<SlugOwnerId>().map(Self::Alias))
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AliasedEntry {
+    pub vernacular_alias: AliasedResourceId,
+    pub index: Id,
+}
+
+impl Display for AliasedEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.vernacular_alias, self.index)
+    }
+}
+
+impl FromStr for AliasedEntry {
+    type Err = DslError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split(".");
+        let vernacular_alias = parts
+            .next()
+            .ok_or_else(|| DslError::bad_value(s))
+            .map(|first| first.parse::<AliasedResourceId>())
+            .flatten()?;
+        let index = parts
+            .next()
+            .ok_or_else(|| DslError::bad_value(s))
+            .map(|second| second.parse::<Id>())
+            .flatten()?;
+        Ok(Self {
+            vernacular_alias,
+            index,
+        })
+    }
+}
+
+impl Serialize for AliasedEntry {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+struct AliasedEntryVisitor;
+
+impl<'de> Visitor<'de> for AliasedEntryVisitor {
+    type Value = AliasedEntry;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("invalid slug_owner_id")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        v.parse::<AliasedEntry>().map_err(|e| E::custom(e))
+    }
+}
+
+impl<'de> Deserialize<'de> for AliasedEntry {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(AliasedEntryVisitor)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EntryAlias {
+    Id(Id),
+    Alias(AliasedEntry),
+}
+
+impl Display for EntryAlias {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Id(id) => id.fmt(f),
+            Self::Alias(alias) => alias.fmt(f),
+        }
+    }
+}
+
+impl FromStr for EntryAlias {
+    type Err = DslError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<Id>()
+            .map(Self::Id)
+            .or_else(|_| s.parse::<AliasedEntry>().map(Self::Alias))
+    }
+}

@@ -4,8 +4,9 @@ use chrono::Utc;
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_lcdcdsl::component::{Alias, AliasedResourceId, Id, SlugOwnerId};
 use sea_orm::{
-    ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter,
-    entity::prelude::DateTimeUtc, sea_query::Query,
+    ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
+    entity::prelude::DateTimeUtc,
+    sea_query::{Expr, Query},
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -19,6 +20,60 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
 #[schema(value_type = String)]
 pub struct VernacularAliasDto(pub AliasedResourceId);
+
+impl VernacularAliasDto {
+    pub(crate) async fn generate_filter(
+        &self,
+        caller_id: Option<Id>,
+        state: &AppState,
+        enforce_owner: bool,
+    ) -> Result<Expr, DcAppError> {
+        let cond = match &self.0 {
+            AliasedResourceId::Id(id) => vernaculars::Column::Id.eq(**id),
+            AliasedResourceId::Alias(alias) => {
+                let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
+                let owner_expr = match &alias.user_alias {
+                    Alias::Id(id) => vernaculars::Column::OwnerId.eq(**id),
+                    Alias::Slug(username) => {
+                        let auth_user_id = state.resolve_auth_user_id(&**username).await?;
+                        vernaculars::Column::OwnerId.in_subquery(
+                            Query::select()
+                                .column(dc_users::Column::Id)
+                                .and_where(dc_users::Column::AuthUserId.eq(auth_user_id))
+                                .from(dc_users::Entity)
+                                .to_owned(),
+                        )
+                    }
+                };
+                slug_expr.and(owner_expr)
+            }
+            AliasedResourceId::Slug(slug) => {
+                if let Some(caller_id) = &caller_id {
+                    vernaculars::Column::Slug
+                        .eq(&**slug)
+                        .and(vernaculars::Column::OwnerId.eq(**caller_id))
+                } else {
+                    return Err(DcAppError::unauthorized(Some("".into())));
+                }
+            }
+        };
+        if enforce_owner {
+            Ok(cond.and(Self::generate_owner_enforced(caller_id)?))
+        } else {
+            Ok(cond)
+        }
+    }
+
+    pub(crate) fn generate_owner_enforcement(caller_id: Id) -> Expr {
+        vernaculars::Column::OwnerId.eq(*caller_id)
+    }
+
+    pub(crate) fn generate_owner_enforced(caller_id: Option<Id>) -> Result<Expr, DcAppError> {
+        caller_id
+            .map(|id| Self::generate_owner_enforcement(id))
+            .ok_or_else(|| DcAppError::unauthorized(None))
+    }
+}
 
 impl<'de> Deserialize<'de> for VernacularAliasDto {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

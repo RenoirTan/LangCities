@@ -4,26 +4,23 @@ use sea_orm::entity::prelude::*;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "vernaculars")]
+#[sea_orm(table_name = "entries")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
-    pub slug: String,
-    pub name: String,
-    pub updated_at: DateTimeUtc,
+    pub vernacular_id: i64,
+    pub index: i64,
     pub created_at: DateTimeUtc,
-    pub owner_id: i64,
-    pub next_entry_id: i64,
+    #[sea_orm(has_many)]
+    pub entry_fields: HasMany<super::entry_fields::Entity>,
     #[sea_orm(
         belongs_to,
-        from = "owner_id",
+        from = "vernacular_id",
         to = "id",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    pub dc_users: BelongsTo<super::dc_users::Entity>,
-    #[sea_orm(has_many)]
-    pub entries: HasMany<super::entries::Entity>,
+    pub vernaculars: BelongsTo<super::vernaculars::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

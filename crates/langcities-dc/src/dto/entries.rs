@@ -1,0 +1,151 @@
+use std::fmt::Display;
+
+use chrono::{DateTime, Utc};
+use langcities_common_server::dto::request::RequestContext;
+use langcities_lcdcdsl::component::{EntryAlias, Id};
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter, sea_query::Expr};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+use crate::{
+    dto::vernaculars::VernacularAliasDto,
+    entity::entries,
+    error::{DcAppError, DcAppErrorTrait},
+    state::AppState,
+};
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
+#[schema(value_type = String)]
+pub struct EntryAliasDto(pub EntryAlias);
+
+impl EntryAliasDto {
+    pub(crate) async fn generate_filter(
+        &self,
+        caller_id: Option<Id>,
+        state: &AppState,
+        enforce_owner: bool,
+    ) -> Result<Expr, DcAppError> {
+        let cond = match &self.0 {
+            EntryAlias::Id(id) => {
+                let expr = entries::Column::Id.eq(**id);
+                if enforce_owner {
+                    expr.and(VernacularAliasDto::generate_owner_enforced(caller_id)?)
+                } else {
+                    expr
+                }
+            }
+            EntryAlias::Alias(alias) => {
+                let index_expr = entries::Column::Index.eq(*alias.index);
+                let vernacular_expr = VernacularAliasDto(alias.vernacular_alias.clone())
+                    .generate_filter(caller_id, state, enforce_owner)
+                    .await?;
+                index_expr.and(vernacular_expr)
+            }
+        };
+        Ok(cond)
+    }
+}
+
+impl<'de> Deserialize<'de> for EntryAliasDto {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse::<EntryAlias>()
+            .map(Self)
+            .map_err(serde::de::Error::custom)
+    }
+}
+
+impl Display for EntryAliasDto {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum EntryAction {
+    Read,
+    Write,
+    Delete,
+}
+
+impl EntryAction {
+    pub fn enforce_owner(&self) -> bool {
+        !matches!(self, Self::Read)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntryAccessDto {
+    pub alias: EntryAliasDto,
+    pub request_context: RequestContext,
+    pub action: EntryAction,
+}
+
+impl EntryAccessDto {
+    pub fn read(alias: EntryAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: EntryAction::Read,
+        }
+    }
+
+    pub fn write(alias: EntryAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: EntryAction::Write,
+        }
+    }
+
+    pub fn delete(alias: EntryAliasDto, request_context: RequestContext) -> Self {
+        Self {
+            alias,
+            request_context,
+            action: EntryAction::Delete,
+        }
+    }
+
+    pub async fn resolve<C: ConnectionTrait>(
+        self,
+        conn: &C,
+        state: &AppState,
+    ) -> Result<Option<entries::Model>, DcAppError> {
+        let expr = self
+            .alias
+            .generate_filter(
+                self.request_context.caller_id,
+                state,
+                self.action.enforce_owner(),
+            )
+            .await?;
+        entries::Entity::find()
+            .filter(expr)
+            .one(conn)
+            .await
+            .map_err(|e| DcAppError::database(Some(e.into())))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct EntryDto {
+    pub id: i64,
+    pub vernacular_id: i64,
+    pub index: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<entries::Model> for EntryDto {
+    fn from(value: entries::Model) -> Self {
+        Self {
+            id: value.id,
+            vernacular_id: value.vernacular_id,
+            index: value.index,
+            created_at: value.created_at,
+        }
+    }
+}

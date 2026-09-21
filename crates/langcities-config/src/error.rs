@@ -1,6 +1,6 @@
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 
-use langcities_common::error::LcError;
+use langcities_common::error::{Error, LcError};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LcConfigErrorKind {
@@ -18,24 +18,30 @@ impl Display for LcConfigErrorKind {
 pub type LcConfigError = LcError<LcConfigErrorKind>;
 
 pub trait LcConfigErrorTrait {
-    fn missing_key(key: impl Into<String>) -> Self;
+    fn missing_key_of(key: impl Into<String>) -> Self;
 
-    fn bad_parse(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self;
+    fn missing_key(source: impl Into<Error>) -> Self;
 
-    fn other(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self;
+    fn bad_parse(source: impl Into<Error>) -> Self;
+
+    fn other(source: impl Into<Error>) -> Self;
 }
 
 impl LcConfigErrorTrait for LcConfigError {
-    fn missing_key(key: impl Into<String>) -> Self {
+    fn missing_key_of(key: impl Into<String>) -> Self {
         let msg = format!("Key '{}' missing", key.into());
-        Self::new(Some(msg.into()), LcConfigErrorKind::MissingKey)
+        Self::missing_key(msg)
     }
 
-    fn bad_parse(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self {
-        Self::new(source.into(), LcConfigErrorKind::BadParse)
+    fn missing_key(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), LcConfigErrorKind::MissingKey)
     }
 
-    fn other(source: Option<Box<dyn Error + Send + Sync + 'static>>) -> Self {
-        Self::new(source.into(), LcConfigErrorKind::Other)
+    fn bad_parse(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), LcConfigErrorKind::BadParse)
+    }
+
+    fn other(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), LcConfigErrorKind::Other)
     }
 }

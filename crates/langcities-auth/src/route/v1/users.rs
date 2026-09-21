@@ -32,11 +32,10 @@ pub async fn get_user(
     sql.one(&state.db)
         .await
         .map(|o| {
-            o.map(|m| Json(m.into())).ok_or_else(|| {
-                AuthAppError::not_found(Some(format!("{} not found", alias.0).into()))
-            })
+            o.map(|m| Json(m.into()))
+                .ok_or_else(|| AuthAppError::not_found(format!("{} not found", alias.0)))
         })
-        .map_err(|e| AuthAppError::database(Some(e.into())))
+        .map_err(AuthAppError::database)
         .flatten()
 }
 
@@ -66,7 +65,7 @@ pub async fn get_many_users(
     sql.all(&state.db)
         .await
         .map(|ms| Json(ms.into_iter().collect()))
-        .map_err(|e| AuthAppError::database(Some(e.into())))
+        .map_err(AuthAppError::database)
 }
 
 #[utoipa::path(
@@ -84,20 +83,19 @@ pub async fn delete_user(
     let user_session = session_user.get_user();
     let id = user_session
         .id
-        .ok_or_else(|| AuthAppError::unauthorized(Some("not logged in".into())))?;
+        .ok_or_else(|| AuthAppError::unauthorized("not logged in"))?;
     let user: AuthUserDto = users::Entity::delete_by_id(id)
         .exec_with_returning(&state.db)
         .await
         .map(|o| {
-            o.map(|m| m.into()).ok_or_else(|| {
-                AuthAppError::not_found(Some(format!("user {} not found", id).into()))
-            })
+            o.map(|m| m.into())
+                .ok_or_else(|| AuthAppError::not_found(format!("user {} not found", id)))
         })
-        .map_err(|e| AuthAppError::database(Some(e.into())))
+        .map_err(AuthAppError::database)
         .flatten()?;
     session_user
         .delete()
         .await
         .map(|()| Json(user))
-        .map_err(|e| AuthAppError::database(Some(e.into())))
+        .map_err(AuthAppError::database)
 }

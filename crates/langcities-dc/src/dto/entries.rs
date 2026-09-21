@@ -147,7 +147,7 @@ impl EntryAccessDto {
             .filter(expr)
             .one(conn)
             .await
-            .map_err(|e| DcAppError::database(Some(e.into())))
+            .map_err(DcAppError::database)
     }
 }
 

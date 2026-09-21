@@ -139,7 +139,7 @@ impl KeyConfig {
                     });
                     Ok(Some(Self { params, algorithm }))
                 } else {
-                    Err(LcConfigError::missing_key("hmac-secret"))
+                    Err(LcConfigError::missing_key_of("hmac-secret"))
                 }
             }
             f => panic!("Unhandled algorithm families: {:?}", f),
@@ -162,7 +162,7 @@ impl JwtConfig {
         let partial = partial.into();
         let key_config = KeyConfig::from_partial(&partial)?;
         if require_key_config && let None = key_config {
-            return Err(LcConfigError::missing_key("algorithm"));
+            return Err(LcConfigError::missing_key_of("algorithm"));
         }
         let expiry = ms_to_dur(partial.expiry.unwrap_or(600000)); // 10 min
         let issuer = partial

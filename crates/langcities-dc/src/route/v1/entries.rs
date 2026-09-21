@@ -42,9 +42,8 @@ pub async fn get_entry(
         .resolve(&state.db, &state)
         .await
         .map(|o| {
-            o.map(|m| Json(m.into())).ok_or_else(|| {
-                DcAppError::not_found(Some(format!("entry {} not found", alias).into()))
-            })
+            o.map(|m| Json(m.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
         })
         .flatten()
 }
@@ -71,36 +70,31 @@ pub async fn create_entry(
         .clone() // sea orm clone is cheap
         .transaction(|txn| {
             Box::pin(async move {
-                let vernacular =
-                    vernacular_access
-                        .resolve(txn, &state)
-                        .await?
-                        .ok_or_else(|| {
-                            DcAppError::not_found(Some(format!("{}", vernacular_alias).into()))
-                        })?;
+                let vernacular = vernacular_access
+                    .resolve(txn, &state)
+                    .await?
+                    .ok_or_else(|| DcAppError::not_found(format!("{}", vernacular_alias)))?;
                 let entry = dto.to_active_model(&vernacular);
                 let next_index = vernacular.next_entry_id + 1;
                 let response: Json<EntryDto> = match entry.insert(txn).await {
                     Ok(model) => Json(model.into()),
                     Err(DbErr::RecordNotInserted) => {
-                        return Err(DcAppError::bad_request(Some(
-                            DbErr::RecordNotInserted.into(),
-                        )));
+                        return Err(DcAppError::bad_request(DbErr::RecordNotInserted));
                     }
-                    Err(e) => return Err(DcAppError::database(Some(e.into()))),
+                    Err(e) => return Err(DcAppError::database(e)),
                 };
                 let mut v = vernacular.into_active_model();
                 v.next_entry_id = ActiveValue::Set(next_index);
                 v.update(txn)
                     .await
                     .map(|_| response)
-                    .map_err(|e| DcAppError::database(Some(e.into())))
+                    .map_err(DcAppError::database)
             })
         })
         .await;
 
     out.map_err(|e| match e {
-        TransactionError::Connection(e) => DcAppError::database(Some(e.into())),
+        TransactionError::Connection(e) => DcAppError::database(e),
         TransactionError::Transaction(e) => e,
     })
 }
@@ -132,7 +126,7 @@ pub async fn update_vernacular(
         VernacularAccessDto::write(alias.clone(), request_context)
             .resolve(&state.db, &state)
             .await
-            .map(|o| o.ok_or_else(|| DcAppError::not_found(Some(format!("{alias}").into()))))
+            .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("{alias}"))))
             .flatten()?
             .into();
     dto.update_active_model(&mut active);
@@ -140,7 +134,7 @@ pub async fn update_vernacular(
         .update(&state.db)
         .await
         .map(|m| Json(VernacularDto::from(m)))
-        .map_err(|e| DcAppError::database(Some(e.into())))
+        .map_err(DcAppError::database)
 }
 */
 
@@ -167,17 +161,13 @@ pub async fn delete_entry(
     let model = EntryAccessDto::delete(alias.clone(), request_context)
         .resolve(&state.db, &state)
         .await
-        .map(|o| {
-            o.ok_or_else(|| {
-                DcAppError::not_found(Some(format!("entry {} not found", alias).into()))
-            })
-        })
+        .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias))))
         .flatten()?;
     let dto = Json(EntryDto::from(model.clone()));
     model
         .delete(&state.db)
         .await
-        .map_err(|e| DcAppError::database(Some(e.into())))?;
+        .map_err(DcAppError::database)?;
     Ok(dto)
 }
 

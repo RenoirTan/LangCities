@@ -7,18 +7,20 @@ use axum::{
 #[cfg(feature = "serde_json")]
 use serde_json::json;
 use std::{
-    error::Error,
+    error::Error as StdError,
     fmt::{Debug, Display},
 };
 
+pub type Error = Box<dyn StdError + Send + Sync + 'static>;
+
 #[derive(Debug)]
 pub struct LcError<K: Debug + Display + Send> {
-    pub source: Option<Box<dyn Error + Send + Sync + 'static>>,
+    pub source: Option<Error>,
     pub kind: K,
 }
 
 impl<K: Debug + Display + Send> LcError<K> {
-    pub fn new(source: Option<Box<dyn Error + Send + Sync + 'static>>, kind: impl Into<K>) -> Self {
+    pub fn new(source: Option<Error>, kind: impl Into<K>) -> Self {
         let kind = kind.into();
         Self { source, kind }
     }
@@ -33,12 +35,14 @@ impl<K: Debug + Display + Send> Display for LcError<K> {
     }
 }
 
-impl<K: Debug + Display + Send> Error for LcError<K> {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.source.as_deref().map(|e| e as &(dyn Error + 'static))
+impl<K: Debug + Display + Send> StdError for LcError<K> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.source
+            .as_deref()
+            .map(|e| e as &(dyn StdError + 'static))
     }
 
-    fn cause(&self) -> Option<&dyn Error> {
+    fn cause(&self) -> Option<&dyn StdError> {
         self.source()
     }
 }

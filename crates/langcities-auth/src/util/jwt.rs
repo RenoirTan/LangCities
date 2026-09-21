@@ -84,7 +84,7 @@ impl Access {
         let token = state
             .jwt_encoder
             .encode_claims(header, claims)
-            .map_err(|e| AuthAppError::other(Some(e.into())))?;
+            .map_err(AuthAppError::other)?;
         let expiry = state.claims_generator.expiry.num_seconds();
         Ok(AccessTokenResponseDto::new(token, "Bearer", expiry))
     }

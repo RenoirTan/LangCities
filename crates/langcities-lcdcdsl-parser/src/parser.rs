@@ -10,7 +10,7 @@ use langcities_lcdcdsl::{
 use tree_sitter::{Parser as TSParser, Tree as TSTree};
 use tree_sitter_lcdcdsl::LANGUAGE;
 
-use crate::{ParserError, ParserErrorKind, RawNodePath};
+use crate::{ParserError, ParserErrorKind, ParserErrorTrait, RawNodePath};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransferInstructionContext {
@@ -88,7 +88,7 @@ impl Parser {
         let mut ts_parser = TSParser::new();
         ts_parser
             .set_language(&LANGUAGE.into())
-            .map_err(|e| ParserError::new(Some(Box::new(e)), ParserErrorKind::BadInitialization))?;
+            .map_err(ParserError::bad_initialization)?;
         Self::new(tree_builder, ts_parser)
     }
 

@@ -24,8 +24,7 @@ impl ClaimsGenerator {
     }
 
     pub fn from_config(config: &JwtConfig) -> Result<Self, JwtError> {
-        let duration =
-            Duration::from_std(config.expiry).map_err(|e| JwtError::bad_config(Some(e.into())))?;
+        let duration = Duration::from_std(config.expiry).map_err(JwtError::bad_config)?;
         Ok(Self::new(duration, config.issuer.clone()))
     }
 

@@ -1,44 +1,13 @@
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
+
+use langcities_common::error::{Error, LcError};
 
 use crate::node::NodeId;
-
-#[derive(Debug)]
-pub struct DslError {
-    pub source: Option<Box<dyn Error>>,
-    pub kind: DslErrorKind,
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DslErrorKind {
     NodeNotFound,
     BadValue,
-}
-
-impl DslError {
-    pub fn new(source: Option<Box<dyn Error>>, kind: impl Into<DslErrorKind>) -> Self {
-        let kind = kind.into();
-        Self { source, kind }
-    }
-
-    pub fn node_not_found(node_id: impl Into<NodeId>) -> Self {
-        Self::new(
-            Some(format!("Node {} not found", node_id.into()).into()),
-            DslErrorKind::NodeNotFound,
-        )
-    }
-
-    pub fn bad_value(value: impl Display) -> Self {
-        Self::new(
-            Some(format!("Invalid value: {}", value).into()),
-            DslErrorKind::BadValue,
-        )
-    }
-}
-
-impl Display for DslError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DslError({})", self.kind)
-    }
 }
 
 impl Display for DslErrorKind {
@@ -47,12 +16,29 @@ impl Display for DslErrorKind {
     }
 }
 
-impl Error for DslError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.source.as_ref().map(|e| e.as_ref())
+pub type DslError = LcError<DslErrorKind>;
+
+pub trait DslErrorTrait {
+    fn node_not_found_of(node_id: impl Into<NodeId>) -> Self;
+    fn node_not_found(source: impl Into<Error>) -> Self;
+    fn bad_value_of(value: impl Display) -> Self;
+    fn bad_value(source: impl Into<Error>) -> Self;
+}
+
+impl DslErrorTrait for DslError {
+    fn node_not_found_of(node_id: impl Into<NodeId>) -> Self {
+        Self::node_not_found(format!("Node {} not found", node_id.into()))
     }
 
-    fn cause(&self) -> Option<&dyn Error> {
-        self.source()
+    fn node_not_found(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DslErrorKind::NodeNotFound)
+    }
+
+    fn bad_value_of(value: impl Display) -> Self {
+        Self::bad_value(format!("Invalid value: {}", value))
+    }
+
+    fn bad_value(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DslErrorKind::BadValue)
     }
 }

@@ -17,6 +17,6 @@ pub async fn build_session_layer(
     layer = auth.configure_session_manager_layer_basics(layer);
     let signed_layer = auth
         .configure_signed_cookies(layer)
-        .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
+        .map_err(AuthAppError::failed_init)?;
     Ok(signed_layer)
 }

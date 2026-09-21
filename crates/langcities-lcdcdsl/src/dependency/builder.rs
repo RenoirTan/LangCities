@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     dependency::{Dependency, DependencyKind},
-    error::{DslError, DslErrorKind},
+    error::{DslError, DslErrorKind, DslErrorTrait},
     node::{NodeId, NodeKind},
     tree::{TraversalKind, Tree, TreeTraverser},
 };
@@ -38,7 +38,7 @@ impl<'t> DependencyBuilder<'t> {
                 .tree
                 .arena
                 .get(&node_id)
-                .ok_or_else(|| DslError::node_not_found(node_id))?;
+                .ok_or_else(|| DslError::node_not_found_of(node_id))?;
 
             match &node.node {
                 NodeKind::IdentifierPrim(_) => {
@@ -52,7 +52,7 @@ impl<'t> DependencyBuilder<'t> {
                         .tree
                         .arena
                         .get(&penultimate_node_id)
-                        .ok_or_else(|| DslError::node_not_found(penultimate_node_id))?;
+                        .ok_or_else(|| DslError::node_not_found_of(penultimate_node_id))?;
                     if let NodeKind::FunctionCallExpr(_) = &penultimate_node.node {
                         let dependency = Dependency::new(
                             node.context.raw(&self.traverser.tree),

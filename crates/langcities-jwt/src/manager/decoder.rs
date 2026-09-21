@@ -33,7 +33,7 @@ impl JwtDecoder {
         let key_config = config
             .key_config
             .as_ref()
-            .ok_or_else(|| JwtError::bad_config(Some("key_config is None".into())))?;
+            .ok_or_else(|| JwtError::bad_config("key_config is None"))?;
         let algorithm = key_config.algorithm;
         let decoding_key = match &key_config.params {
             KeyParams::Hmac(hmac) => DecodingKey::from_secret(&hmac.secret),
@@ -55,7 +55,7 @@ impl JwtDecoder {
         A: DeserializeOwned,
     {
         let data = decode::<Claims>(token, &self.decoding_key, &self.validation)
-            .map_err(|e| JwtError::undecodeable(Some(e.into())))?;
+            .map_err(JwtError::undecodeable)?;
         Ok(data)
     }
 }

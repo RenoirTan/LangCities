@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use serde::{Deserialize, Serialize, de::Visitor};
 
-use crate::error::DslError;
+use crate::error::{DslError, DslErrorTrait};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Id(i64);
@@ -39,7 +39,7 @@ impl FromStr for Id {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.parse::<i64>()
             .map(|i| Self(i))
-            .map_err(|_| DslError::bad_value(s))
+            .map_err(|_| DslError::bad_value_of(s))
     }
 }
 
@@ -132,13 +132,13 @@ impl FromStr for Slug {
     type Err = DslError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let first = s.chars().next().ok_or_else(|| DslError::bad_value(s))?;
+        let first = s.chars().next().ok_or_else(|| DslError::bad_value_of(s))?;
         if !(first.is_ascii_lowercase() || first == '_') {
-            return Err(DslError::bad_value(s));
+            return Err(DslError::bad_value_of(s));
         }
         for c in s.chars().skip(1) {
             if !(c.is_ascii_lowercase() || c.is_digit(10) || c == '_') {
-                return Err(DslError::bad_value(s));
+                return Err(DslError::bad_value_of(s));
             }
         }
         Ok(Self(s.to_string()))
@@ -216,12 +216,12 @@ impl FromStr for SlugOwnerId {
         let mut parts = s.split("@");
         let slug = parts
             .next()
-            .ok_or_else(|| DslError::bad_value(s))
+            .ok_or_else(|| DslError::bad_value_of(s))
             .map(|first| first.parse::<Slug>())
             .flatten()?;
         let user_alias = parts
             .next()
-            .ok_or_else(|| DslError::bad_value(s))
+            .ok_or_else(|| DslError::bad_value_of(s))
             .map(|second| second.parse::<Alias>())
             .flatten()?;
         Ok(Self { slug, user_alias })
@@ -310,12 +310,12 @@ impl FromStr for AliasedEntry {
         let mut parts = s.split(".");
         let vernacular_alias = parts
             .next()
-            .ok_or_else(|| DslError::bad_value(s))
+            .ok_or_else(|| DslError::bad_value_of(s))
             .map(|first| first.parse::<VernacularAlias>())
             .flatten()?;
         let index = parts
             .next()
-            .ok_or_else(|| DslError::bad_value(s))
+            .ok_or_else(|| DslError::bad_value_of(s))
             .map(|second| second.parse::<Id>())
             .flatten()?;
         Ok(Self {

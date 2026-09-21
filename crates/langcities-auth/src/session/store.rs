@@ -1,4 +1,4 @@
-use crate::error::{AuthAppError, AuthAppErrorTrait};
+use crate::error::{AuthAppError, AuthAppErrorKind, AuthAppErrorTrait};
 use sea_orm::DatabaseConnection;
 #[cfg(feature = "sqlite")]
 use sea_orm::DbBackend;
@@ -50,7 +50,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(|e| AuthAppError::failed_session(Some(e.into())))?;
+            .map_err(AuthAppError::failed_session)?;
         Ok(store)
     }
 
@@ -61,7 +61,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(|e| AuthAppError::failed_session(Some(e.into())))?;
+            .map_err(AuthAppError::failed_session)?;
         Ok(store)
     }
 
@@ -72,7 +72,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(|e| AuthAppError::failed_session(Some(e.into())))?;
+            .map_err(AuthAppError::failed_session)?;
         Ok(store)
     }
 
@@ -90,7 +90,7 @@ impl BoxedSessionStore {
             DbBackend::Postgres => Self::store_from_postgres(db)
                 .await
                 .map(|s| BoxedSessionStore::new(s)),
-            _ => Err(AuthAppError::other(None)),
+            _ => Err(AuthAppError::new(None, AuthAppErrorKind::Other)),
         }
     }
 }

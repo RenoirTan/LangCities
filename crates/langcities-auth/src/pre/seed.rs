@@ -37,7 +37,7 @@ impl<'a> Seeder<'a> {
         {
             Err(DbErr::RecordNotInserted) => {}
             Err(e) => {
-                return Err(AuthAppError::failed_init(Some(e.into())));
+                return Err(AuthAppError::failed_init(e));
             }
             _ => {}
         };
@@ -48,7 +48,7 @@ impl<'a> Seeder<'a> {
             )
             .all(&self.state.db)
             .await
-            .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
+            .map_err(AuthAppError::failed_init)?;
         let mut users = HashMap::new();
         for user in user_records {
             users.insert(user.id, user.username);

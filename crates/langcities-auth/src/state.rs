@@ -50,12 +50,12 @@ impl AppState {
         let config = config.into();
         let db = Database::connect(config.db.clone().to_connection_options())
             .await
-            .map_err(|e| AuthAppError::database(Some(e.into())))?;
+            .map_err(AuthAppError::database)?;
         let pw_checker = PasswordChecker::default();
-        let jwt_encoder = JwtEncoder::from_config(&config.jwt)
-            .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
-        let claims_generator = ClaimsGenerator::from_config(&config.jwt)
-            .map_err(|e| AuthAppError::failed_init(Some(e.into())))?;
+        let jwt_encoder =
+            JwtEncoder::from_config(&config.jwt).map_err(AuthAppError::failed_init)?;
+        let claims_generator =
+            ClaimsGenerator::from_config(&config.jwt).map_err(AuthAppError::failed_init)?;
         Ok(Self::new(
             config,
             db,

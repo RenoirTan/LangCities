@@ -1968,6 +1968,7 @@ dependencies = [
 name = "langcities-lcdcdsl"
 version = "0.1.0"
 dependencies = [
+ "langcities-common",
  "serde",
 ]
 
@@ -1975,6 +1976,7 @@ dependencies = [
 name = "langcities-lcdcdsl-parser"
 version = "0.1.0"
 dependencies = [
+ "langcities-common",
  "langcities-lcdcdsl",
  "tree-sitter",
  "tree-sitter-lcdcdsl",

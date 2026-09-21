@@ -31,8 +31,8 @@ impl AppState {
     {
         let config = config.into();
         let username_cache = MokaWrapper::new(config.dc.username_cache_max_capacity);
-        let auth_client = AuthClient::new(&config.dc.auth_base_url)
-            .map_err(|e| DcAppError::failed_init(Some(e)))?;
+        let auth_client =
+            AuthClient::new(&config.dc.auth_base_url).map_err(DcAppError::failed_init)?;
         Ok(Self {
             config: Arc::new(config),
             db: db.into(),
@@ -63,12 +63,12 @@ impl AppState {
             .auth_client
             .fetch_users(aliases)
             .await
-            .map_err(|e| DcAppError::auth_service(Some(e.into())))?;
+            .map_err(DcAppError::auth_service)?;
 
         for user in &users {
             self.set_username_cache(user.username.clone(), user.id)
                 .await
-                .map_err(|e| DcAppError::other(Some(e)))?;
+                .map_err(DcAppError::other)?;
         }
         Ok(users)
     }
@@ -88,9 +88,7 @@ impl AppState {
             .into_iter()
             .find(|user| user.username == username)
             .map(|user| user.id)
-            .ok_or_else(|| {
-                DcAppError::not_found(Some(format!("user '{username}' not found").into()))
-            })
+            .ok_or_else(|| DcAppError::not_found(format!("user '{username}' not found")))
     }
 
     pub async fn create<C>(config: C) -> Result<Self, DcAppError>
@@ -100,10 +98,10 @@ impl AppState {
         let config = config.into();
         let db = Database::connect(config.db.clone().to_connection_options())
             .await
-            .map_err(|e| DcAppError::database(Some(e.into())))?;
+            .map_err(DcAppError::database)?;
         let jwt_decoder =
             JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences())
-                .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
+                .map_err(DcAppError::failed_init)?;
         Self::new(config, db, jwt_decoder)
     }
 }
@@ -117,12 +115,12 @@ impl ParseJwtClaims for AppState {
         }
         match self.jwt_decoder.decode_token::<()>(token) {
             Ok(t) => ParsedClaims::Valid(t.claims),
-            Err(e) => ParsedClaims::Invalid(DcAppError::unauthorized(Some(e.into()))),
+            Err(e) => ParsedClaims::Invalid(DcAppError::unauthorized(e)),
         }
     }
 
     fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error {
-        DcAppError::invalid_access_token(Some(error.into()))
+        DcAppError::invalid_access_token(error)
     }
 }
 

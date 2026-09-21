@@ -13,7 +13,7 @@ use utoipa::ToSchema;
 
 use crate::{
     entity::{dc_users, vernaculars},
-    error::{DcAppError, DcAppErrorTrait},
+    error::{DcAppError, DcAppErrorKind, DcAppErrorTrait},
     state::AppState,
 };
 
@@ -53,7 +53,7 @@ impl VernacularAliasDto {
                         .eq(&**slug)
                         .and(vernaculars::Column::OwnerId.eq(**caller_id))
                 } else {
-                    return Err(DcAppError::unauthorized(Some("".into())));
+                    return Err(DcAppError::unauthorized(""));
                 }
             }
         };
@@ -71,7 +71,7 @@ impl VernacularAliasDto {
     pub(crate) fn generate_owner_enforced(caller_id: Option<Id>) -> Result<Expr, DcAppError> {
         caller_id
             .map(|id| Self::generate_owner_enforcement(id))
-            .ok_or_else(|| DcAppError::unauthorized(None))
+            .ok_or_else(|| DcAppError::new(None, DcAppErrorKind::Unauthorized))
     }
 }
 
@@ -171,7 +171,7 @@ impl VernacularAccessDto {
             .filter(expr)
             .one(conn)
             .await
-            .map_err(|e| DcAppError::database(Some(e.into())))
+            .map_err(DcAppError::database)
     }
 }
 

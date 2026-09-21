@@ -288,7 +288,7 @@ impl DbConfig {
         let partial = partial.into();
         let url = partial
             .url
-            .ok_or_else(|| LcConfigError::missing_key("url"))?;
+            .ok_or_else(|| LcConfigError::missing_key_of("url"))?;
         let me = Self {
             url,
             max_connections: partial.max_connections,

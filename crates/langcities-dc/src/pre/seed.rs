@@ -25,7 +25,7 @@ impl<'a> Seeder<'a> {
         let user = dc_users::Entity::find_by_id(user_id)
             .one(&self.state.db)
             .await
-            .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
+            .map_err(DcAppError::failed_init)?;
 
         if user.is_none() {
             dc_users::Entity::insert(dc_users::ActiveModel {
@@ -34,7 +34,7 @@ impl<'a> Seeder<'a> {
             })
             .exec(&self.state.db)
             .await
-            .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
+            .map_err(DcAppError::failed_init)?;
         }
 
         Ok(())
@@ -73,7 +73,7 @@ impl<'a> Seeder<'a> {
                 .await
             {
                 Ok(_) | Err(DbErr::RecordNotInserted) => {}
-                Err(e) => return Err(DcAppError::failed_init(Some(e.into()))),
+                Err(e) => return Err(DcAppError::failed_init(e)),
             }
         }
 
@@ -82,7 +82,7 @@ impl<'a> Seeder<'a> {
             .filter(vernaculars::Column::Slug.is_in(slugs))
             .all(&self.state.db)
             .await
-            .map_err(|e| DcAppError::failed_init(Some(e.into())))?;
+            .map_err(DcAppError::failed_init)?;
         let mut vernaculars = HashMap::new();
         for vernacular in vernacular_records {
             vernaculars.insert(vernacular.id, vernacular.slug);

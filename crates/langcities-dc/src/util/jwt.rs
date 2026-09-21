@@ -65,12 +65,12 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|r| DcAppError::unauthorized(Some(r.into())))?;
+            .map_err(DcAppError::unauthorized)?;
 
         let token_data = app_state
             .jwt_decoder
             .decode_token::<()>(&bearer.token())
-            .map_err(|e| DcAppError::unauthorized(Some(e.into())))?;
+            .map_err(DcAppError::unauthorized)?;
 
         Ok(DcClaimsWrapper(token_data.claims))
     }

@@ -15,9 +15,9 @@ pub fn validate_base_url(base_url: &Url) -> Result<(), LcConfigError> {
         || !base_url.username().is_empty()
         || base_url.password().is_some()
     {
-        return Err(LcConfigError::bad_parse(Some(
-            "auth_base_url must be an HTTP(S) origin, e.g. http://langcities-auth:8000".into(),
-        )));
+        return Err(LcConfigError::bad_parse(
+            "auth_base_url must be an HTTP(S) origin, e.g. http://langcities-auth:8000",
+        ));
     }
     Ok(())
 }

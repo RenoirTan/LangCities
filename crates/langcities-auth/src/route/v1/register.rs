@@ -35,18 +35,16 @@ pub async fn register(
     {
         Ok(res) => match res {
             TryInsertResult::Empty => panic!("Not supposed to happen"),
-            TryInsertResult::Conflicted => Err(AuthAppError::unauthorized(Some(
-                "conflicting usernames".into(),
-            ))),
+            TryInsertResult::Conflicted => Err(AuthAppError::unauthorized("conflicting usernames")),
             TryInsertResult::Inserted(i) => match users::Entity::find_by_id(i.last_insert_id)
                 .one(&state.db)
                 .await
             {
                 Ok(Some(user)) => Ok(Json(user.into())),
-                Ok(None) => Err(AuthAppError::other(Some("unsuccessful insert".into()))),
-                Err(e) => Err(AuthAppError::database(Some(e.into()))),
+                Ok(None) => Err(AuthAppError::other("unsuccessful insert")),
+                Err(e) => Err(AuthAppError::database(e)),
             },
         },
-        Err(e) => Err(AuthAppError::database(Some(e.into()))),
+        Err(e) => Err(AuthAppError::database(e)),
     }
 }

@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
-use langcities_common::error::LcError;
+use langcities_common::error::{Error, LcError};
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DcAppErrorKind {
@@ -36,50 +36,46 @@ impl Into<StatusCode> for DcAppErrorKind {
 pub type DcAppError = LcError<DcAppErrorKind>;
 
 pub trait DcAppErrorTrait {
-    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn invalid_access_token(
-        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
-    ) -> Self;
-    fn bad_request(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn auth_service(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn database(source: impl Into<Error>) -> Self;
+    fn failed_init(source: impl Into<Error>) -> Self;
+    fn unauthorized(source: impl Into<Error>) -> Self;
+    fn invalid_access_token(source: impl Into<Error>) -> Self;
+    fn bad_request(source: impl Into<Error>) -> Self;
+    fn not_found(source: impl Into<Error>) -> Self;
+    fn auth_service(source: impl Into<Error>) -> Self;
+    fn other(source: impl Into<Error>) -> Self;
 }
 
 impl DcAppErrorTrait for DcAppError {
-    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::Database)
+    fn database(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Database)
     }
 
-    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::FailedInit)
+    fn failed_init(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::FailedInit)
     }
 
-    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::Unauthorized)
+    fn unauthorized(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Unauthorized)
     }
 
-    fn invalid_access_token(
-        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
-    ) -> Self {
-        Self::new(source.into(), DcAppErrorKind::InvalidAccessToken)
+    fn invalid_access_token(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::InvalidAccessToken)
     }
 
-    fn bad_request(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::BadRequest)
+    fn bad_request(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::BadRequest)
     }
 
-    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::NotFound)
+    fn not_found(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::NotFound)
     }
 
-    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::Other)
+    fn other(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Other)
     }
 
-    fn auth_service(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), DcAppErrorKind::AuthService)
+    fn auth_service(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::AuthService)
     }
 }

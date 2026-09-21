@@ -29,11 +29,10 @@ pub async fn get_user(
         .one(&state.db)
         .await
         .map(|u| {
-            u.map(|u| Json(u.into())).ok_or_else(|| {
-                DcAppError::not_found(Some(format!("{} not found", query.auth_user_id).into()))
-            })
+            u.map(|u| Json(u.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("{} not found", query.auth_user_id)))
         })
-        .map_err(|e| DcAppError::database(Some(e.into())))
+        .map_err(DcAppError::database)
         .flatten()
 }
 
@@ -61,10 +60,11 @@ pub async fn get_user_by_alias(
     };
     match user {
         Ok(Some(user)) => Ok(Json(user.into())),
-        Ok(None) => Err(DcAppError::not_found(Some(
-            format!("user '{}' not found", alias.0).into(),
+        Ok(None) => Err(DcAppError::not_found(format!(
+            "user '{}' not found",
+            alias.0
         ))),
-        Err(e) => Err(DcAppError::database(Some(e.into()))),
+        Err(e) => Err(DcAppError::database(e)),
     }
 }
 

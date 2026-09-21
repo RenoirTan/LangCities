@@ -40,9 +40,8 @@ pub async fn get_vernacular(
         .resolve(&state.db, &state)
         .await
         .map(|o| {
-            o.map(|m| Json(m.into())).ok_or_else(|| {
-                DcAppError::not_found(Some(format!("vernacular {} not found", alias).into()))
-            })
+            o.map(|m| Json(m.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("vernacular {} not found", alias)))
         })
         .flatten()
 }
@@ -65,10 +64,8 @@ pub async fn create_vernacular(
     let active_model = dto.to_active_model(owner_id);
     match active_model.insert(&state.db).await {
         Ok(model) => Ok(Json(model.into())),
-        Err(DbErr::RecordNotInserted) => Err(DcAppError::bad_request(Some(
-            DbErr::RecordNotInserted.into(),
-        ))),
-        Err(e) => Err(DcAppError::database(Some(e.into()))),
+        Err(DbErr::RecordNotInserted) => Err(DcAppError::bad_request(DbErr::RecordNotInserted)),
+        Err(e) => Err(DcAppError::database(e)),
     }
 }
 
@@ -98,7 +95,7 @@ pub async fn update_vernacular(
         VernacularAccessDto::write(alias.clone(), request_context)
             .resolve(&state.db, &state)
             .await
-            .map(|o| o.ok_or_else(|| DcAppError::not_found(Some(format!("{alias}").into()))))
+            .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("{alias}"))))
             .flatten()?
             .into();
     dto.update_active_model(&mut active);
@@ -106,7 +103,7 @@ pub async fn update_vernacular(
         .update(&state.db)
         .await
         .map(|m| Json(VernacularDto::from(m)))
-        .map_err(|e| DcAppError::database(Some(e.into())))
+        .map_err(DcAppError::database)
 }
 
 #[utoipa::path(
@@ -132,17 +129,13 @@ pub async fn delete_vernacular(
     let model = VernacularAccessDto::delete(alias.clone(), request_context)
         .resolve(&state.db, &state)
         .await
-        .map(|o| {
-            o.ok_or_else(|| {
-                DcAppError::not_found(Some(format!("vernacular {} not found", alias).into()))
-            })
-        })
+        .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("vernacular {} not found", alias))))
         .flatten()?;
     let dto = Json(VernacularDto::from(model.clone()));
     model
         .delete(&state.db)
         .await
-        .map_err(|e| DcAppError::database(Some(e.into())))?;
+        .map_err(DcAppError::database)?;
     Ok(dto)
 }
 

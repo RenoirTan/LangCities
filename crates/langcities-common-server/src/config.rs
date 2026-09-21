@@ -90,7 +90,7 @@ impl ServerConfig {
             .bind_address
             .map(|a| IpAddr::from_str(&a))
             .transpose()
-            .map_err(|e| LcConfigError::bad_parse(Some(e.into())))?
+            .map_err(LcConfigError::bad_parse)?
             .unwrap_or_else(|| Ipv4Addr::new(0, 0, 0, 0).into());
         let bind_port = partial.bind_port.unwrap_or(default_port);
         Ok(Self {

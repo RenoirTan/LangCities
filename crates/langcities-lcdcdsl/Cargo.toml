@@ -8,4 +8,5 @@ categories.workspace = true
 repository.workspace = true
 
 [dependencies]
+langcities-common = { path = "../langcities-common" }
 serde = { version = "1.0.229", features = ["derive"] }

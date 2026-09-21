@@ -1,7 +1,7 @@
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 
 use axum::http::StatusCode;
-use langcities_common::error::LcError;
+use langcities_common::error::{Error, LcError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,50 +40,46 @@ impl Into<StatusCode> for AuthAppErrorKind {
 pub type AuthAppError = LcError<AuthAppErrorKind>;
 
 pub trait AuthAppErrorTrait {
-    fn invalid_credentials(
-        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
-    ) -> Self;
-    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
-    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self;
+    fn invalid_credentials(source: impl Into<Error>) -> Self;
+    fn database(source: impl Into<Error>) -> Self;
+    fn password_hashing(source: impl Into<Error>) -> Self;
+    fn failed_init(source: impl Into<Error>) -> Self;
+    fn failed_session(source: impl Into<Error>) -> Self;
+    fn unauthorized(source: impl Into<Error>) -> Self;
+    fn other(source: impl Into<Error>) -> Self;
+    fn not_found(source: impl Into<Error>) -> Self;
 }
 
 impl AuthAppErrorTrait for AuthAppError {
-    fn invalid_credentials(
-        source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>,
-    ) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::InvalidCredentials)
+    fn invalid_credentials(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::InvalidCredentials)
     }
 
-    fn database(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::Database)
+    fn database(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::Database)
     }
 
-    fn password_hashing(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::PasswordHashing)
+    fn password_hashing(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::PasswordHashing)
     }
 
-    fn failed_init(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::FailedInit)
+    fn failed_init(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::FailedInit)
     }
 
-    fn failed_session(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::FailedSession)
+    fn failed_session(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::FailedSession)
     }
 
-    fn unauthorized(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::Unauthorized)
+    fn unauthorized(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::Unauthorized)
     }
 
-    fn other(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::Other)
+    fn other(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::Other)
     }
 
-    fn not_found(source: impl Into<Option<Box<dyn Error + Send + Sync + 'static>>>) -> Self {
-        Self::new(source.into(), AuthAppErrorKind::NotFound)
+    fn not_found(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::NotFound)
     }
 }

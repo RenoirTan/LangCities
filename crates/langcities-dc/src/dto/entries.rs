@@ -3,13 +3,16 @@ use std::fmt::Display;
 use chrono::{DateTime, Utc};
 use langcities_common_server::dto::request::RequestContext;
 use langcities_lcdcdsl::component::{EntryAlias, Id};
-use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter, sea_query::Expr};
+use sea_orm::{
+    ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
+    sea_query::{Expr, Query},
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
     dto::vernaculars::VernacularAliasDto,
-    entity::entries,
+    entity::{entries, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
@@ -29,17 +32,34 @@ impl EntryAliasDto {
             EntryAlias::Id(id) => {
                 let expr = entries::Column::Id.eq(**id);
                 if enforce_owner {
-                    expr.and(VernacularAliasDto::generate_owner_enforced(caller_id)?)
+                    let ver_expr = VernacularAliasDto::generate_owner_enforced(caller_id)?;
+                    expr.and(
+                        entries::Column::VernacularId.in_subquery(
+                            Query::select()
+                                .column(vernaculars::Column::Id)
+                                .and_where(ver_expr)
+                                .from(vernaculars::Entity)
+                                .to_owned(),
+                        ),
+                    )
                 } else {
                     expr
                 }
             }
             EntryAlias::Alias(alias) => {
                 let index_expr = entries::Column::Index.eq(*alias.index);
-                let vernacular_expr = VernacularAliasDto(alias.vernacular_alias.clone())
+                let ver_expr = VernacularAliasDto(alias.vernacular_alias.clone())
                     .generate_filter(caller_id, state, enforce_owner)
                     .await?;
-                index_expr.and(vernacular_expr)
+                index_expr.and(
+                    entries::Column::VernacularId.in_subquery(
+                        Query::select()
+                            .column(vernaculars::Column::Id)
+                            .and_where(ver_expr)
+                            .from(vernaculars::Entity)
+                            .to_owned(),
+                    ),
+                )
             }
         };
         Ok(cond)

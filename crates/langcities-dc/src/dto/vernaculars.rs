@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::Utc;
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
-use langcities_lcdcdsl::component::{Alias, AliasedResourceId, Id, SlugOwnerId};
+use langcities_lcdcdsl::component::{Alias, Id, SlugOwnerId, VernacularAlias};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
     entity::prelude::DateTimeUtc,
@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
 #[schema(value_type = String)]
-pub struct VernacularAliasDto(pub AliasedResourceId);
+pub struct VernacularAliasDto(pub VernacularAlias);
 
 impl VernacularAliasDto {
     pub(crate) async fn generate_filter(
@@ -29,8 +29,8 @@ impl VernacularAliasDto {
         enforce_owner: bool,
     ) -> Result<Expr, DcAppError> {
         let cond = match &self.0 {
-            AliasedResourceId::Id(id) => vernaculars::Column::Id.eq(**id),
-            AliasedResourceId::Alias(alias) => {
+            VernacularAlias::Id(id) => vernaculars::Column::Id.eq(**id),
+            VernacularAlias::Alias(alias) => {
                 let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
                 let owner_expr = match &alias.user_alias {
                     Alias::Id(id) => vernaculars::Column::OwnerId.eq(**id),
@@ -47,7 +47,7 @@ impl VernacularAliasDto {
                 };
                 slug_expr.and(owner_expr)
             }
-            AliasedResourceId::Slug(slug) => {
+            VernacularAlias::Slug(slug) => {
                 if let Some(caller_id) = &caller_id {
                     vernaculars::Column::Slug
                         .eq(&**slug)
@@ -81,7 +81,7 @@ impl<'de> Deserialize<'de> for VernacularAliasDto {
         D: serde::Deserializer<'de>,
     {
         String::deserialize(deserializer)?
-            .parse::<AliasedResourceId>()
+            .parse::<VernacularAlias>()
             .map(Self)
             .map_err(serde::de::Error::custom)
     }
@@ -156,11 +156,11 @@ impl VernacularAccessDto {
         state: &AppState,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
         let vernacular = match &self.alias.0 {
-            AliasedResourceId::Id(id) => Self::resolve_id(**id, conn).await,
-            AliasedResourceId::Alias(aliased) => {
+            VernacularAlias::Id(id) => Self::resolve_id(**id, conn).await,
+            VernacularAlias::Alias(aliased) => {
                 Self::resolve_aliased(aliased.clone(), conn, state).await
             }
-            AliasedResourceId::Slug(slug) => {
+            VernacularAlias::Slug(slug) => {
                 let owner_id = self.request_context.caller_id.as_ref().ok_or_else(|| {
                     DcAppError::bad_request(Some(format!("pure slug '{slug}' needs login").into()))
                 })?;
@@ -304,7 +304,7 @@ mod tests {
     fn deserialize_numeric_vernacular_alias() {
         let alias: VernacularAliasDto = serde_json::from_str(r#""123""#).unwrap();
 
-        assert!(matches!(alias.0, AliasedResourceId::Id(id) if *id == 123));
+        assert!(matches!(alias.0, VernacularAlias::Id(id) if *id == 123));
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod tests {
         let alias: VernacularAliasDto = serde_json::from_str(r#""lang@someone""#).unwrap();
 
         assert!(
-            matches!(alias.0, AliasedResourceId::Alias(alias) if alias.to_string() == "lang@someone")
+            matches!(alias.0, VernacularAlias::Alias(alias) if alias.to_string() == "lang@someone")
         );
     }
 }

@@ -265,13 +265,13 @@ impl<'de> Deserialize<'de> for SlugOwnerId {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum AliasedResourceId {
+pub enum VernacularAlias {
     Id(Id),
     Alias(SlugOwnerId),
     Slug(Slug),
 }
 
-impl Display for AliasedResourceId {
+impl Display for VernacularAlias {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Id(id) => id.fmt(f),
@@ -281,7 +281,7 @@ impl Display for AliasedResourceId {
     }
 }
 
-impl FromStr for AliasedResourceId {
+impl FromStr for VernacularAlias {
     type Err = DslError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -294,7 +294,7 @@ impl FromStr for AliasedResourceId {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AliasedEntry {
-    pub vernacular_alias: AliasedResourceId,
+    pub vernacular_alias: VernacularAlias,
     pub index: Id,
 }
 
@@ -311,7 +311,7 @@ impl FromStr for AliasedEntry {
         let vernacular_alias = parts
             .next()
             .ok_or_else(|| DslError::bad_value(s))
-            .map(|first| first.parse::<AliasedResourceId>())
+            .map(|first| first.parse::<VernacularAlias>())
             .flatten()?;
         let index = parts
             .next()

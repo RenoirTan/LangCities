@@ -1,12 +1,18 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::get,
+    routing::{get, post},
 };
 use langcities_common_server::dto::request::RequestContext;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, DbErr, IntoActiveModel, TransactionError, TransactionTrait,
+};
 
 use crate::{
-    dto::entries::{EntryAccessDto, EntryAliasDto, EntryDto},
+    dto::{
+        entries::{CreateEntryDto, EntryAccessDto, EntryAliasDto, EntryDto},
+        vernaculars::VernacularAccessDto,
+    },
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
@@ -42,32 +48,63 @@ pub async fn get_entry(
         .flatten()
 }
 
-/*
 #[utoipa::path(
     post,
-    path = "/v1/vernaculars",
-    request_body = CreateVernacularDto,
+    path = "/v1/entries",
+    request_body = CreateEntryDto,
     responses(
-        (status = 200, body = VernacularDto, description = "new vernacular details")
+        (status = 200, body = EntryDto, description = "new vernacular details")
     )
 )]
 #[axum::debug_handler]
-pub async fn create_vernacular(
+pub async fn create_entry(
     State(state): State<AppState>,
-    user: dc_users::Model,
-    Json(dto): Json<CreateVernacularDto>,
-) -> Result<Json<VernacularDto>, DcAppError> {
-    let owner_id = user.id;
-    let active_model = dto.to_active_model(owner_id);
-    match active_model.insert(&state.db).await {
-        Ok(model) => Ok(Json(model.into())),
-        Err(DbErr::RecordNotInserted) => Err(DcAppError::bad_request(Some(
-            DbErr::RecordNotInserted.into(),
-        ))),
-        Err(e) => Err(DcAppError::database(Some(e.into()))),
-    }
+    request_context: RequestContext,
+    Json(dto): Json<CreateEntryDto>,
+) -> Result<Json<EntryDto>, DcAppError> {
+    let vernacular_alias = dto.vernacular.clone();
+    let vernacular_access = VernacularAccessDto::write(dto.vernacular.clone(), request_context);
+
+    let out = state
+        .db
+        .clone() // sea orm clone is cheap
+        .transaction(|txn| {
+            Box::pin(async move {
+                let vernacular =
+                    vernacular_access
+                        .resolve(txn, &state)
+                        .await?
+                        .ok_or_else(|| {
+                            DcAppError::not_found(Some(format!("{}", vernacular_alias).into()))
+                        })?;
+                let entry = dto.to_active_model(&vernacular);
+                let next_index = vernacular.next_entry_id + 1;
+                let response: Json<EntryDto> = match entry.insert(txn).await {
+                    Ok(model) => Json(model.into()),
+                    Err(DbErr::RecordNotInserted) => {
+                        return Err(DcAppError::bad_request(Some(
+                            DbErr::RecordNotInserted.into(),
+                        )));
+                    }
+                    Err(e) => return Err(DcAppError::database(Some(e.into()))),
+                };
+                let mut v = vernacular.into_active_model();
+                v.next_entry_id = ActiveValue::Set(next_index);
+                v.update(txn)
+                    .await
+                    .map(|_| response)
+                    .map_err(|e| DcAppError::database(Some(e.into())))
+            })
+        })
+        .await;
+
+    out.map_err(|e| match e {
+        TransactionError::Connection(e) => DcAppError::database(Some(e.into())),
+        TransactionError::Transaction(e) => e,
+    })
 }
 
+/*
 #[utoipa::path(
     patch,
     path = "/v1/vernaculars/{alias}",
@@ -144,5 +181,7 @@ pub async fn delete_vernacular(
 */
 
 pub fn get_v1_entries_router() -> Router<AppState> {
-    Router::new().route("/entries/{alias}", get(get_entry))
+    Router::new()
+        .route("/entries/{alias}", get(get_entry))
+        .route("/entries", post(create_entry))
 }

@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use langcities_common_server::dto::request::RequestContext;
 use langcities_lcdcdsl::component::{EntryAlias, Id};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
+    ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
     sea_query::{Expr, Query},
 };
 use serde::{Deserialize, Serialize};
@@ -166,6 +166,21 @@ impl From<entries::Model> for EntryDto {
             vernacular_id: value.vernacular_id,
             index: value.index,
             created_at: value.created_at,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct CreateEntryDto {
+    pub vernacular: VernacularAliasDto,
+}
+
+impl CreateEntryDto {
+    pub fn to_active_model(self, vernacular: &vernaculars::Model) -> entries::ActiveModel {
+        entries::ActiveModel {
+            vernacular_id: ActiveValue::Set(vernacular.id),
+            index: ActiveValue::Set(vernacular.next_entry_id),
+            ..Default::default()
         }
     }
 }

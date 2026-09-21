@@ -1,18 +1,18 @@
 services:
   dev-build:
     environment:
-      LCAUTH_DB_URL: sqlite:///data/auth.sqlite?mode=rwc
+      LCAUTH_DB_URL: sqlite:///data/db/auth/db.sqlite?mode=rwc
       LCAUTH_DATABASE_URL: ''
-      LCDC_DB_URL: sqlite:///data/dc.sqlite?mode=rwc
+      LCDC_DB_URL: sqlite:///data/db/dc/db.sqlite?mode=rwc
       LCDC_DATABASE_URL: ''
     volumes:
-      - ${LCAUTH_SQLITE_PATH}:/data/auth.sqlite
-      - ${LCDC_SQLITE_PATH}:/data/dc.sqlite
+      - ${LCAUTH_SQLITE_DIR}:/data/db/auth/
+      - ${LCDC_SQLITE_DIR}:/data/db/dc/
 
   langcities-auth:
     volumes:
-      - ${LCAUTH_SQLITE_PATH}:/data/auth.sqlite
+      - ${LCAUTH_SQLITE_DIR}:/data/db/auth/
 
   langcities-dc:
     volumes:
-      - ${LCDC_SQLITE_PATH}:/data/dc.sqlite
+      - ${LCDC_SQLITE_DIR}:/data/db/dc/

@@ -10,7 +10,7 @@
     "bind_port": 8032
   },
   "db": {
-    "url": "sqlite:///data/dc.sqlite?mode=rwc",
+    "url": "sqlite:///data/db/dc/db.sqlite?mode=rwc",
     "max_connections": 10,
     "min_connections": 1,
     "connect_timeout": 30000,

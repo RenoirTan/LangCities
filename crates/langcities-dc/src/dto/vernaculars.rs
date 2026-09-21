@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::Utc;
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
-use langcities_lcdcdsl::component::{Alias, Id, SlugOwnerId, VernacularAlias};
+use langcities_lcdcdsl::component::{Alias, Id, VernacularAlias};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
     entity::prelude::DateTimeUtc,
@@ -101,6 +101,12 @@ pub enum VernacularAction {
     Delete,
 }
 
+impl VernacularAction {
+    pub fn enforce_owner(&self) -> bool {
+        !matches!(self, Self::Read)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VernacularAccessDto {
     pub alias: VernacularAliasDto,
@@ -155,71 +161,16 @@ impl VernacularAccessDto {
         conn: &C,
         state: &AppState,
     ) -> Result<Option<vernaculars::Model>, DcAppError> {
-        let vernacular = match &self.alias.0 {
-            VernacularAlias::Id(id) => Self::resolve_id(**id, conn).await,
-            VernacularAlias::Alias(aliased) => {
-                Self::resolve_aliased(aliased.clone(), conn, state).await
-            }
-            VernacularAlias::Slug(slug) => {
-                let owner_id = self.request_context.caller_id.as_ref().ok_or_else(|| {
-                    DcAppError::bad_request(Some(format!("pure slug '{slug}' needs login").into()))
-                })?;
-                let aliased = SlugOwnerId {
-                    slug: slug.clone(),
-                    user_alias: Alias::Id(owner_id.clone()),
-                };
-                Self::resolve_aliased(aliased, conn, state).await
-            }
-        }?;
-        if let Some(vernacular) = vernacular {
-            if self.can_access(&vernacular) {
-                Ok(Some(vernacular))
-            } else {
-                Err(DcAppError::unauthorized(Some(
-                    format!("cannot access '{}'", self.alias).into(),
-                )))
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    async fn resolve_id<C: ConnectionTrait>(
-        id: i64,
-        conn: &C,
-    ) -> Result<Option<vernaculars::Model>, DcAppError> {
-        vernaculars::Entity::find_by_id(id)
-            .one(conn)
-            .await
-            // .map(|o| o.map(|m| m.id))
-            .map_err(|e| DcAppError::database(Some(e.into())))
-    }
-
-    async fn resolve_aliased<C: ConnectionTrait>(
-        aliased: SlugOwnerId,
-        conn: &C,
-        state: &AppState,
-    ) -> Result<Option<vernaculars::Model>, DcAppError> {
-        let slug: String = aliased.slug.into();
-        let user_condition = match aliased.user_alias {
-            Alias::Id(id) => vernaculars::Column::OwnerId.eq(*id),
-            Alias::Slug(username) => {
-                let auth_user_id = state.resolve_auth_user_id(&**username).await?;
-                vernaculars::Column::OwnerId.in_subquery(
-                    Query::select()
-                        .column(dc_users::Column::Id)
-                        .and_where(dc_users::Column::AuthUserId.eq(auth_user_id))
-                        .from(dc_users::Entity)
-                        .to_owned(),
-                )
-            }
-        };
+        let caller_id = self.request_context.caller_id;
+        let enforce_owner = self.action.enforce_owner();
+        let expr = self
+            .alias
+            .generate_filter(caller_id, state, enforce_owner)
+            .await?;
         vernaculars::Entity::find()
-            .filter(vernaculars::Column::Slug.eq(slug))
-            .filter(user_condition)
+            .filter(expr)
             .one(conn)
             .await
-            // .map(|o| o.map(|m| m.id))
             .map_err(|e| DcAppError::database(Some(e.into())))
     }
 }

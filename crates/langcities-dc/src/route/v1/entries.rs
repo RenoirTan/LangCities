@@ -1,11 +1,12 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use langcities_common_server::dto::request::RequestContext;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue, DbErr, IntoActiveModel, TransactionError, TransactionTrait,
+    ActiveModelTrait, ActiveValue, DbErr, IntoActiveModel, ModelTrait, TransactionError,
+    TransactionTrait,
 };
 
 use crate::{
@@ -53,7 +54,7 @@ pub async fn get_entry(
     path = "/v1/entries",
     request_body = CreateEntryDto,
     responses(
-        (status = 200, body = EntryDto, description = "new vernacular details")
+        (status = 200, body = EntryDto, description = "new entry details")
     )
 )]
 #[axum::debug_handler]
@@ -141,47 +142,48 @@ pub async fn update_vernacular(
         .map(|m| Json(VernacularDto::from(m)))
         .map_err(|e| DcAppError::database(Some(e.into())))
 }
+*/
 
 #[utoipa::path(
     delete,
-    path = "/v1/vernaculars/{alias}",
+    path = "/v1/entries/{alias}",
     params(
         (
-            "alias" = VernacularAliasDto,
+            "alias" = EntryAliasDto,
             Path,
-            description = "Unique vernacular identifier, such as its numeric ID or alias"
+            description = "Unique entry identifier, such as its numeric ID or alias"
         )
     ),
     responses(
-        (status = 200, body = VernacularDto, description = "vernacular details")
+        (status = 200, body = EntryDto, description = "entry details")
     )
 )]
 #[axum::debug_handler]
-pub async fn delete_vernacular(
-    Path(alias): Path<VernacularAliasDto>,
+pub async fn delete_entry(
+    Path(alias): Path<EntryAliasDto>,
     request_context: RequestContext,
     State(state): State<AppState>,
-) -> Result<Json<VernacularDto>, DcAppError> {
-    let model = VernacularAccessDto::delete(alias.clone(), request_context)
+) -> Result<Json<EntryDto>, DcAppError> {
+    let model = EntryAccessDto::delete(alias.clone(), request_context)
         .resolve(&state.db, &state)
         .await
         .map(|o| {
             o.ok_or_else(|| {
-                DcAppError::not_found(Some(format!("vernacular {} not found", alias).into()))
+                DcAppError::not_found(Some(format!("entry {} not found", alias).into()))
             })
         })
         .flatten()?;
-    let dto = Json(VernacularDto::from(model.clone()));
+    let dto = Json(EntryDto::from(model.clone()));
     model
         .delete(&state.db)
         .await
         .map_err(|e| DcAppError::database(Some(e.into())))?;
     Ok(dto)
 }
-*/
 
 pub fn get_v1_entries_router() -> Router<AppState> {
     Router::new()
         .route("/entries/{alias}", get(get_entry))
         .route("/entries", post(create_entry))
+        .route("/entries/{alias}", delete(delete_entry))
 }

@@ -2,6 +2,7 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20260831_000001_create_users;
 mod m20260905_092406_create_vernaculars;
+mod m20260921_073321_create_entries;
 
 pub struct Migrator;
 
@@ -11,6 +12,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20260831_000001_create_users::Migration),
             Box::new(m20260905_092406_create_vernaculars::Migration),
+            Box::new(m20260921_073321_create_entries::Migration),
         ]
     }
 }

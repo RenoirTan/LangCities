@@ -8,6 +8,12 @@ LangCities is a constructed language management system that aims to eventually e
 cargo build --workspace --features sqlite,postgres,mysql
 ```
 
+Using docker:
+
+```bash
+./scripts/compose.sh sqlite dev up --remove-orphans dev-build
+```
+
 ### SeaORM Codegen
 
 Run the following commands to generate entity files for langcities' microservices.

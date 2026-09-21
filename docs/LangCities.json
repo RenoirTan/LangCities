@@ -807,6 +807,20 @@
           "comment": "",
           "size": "",
           "values": []
+        },
+        {
+          "id": "LDQspzw-pVEgFziEzsOi6",
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "",
+          "size": "",
+          "values": []
         }
       ],
       "comment": "",
@@ -827,8 +841,8 @@
     {
       "id": "YzZUEf0Vy5VwrTTcyQKHB",
       "name": "entry_fields",
-      "x": 848.6970477937243,
-      "y": 369.0125717554058,
+      "x": 850.0302997468493,
+      "y": 393.67922824954644,
       "locked": false,
       "fields": [
         {
@@ -915,20 +929,6 @@
           "id": "AKZfU5dZEuwRA4chWCjIL",
           "name": "updated_at",
           "type": "TIMESTAMP",
-          "default": "",
-          "check": "",
-          "primary": false,
-          "unique": false,
-          "notNull": true,
-          "increment": false,
-          "comment": "",
-          "size": "",
-          "values": []
-        },
-        {
-          "id": "KzeXC7hpzTL16ul1kdYvX",
-          "name": "dependencies",
-          "type": "JSON",
           "default": "",
           "check": "",
           "primary": false,

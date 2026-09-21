@@ -7,7 +7,7 @@ generate_compose_command() {
   # $2: db backend
   # $3: profile
   if [ $# -ne 3 ]; then
-    echo "need at least 2 arguments: db backend, profile"
+    echo "need at least 3 arguments: cmd array, db backend, profile"
     return 1
   fi
 

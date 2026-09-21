@@ -3,4 +3,5 @@
 pub mod prelude;
 
 pub mod dc_users;
+pub mod seaql_migrations;
 pub mod vernaculars;

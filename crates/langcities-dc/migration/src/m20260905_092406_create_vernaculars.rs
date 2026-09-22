@@ -41,13 +41,32 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
-            .await
+            .await?;
+
+        manager
+            .create_index(
+                Index::create()
+                    .if_not_exists()
+                    .name("idx_vernaculars_owner_id")
+                    .table("vernaculars")
+                    .col("owner_id")
+                    .to_owned(),
+            )
+            .await?;
+
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // Replace the sample below with your own migration scripts
         manager
+            .drop_index(Index::drop().name("idx_vernaculars_owner_id").to_owned())
+            .await?;
+
+        manager
             .drop_table(Table::drop().table("vernaculars").to_owned())
-            .await
+            .await?;
+
+        Ok(())
     }
 }

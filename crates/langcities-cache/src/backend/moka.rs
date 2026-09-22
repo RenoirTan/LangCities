@@ -1,9 +1,9 @@
 use std::{
-    error::Error,
     hash::{BuildHasher, Hash, RandomState},
     time::Duration,
 };
 
+use langcities_common::error::Error;
 use moka::{Expiry as MokaExpiry, future::Cache, ops::compute::Op};
 
 use crate::common::{CacheBackend, Expiry};
@@ -86,12 +86,7 @@ where
         self.inner.get(key).await.map(|entry| entry.value)
     }
 
-    async fn set(
-        &self,
-        key: K,
-        value: V,
-        expiry: Expiry,
-    ) -> Result<Option<V>, Box<dyn Error + Send + Sync + 'static>> {
+    async fn set(&self, key: K, value: V, expiry: Expiry) -> Result<Option<V>, Error> {
         let mut previous = None;
         self.inner
             .entry(key)

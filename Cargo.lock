@@ -1861,6 +1861,7 @@ dependencies = [
 name = "langcities-cache"
 version = "0.1.0"
 dependencies = [
+ "langcities-common",
  "langcities-config",
  "moka",
  "serde",

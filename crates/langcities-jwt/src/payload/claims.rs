@@ -1,5 +1,6 @@
-use std::error::Error;
+use std::error::Error as StdError;
 
+use langcities_common::error::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{JwtError, JwtErrorTrait};
@@ -40,20 +41,20 @@ impl Claims {
 }
 
 pub trait ParseJwtClaims {
-    type Error: Error + Send + Sync + 'static;
+    type Error: StdError + Send + Sync + 'static;
 
     fn parse_jwt_claims(&self, token: &str) -> ParsedClaims<Self::Error>;
-    fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error;
+    fn map_err(&self, error: Error) -> Self::Error;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ParsedClaims<E: Error + Send + Sync + 'static> {
+pub enum ParsedClaims<E: StdError + Send + Sync + 'static> {
     Valid(Claims),
     Invalid(E),
     Missing,
 }
 
-impl<E: Error + Send + Sync + 'static> ParsedClaims<E> {
+impl<E: StdError + Send + Sync + 'static> ParsedClaims<E> {
     pub fn from_result(ro: Result<Option<Claims>, E>) -> Self {
         match ro {
             Ok(Some(claims)) => Self::Valid(claims),

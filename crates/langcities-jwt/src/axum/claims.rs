@@ -28,6 +28,7 @@ where
         let parsed_claims = parts
             .extensions
             .get::<Arc<ParsedClaims<S::Error>>>()
+            .cloned()
             .ok_or_else(|| state.map_err("ParsedClaims missing from request extensions".into()))?;
 
         match parsed_claims.as_ref() {

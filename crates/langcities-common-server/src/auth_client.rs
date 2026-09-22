@@ -1,5 +1,6 @@
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 
+use langcities_common::error::Error;
 use langcities_config::error::{LcConfigError, LcConfigErrorTrait};
 use reqwest::{Client, Url};
 
@@ -33,7 +34,7 @@ impl AuthClient {
     /// Creates a client with a 2-second connection timeout and a 5-second total timeout.
     /// The users endpoint is resolved at `/v1/users` on the supplied service origin.
     /// Returns an error if the origin fails [`validate_base_url`].
-    pub fn new(base_url: &Url) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+    pub fn new(base_url: &Url) -> Result<Self, Error> {
         validate_base_url(base_url)?;
         let users_url = base_url.join("/v1/users")?;
         let http = Client::builder()

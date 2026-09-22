@@ -10,7 +10,7 @@ use langcities_lcdcdsl::{
 use tree_sitter::{Parser as TSParser, Tree as TSTree};
 use tree_sitter_lcdcdsl::LANGUAGE;
 
-use crate::{ParserError, ParserErrorKind, ParserErrorTrait, RawNodePath};
+use crate::{ParserError, ParserErrorTrait, RawNodePath};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransferInstructionContext {
@@ -72,7 +72,7 @@ impl Parser {
         let source = &tree_builder.tree.context.source;
         let raw_tree = ts_parser
             .parse(source, None)
-            .ok_or_else(|| ParserError::new(None, ParserErrorKind::InvalidSource))?;
+            .ok_or_else(|| ParserError::invalid_source("tree-sitter produced no syntax tree"))?;
         Ok(Self {
             tree_builder,
             ts_parser,
@@ -100,7 +100,11 @@ impl Parser {
 
         let root = self.raw_tree.root_node();
         if root.has_error() || root.kind() != "source_file" || root.named_child_count() != 1 {
-            return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+            return Err(ParserError::invalid_source(format!(
+                "expected one valid source expression, found kind '{}' with {} named children",
+                root.kind(),
+                root.named_child_count()
+            )));
         }
 
         self.tasks = vec![TraversalTask::Expression(RawNodePath::root().with_child(0))];
@@ -131,7 +135,9 @@ impl Parser {
                         }
                         TransferInstructionKind::Binary(op) => {
                             if self.node_ids_stack.len() < 2 {
-                                return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                                return Err(ParserError::invalid_source(
+                                    "binary expression has fewer than two child nodes",
+                                ));
                             }
 
                             let child_ids =
@@ -141,7 +147,10 @@ impl Parser {
                         TransferInstructionKind::FunctionCall { arg_count } => {
                             let child_count = arg_count + 1;
                             if self.node_ids_stack.len() < child_count {
-                                return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                                return Err(ParserError::invalid_source(format!(
+                                    "function call needs {child_count} child nodes but only {} are available",
+                                    self.node_ids_stack.len()
+                                )));
                             }
 
                             let child_ids = self
@@ -164,9 +173,9 @@ impl Parser {
                 TraversalTask::Expression(path) => path,
             };
 
-            let node = path
-                .of_tree(&self.raw_tree)
-                .ok_or_else(|| ParserError::new(None, ParserErrorKind::InvalidSource))?;
+            let node = path.of_tree(&self.raw_tree).ok_or_else(|| {
+                ParserError::invalid_source(format!("AST node missing at path {:?}", path.indices))
+            })?;
 
             match node.kind() {
                 "identifier" => {
@@ -199,7 +208,9 @@ impl Parser {
                 }
                 "parenthesis_expression" => {
                     if node.named_child_count() != 1 {
-                        return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                        return Err(ParserError::invalid_source(
+                            "parenthesized expression must contain one child",
+                        ));
                     }
 
                     self.tasks
@@ -266,7 +277,10 @@ impl Parser {
                         )));
                 }
                 _ => {
-                    return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                    return Err(ParserError::invalid_source(format!(
+                        "unsupported AST node kind '{}'",
+                        node.kind()
+                    )));
                 }
             }
         }

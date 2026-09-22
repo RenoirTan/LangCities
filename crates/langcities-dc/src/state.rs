@@ -3,6 +3,7 @@ use crate::{
     error::{DcAppError, DcAppErrorTrait},
 };
 use langcities_cache::{backend::moka::MokaWrapper, common::CacheBackend};
+use langcities_common::error::Error;
 use langcities_common_server::{auth_client::AuthClient, dto::users::AuthUserDto};
 use langcities_jwt::{
     manager::JwtDecoder,
@@ -10,7 +11,7 @@ use langcities_jwt::{
     payload::{ParseJwtClaims, ParsedClaims},
 };
 use sea_orm::{Database, DatabaseConnection};
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct AppState {
@@ -46,7 +47,7 @@ impl AppState {
         &self,
         username: String,
         id: i64,
-    ) -> Result<Option<i64>, Box<dyn Error + Send + Sync + 'static>> {
+    ) -> Result<Option<i64>, Error> {
         let expiry = self.config.dc.username_cache_expiry.clone();
         self.username_cache.set(username, id, expiry).await
     }
@@ -119,7 +120,7 @@ impl ParseJwtClaims for AppState {
         }
     }
 
-    fn map_err(&self, error: Box<dyn Error + Send + Sync>) -> Self::Error {
+    fn map_err(&self, error: Error) -> Self::Error {
         DcAppError::invalid_access_token(error)
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    error::{DslError, DslErrorKind},
+    error::{DslError, DslErrorTrait},
     node::{NodeId, NodeKind},
     tree::Tree,
 };
@@ -46,12 +46,9 @@ impl<'t> TreeTraverser<'t> {
         K: Into<TraversalKind>,
     {
         let (start_id, kind) = (start_id.into(), kind.into());
-        tree.arena.get(&start_id).ok_or_else(|| {
-            DslError::new(
-                Some(format!("Node {} not found", start_id).into()),
-                DslErrorKind::NodeNotFound,
-            )
-        })?;
+        tree.arena
+            .get(&start_id)
+            .ok_or_else(|| DslError::node_not_found_of(start_id))?;
         Ok(Self {
             tree,
             tasks: vec![TraversalTask::new_initial(start_id)],
@@ -85,12 +82,11 @@ impl<'t> TreeTraverser<'t> {
     pub fn find_next(&mut self) -> Result<Option<NodeId>, DslError> {
         while let Some(task) = self.pop_next() {
             let TraversalTask { node_id, initial } = task;
-            let node = self.tree.arena.get(&node_id).ok_or_else(|| {
-                DslError::new(
-                    Some(format!("Node {} not found", node_id).into()),
-                    DslErrorKind::NodeNotFound,
-                )
-            })?;
+            let node = self
+                .tree
+                .arena
+                .get(&node_id)
+                .ok_or_else(|| DslError::node_not_found_of(node_id))?;
             match &node.node {
                 NodeKind::IdentifierExpr(_)
                 | NodeKind::IdentifierPrim(_)
@@ -134,13 +130,10 @@ impl<'t> TreeTraverser<'t> {
                     }
                 }
                 _ => {
-                    return Err(DslError::new(
-                        Some(
-                            format!("Unimplemented node {} of kind: {:?}", node_id, node.node,)
-                                .into(),
-                        ),
-                        DslErrorKind::NodeNotFound,
-                    ));
+                    return Err(DslError::unsupported_node(format!(
+                        "node {node_id} has unsupported kind {:?}",
+                        node.node
+                    )));
                 }
             }
         }

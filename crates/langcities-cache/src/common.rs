@@ -1,5 +1,6 @@
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 
+use langcities_common::error::Error;
 use langcities_config::datatype::Milliseconds;
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +32,7 @@ pub trait CacheBackend<K, V>: Send + Sync {
         key: K,
         value: V,
         expiry: Expiry,
-    ) -> impl Future<Output = Result<Option<V>, Box<dyn Error + Send + Sync + 'static>>>;
+    ) -> impl Future<Output = Result<Option<V>, Error>>;
     fn take(&self, key: &K) -> impl Future<Output = Option<V>>;
 
     fn delete(&self, key: &K) -> impl Future<Output = ()> {

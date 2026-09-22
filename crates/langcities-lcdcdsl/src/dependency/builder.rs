@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     dependency::{Dependency, DependencyKind},
-    error::{DslError, DslErrorKind, DslErrorTrait},
+    error::{DslError, DslErrorTrait},
     node::{NodeId, NodeKind},
     tree::{TraversalKind, Tree, TreeTraverser},
 };
@@ -15,12 +15,9 @@ pub struct DependencyBuilder<'t> {
 
 impl<'t> DependencyBuilder<'t> {
     pub fn new(tree: &'t Tree) -> Result<Self, DslError> {
-        let start_id = tree.root_node_id.ok_or_else(|| {
-            DslError::new(
-                Some("No root node found".into()),
-                DslErrorKind::NodeNotFound,
-            )
-        })?;
+        let start_id = tree
+            .root_node_id
+            .ok_or_else(|| DslError::node_not_found("tree has no root node"))?;
         let traverser = TreeTraverser::new(tree, start_id, TraversalKind::Preorder)?;
         Ok(Self {
             traverser,

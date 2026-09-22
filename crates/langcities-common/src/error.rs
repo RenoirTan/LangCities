@@ -50,10 +50,50 @@ impl<K: Debug + Display + Send> StdError for LcError<K> {
 #[cfg(feature = "axum")]
 impl<K: Debug + Display + Send + Into<StatusCode>> IntoResponse for LcError<K> {
     fn into_response(self) -> Response {
-        let body = Json(json!({
-            "error": format!("{}", self),
-        }));
+        let error = self.kind.to_string();
         let status = self.kind.into();
+        let body = Json(json!({
+            "error": error,
+        }));
         (status, body).into_response()
+    }
+}
+
+#[cfg(all(test, feature = "axum"))]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+
+    #[derive(Debug)]
+    enum TestErrorKind {
+        Internal,
+    }
+
+    impl Display for TestErrorKind {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Internal")
+        }
+    }
+
+    impl From<TestErrorKind> for StatusCode {
+        fn from(_: TestErrorKind) -> Self {
+            Self::INTERNAL_SERVER_ERROR
+        }
+    }
+
+    #[tokio::test]
+    async fn response_does_not_expose_error_source() {
+        let error: LcError<TestErrorKind> = LcError::new(
+            Some("sensitive database details".into()),
+            TestErrorKind::Internal,
+        );
+        let response = error.into_response();
+
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
+            json!({ "error": "Internal" })
+        );
     }
 }

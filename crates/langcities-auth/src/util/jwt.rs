@@ -22,11 +22,11 @@ impl SessionAuthorization {
         Self { user }
     }
 
-    pub fn get_sub(self) -> String {
-        match self.user.id {
-            Some(id) => id.to_string(),
-            None => "".to_string(),
-        }
+    pub fn get_sub(self) -> Result<String, AuthAppError> {
+        self.user
+            .id
+            .map(|id| id.to_string())
+            .ok_or_else(|| AuthAppError::unauthorized("not logged in"))
     }
 }
 
@@ -43,7 +43,7 @@ impl Authorization {
         Self::Session(SessionAuthorization::new(user))
     }
 
-    pub fn get_sub(self) -> String {
+    pub fn get_sub(self) -> Result<String, AuthAppError> {
         match self {
             Self::Session(s) => s.get_sub(),
         }
@@ -72,7 +72,7 @@ impl Access {
     pub fn generate_claims(self, generator: &ClaimsGenerator) -> Result<Claims, AuthAppError> {
         Ok(generator.generate_claims(
             self.microservice.first_allowed_audience(),
-            self.authorization.get_sub(),
+            self.authorization.get_sub()?,
             "all",
             vec![],
         ))
@@ -87,5 +87,20 @@ impl Access {
             .map_err(AuthAppError::other)?;
         let expiry = state.claims_generator.expiry.num_seconds();
         Ok(AccessTokenResponseDto::new(token, "Bearer", expiry))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::AuthAppErrorKind;
+
+    #[test]
+    fn session_authorization_requires_a_user_id() {
+        let error = SessionAuthorization::new(SessionUserDto::default())
+            .get_sub()
+            .unwrap_err();
+
+        assert_eq!(error.kind, AuthAppErrorKind::Unauthorized);
     }
 }

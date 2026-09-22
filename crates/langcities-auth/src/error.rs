@@ -25,7 +25,7 @@ impl Display for AuthAppErrorKind {
 impl Into<StatusCode> for AuthAppErrorKind {
     fn into(self) -> StatusCode {
         match self {
-            Self::InvalidCredentials => StatusCode::BAD_REQUEST,
+            Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::Database => StatusCode::INTERNAL_SERVER_ERROR,
             Self::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
             Self::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
@@ -81,5 +81,43 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn not_found(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), AuthAppErrorKind::NotFound)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_kinds_map_to_expected_http_statuses() {
+        let cases = [
+            (
+                AuthAppErrorKind::Database,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                AuthAppErrorKind::InvalidCredentials,
+                StatusCode::UNAUTHORIZED,
+            ),
+            (
+                AuthAppErrorKind::PasswordHashing,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                AuthAppErrorKind::FailedInit,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (AuthAppErrorKind::Other, StatusCode::INTERNAL_SERVER_ERROR),
+            (
+                AuthAppErrorKind::FailedSession,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (AuthAppErrorKind::Unauthorized, StatusCode::UNAUTHORIZED),
+            (AuthAppErrorKind::NotFound, StatusCode::NOT_FOUND),
+        ];
+
+        for (kind, expected) in cases {
+            assert_eq!(Into::<StatusCode>::into(kind), expected);
+        }
     }
 }

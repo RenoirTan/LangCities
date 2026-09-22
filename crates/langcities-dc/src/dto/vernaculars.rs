@@ -33,16 +33,10 @@ impl VernacularAliasDto {
             VernacularAlias::Alias(alias) => {
                 let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
                 let owner_expr = match &alias.user_alias {
-                    Alias::Id(id) => vernaculars::Column::OwnerId.eq(**id),
+                    Alias::Id(id) => Self::generate_owner_from_auth_user_id(**id),
                     Alias::Slug(username) => {
                         let auth_user_id = state.resolve_auth_user_id(&**username).await?;
-                        vernaculars::Column::OwnerId.in_subquery(
-                            Query::select()
-                                .column(dc_users::Column::Id)
-                                .and_where(dc_users::Column::AuthUserId.eq(auth_user_id))
-                                .from(dc_users::Entity)
-                                .to_owned(),
-                        )
+                        Self::generate_owner_from_auth_user_id(auth_user_id)
                     }
                 };
                 slug_expr.and(owner_expr)
@@ -66,6 +60,16 @@ impl VernacularAliasDto {
 
     pub(crate) fn generate_owner_enforcement(caller_id: Id) -> Expr {
         vernaculars::Column::OwnerId.eq(*caller_id)
+    }
+
+    fn generate_owner_from_auth_user_id(auth_user_id: i64) -> Expr {
+        vernaculars::Column::OwnerId.in_subquery(
+            Query::select()
+                .column(dc_users::Column::Id)
+                .and_where(dc_users::Column::AuthUserId.eq(auth_user_id))
+                .from(dc_users::Entity)
+                .to_owned(),
+        )
     }
 
     pub(crate) fn generate_owner_enforced(caller_id: Option<Id>) -> Result<Expr, DcAppError> {
@@ -250,6 +254,7 @@ impl UpdateVernacularDto {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sea_orm::sea_query::SqliteQueryBuilder;
 
     #[test]
     fn deserialize_numeric_vernacular_alias() {
@@ -264,6 +269,23 @@ mod tests {
 
         assert!(
             matches!(alias.0, VernacularAlias::Alias(alias) if alias.to_string() == "lang@someone")
+        );
+    }
+
+    #[test]
+    fn numeric_owner_aliases_resolve_auth_user_ids() {
+        let query = Query::select()
+            .column(vernaculars::Column::Id)
+            .from(vernaculars::Entity)
+            .and_where(VernacularAliasDto::generate_owner_from_auth_user_id(42))
+            .to_owned()
+            .to_string(SqliteQueryBuilder);
+
+        assert!(
+            query.contains(
+                r#""vernaculars"."owner_id" IN (SELECT "id" FROM "dc_users" WHERE "dc_users"."auth_user_id" = 42)"#
+            ),
+            "{query}"
         );
     }
 }

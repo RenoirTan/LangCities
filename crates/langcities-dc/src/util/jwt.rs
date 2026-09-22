@@ -11,10 +11,7 @@ use axum_extra::{
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_jwt::payload::Claims;
 use langcities_lcdcdsl::component::Id;
-use std::{
-    any::Any,
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug)]
 pub struct DcClaimsWrapper(pub Claims);
@@ -51,23 +48,19 @@ impl DerefMut for DcClaimsWrapper {
     }
 }
 
-impl<S> FromRequestParts<S> for DcClaimsWrapper
-where
-    S: Any + Send + Sync,
-{
+impl FromRequestParts<AppState> for DcClaimsWrapper {
     type Rejection = DcAppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let app_state = (state as &dyn Any)
-            .downcast_ref::<AppState>()
-            .expect("AppState not found in router state");
-
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
             .map_err(DcAppError::unauthorized)?;
 
-        let token_data = app_state
+        let token_data = state
             .jwt_decoder
             .decode_token::<()>(&bearer.token())
             .map_err(DcAppError::unauthorized)?;

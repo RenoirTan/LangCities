@@ -142,7 +142,9 @@ impl KeyConfig {
                     Err(LcConfigError::missing_key_of("hmac-secret"))
                 }
             }
-            f => panic!("Unhandled algorithm families: {:?}", f),
+            family => Err(LcConfigError::bad_parse(format!(
+                "unsupported JWT algorithm family: {family:?}"
+            ))),
         }
     }
 }

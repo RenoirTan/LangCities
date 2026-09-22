@@ -206,16 +206,20 @@ impl Parser {
                         .push(TraversalTask::Expression(path.with_child(0)));
                 }
                 "binary_expression" => {
-                    let add_expression = node.named_child(0);
-                    if node.named_child_count() != 1
-                        || add_expression.is_none_or(|child| child.kind() != "add_expression")
-                    {
-                        return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                    let Some(add_expression) = node.named_child(0) else {
+                        return Err(ParserError::invalid_source(
+                            "binary expression has no add expression",
+                        ));
+                    };
+                    if node.named_child_count() != 1 || add_expression.kind() != "add_expression" {
+                        return Err(ParserError::invalid_source(
+                            "binary expression must contain one add expression",
+                        ));
                     }
-
-                    let add_expression = add_expression.unwrap();
                     if add_expression.named_child_count() != 2 {
-                        return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                        return Err(ParserError::invalid_source(
+                            "add expression must contain two operands",
+                        ));
                     }
 
                     let add_path = path.with_child(0);
@@ -231,12 +235,15 @@ impl Parser {
                 }
                 "function_call" => {
                     let child_count = node.named_child_count();
-                    if child_count < 1
-                        || node
-                            .named_child(0)
-                            .is_none_or(|child| child.kind() != "identifier")
-                    {
-                        return Err(ParserError::new(None, ParserErrorKind::InvalidSource));
+                    let Some(identifier) = node.named_child(0) else {
+                        return Err(ParserError::invalid_source(
+                            "function call has no identifier",
+                        ));
+                    };
+                    if child_count < 1 || identifier.kind() != "identifier" {
+                        return Err(ParserError::invalid_source(
+                            "function call must start with an identifier",
+                        ));
                     }
 
                     self.tasks
@@ -252,7 +259,6 @@ impl Parser {
                             .push(TraversalTask::Expression(path.with_child(index as u32)));
                     }
 
-                    let identifier = node.named_child(0).unwrap();
                     self.tasks
                         .push(TraversalTask::Register(TransferInstruction::new(
                             TransferInstructionKind::IdentifierPrim,

@@ -51,7 +51,8 @@ pub async fn get_vernacular(
     path = "/v1/vernaculars",
     request_body = CreateVernacularDto,
     responses(
-        (status = 200, body = VernacularDto, description = "new vernacular details")
+        (status = 200, body = VernacularDto, description = "new vernacular details"),
+        (status = 409, description = "vernacular conflicts with existing data")
     )
 )]
 #[axum::debug_handler]
@@ -64,7 +65,7 @@ pub async fn create_vernacular(
     let active_model = dto.to_active_model(owner_id);
     match active_model.insert(&state.db).await {
         Ok(model) => Ok(Json(model.into())),
-        Err(DbErr::RecordNotInserted) => Err(DcAppError::bad_request(DbErr::RecordNotInserted)),
+        Err(DbErr::RecordNotInserted) => Err(DcAppError::conflict(DbErr::RecordNotInserted)),
         Err(e) => Err(DcAppError::database(e)),
     }
 }

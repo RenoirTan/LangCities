@@ -53,7 +53,8 @@ pub async fn get_entry(
     path = "/v1/entries",
     request_body = CreateEntryDto,
     responses(
-        (status = 200, body = EntryDto, description = "new entry details")
+        (status = 200, body = EntryDto, description = "new entry details"),
+        (status = 409, description = "entry conflicts with existing data")
     )
 )]
 #[axum::debug_handler]
@@ -79,7 +80,7 @@ pub async fn create_entry(
                 let response: Json<EntryDto> = match entry.insert(txn).await {
                     Ok(model) => Json(model.into()),
                     Err(DbErr::RecordNotInserted) => {
-                        return Err(DcAppError::bad_request(DbErr::RecordNotInserted));
+                        return Err(DcAppError::conflict(DbErr::RecordNotInserted));
                     }
                     Err(e) => return Err(DcAppError::database(e)),
                 };

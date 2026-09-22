@@ -14,7 +14,8 @@ use crate::{
     path = "/v1/register",
     request_body = RegisterDto,
     responses(
-        (status = 200, body = AuthUserDto, description = "successful registration")
+        (status = 200, body = AuthUserDto, description = "successful registration"),
+        (status = 409, description = "username already exists")
     )
 )]
 #[axum::debug_handler]
@@ -35,7 +36,7 @@ pub async fn register(
     {
         Ok(res) => match res {
             TryInsertResult::Empty => Err(AuthAppError::other("registration inserted no user")),
-            TryInsertResult::Conflicted => Err(AuthAppError::unauthorized("conflicting usernames")),
+            TryInsertResult::Conflicted => Err(AuthAppError::conflict("conflicting usernames")),
             TryInsertResult::Inserted(i) => match users::Entity::find_by_id(i.last_insert_id)
                 .one(&state.db)
                 .await

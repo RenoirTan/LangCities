@@ -8,10 +8,12 @@ use serde::{Deserialize, Serialize};
 pub enum AuthAppErrorKind {
     Database,
     InvalidCredentials,
+    Conflict,
     PasswordHashing,
     FailedInit,
     Other,
     FailedSession,
+    TokenGeneration,
     Unauthorized,
     NotFound,
 }
@@ -26,11 +28,13 @@ impl Into<StatusCode> for AuthAppErrorKind {
     fn into(self) -> StatusCode {
         match self {
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
+            Self::Conflict => StatusCode::CONFLICT,
             Self::Database => StatusCode::INTERNAL_SERVER_ERROR,
             Self::PasswordHashing => StatusCode::INTERNAL_SERVER_ERROR,
             Self::FailedInit => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Other => StatusCode::INTERNAL_SERVER_ERROR,
             Self::FailedSession => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::TokenGeneration => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::NotFound => StatusCode::NOT_FOUND,
         }
@@ -41,10 +45,12 @@ pub type AuthAppError = LcError<AuthAppErrorKind>;
 
 pub trait AuthAppErrorTrait {
     fn invalid_credentials(source: impl Into<Error>) -> Self;
+    fn conflict(source: impl Into<Error>) -> Self;
     fn database(source: impl Into<Error>) -> Self;
     fn password_hashing(source: impl Into<Error>) -> Self;
     fn failed_init(source: impl Into<Error>) -> Self;
     fn failed_session(source: impl Into<Error>) -> Self;
+    fn token_generation(source: impl Into<Error>) -> Self;
     fn unauthorized(source: impl Into<Error>) -> Self;
     fn other(source: impl Into<Error>) -> Self;
     fn not_found(source: impl Into<Error>) -> Self;
@@ -53,6 +59,10 @@ pub trait AuthAppErrorTrait {
 impl AuthAppErrorTrait for AuthAppError {
     fn invalid_credentials(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), AuthAppErrorKind::InvalidCredentials)
+    }
+
+    fn conflict(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::Conflict)
     }
 
     fn database(source: impl Into<Error>) -> Self {
@@ -69,6 +79,10 @@ impl AuthAppErrorTrait for AuthAppError {
 
     fn failed_session(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), AuthAppErrorKind::FailedSession)
+    }
+
+    fn token_generation(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), AuthAppErrorKind::TokenGeneration)
     }
 
     fn unauthorized(source: impl Into<Error>) -> Self {
@@ -99,6 +113,7 @@ mod tests {
                 AuthAppErrorKind::InvalidCredentials,
                 StatusCode::UNAUTHORIZED,
             ),
+            (AuthAppErrorKind::Conflict, StatusCode::CONFLICT),
             (
                 AuthAppErrorKind::PasswordHashing,
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -110,6 +125,10 @@ mod tests {
             (AuthAppErrorKind::Other, StatusCode::INTERNAL_SERVER_ERROR),
             (
                 AuthAppErrorKind::FailedSession,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                AuthAppErrorKind::TokenGeneration,
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
             (AuthAppErrorKind::Unauthorized, StatusCode::UNAUTHORIZED),

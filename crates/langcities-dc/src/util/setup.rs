@@ -34,7 +34,7 @@ pub async fn create_user_if_not_exists<C: TransactionTrait>(
     })
     .await
     .map_err(DcAppError::database)
-    .map(|o| o.ok_or_else(|| DcAppError::database("Could not insert new user")))
+    .map(|o| o.ok_or_else(|| DcAppError::other("could not insert new user")))
     .flatten()
 }
 

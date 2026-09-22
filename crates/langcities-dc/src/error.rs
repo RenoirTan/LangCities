@@ -9,9 +9,11 @@ pub enum DcAppErrorKind {
     FailedInit,
     Unauthorized,
     InvalidAccessToken,
+    Conflict,
     BadRequest,
     NotFound,
     AuthService,
+    Cache,
     Other,
 }
 
@@ -26,6 +28,7 @@ impl Into<StatusCode> for DcAppErrorKind {
         match self {
             Self::Unauthorized | Self::InvalidAccessToken => StatusCode::UNAUTHORIZED,
             Self::BadRequest => StatusCode::BAD_REQUEST,
+            Self::Conflict => StatusCode::CONFLICT,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::AuthService => StatusCode::BAD_GATEWAY,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -40,9 +43,11 @@ pub trait DcAppErrorTrait {
     fn failed_init(source: impl Into<Error>) -> Self;
     fn unauthorized(source: impl Into<Error>) -> Self;
     fn invalid_access_token(source: impl Into<Error>) -> Self;
+    fn conflict(source: impl Into<Error>) -> Self;
     fn bad_request(source: impl Into<Error>) -> Self;
     fn not_found(source: impl Into<Error>) -> Self;
     fn auth_service(source: impl Into<Error>) -> Self;
+    fn cache(source: impl Into<Error>) -> Self;
     fn other(source: impl Into<Error>) -> Self;
 }
 
@@ -63,6 +68,10 @@ impl DcAppErrorTrait for DcAppError {
         Self::new(Some(source.into()), DcAppErrorKind::InvalidAccessToken)
     }
 
+    fn conflict(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Conflict)
+    }
+
     fn bad_request(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), DcAppErrorKind::BadRequest)
     }
@@ -77,6 +86,10 @@ impl DcAppErrorTrait for DcAppError {
 
     fn auth_service(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), DcAppErrorKind::AuthService)
+    }
+
+    fn cache(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Cache)
     }
 }
 
@@ -94,9 +107,11 @@ mod tests {
             ),
             (DcAppErrorKind::Unauthorized, StatusCode::UNAUTHORIZED),
             (DcAppErrorKind::InvalidAccessToken, StatusCode::UNAUTHORIZED),
+            (DcAppErrorKind::Conflict, StatusCode::CONFLICT),
             (DcAppErrorKind::BadRequest, StatusCode::BAD_REQUEST),
             (DcAppErrorKind::NotFound, StatusCode::NOT_FOUND),
             (DcAppErrorKind::AuthService, StatusCode::BAD_GATEWAY),
+            (DcAppErrorKind::Cache, StatusCode::INTERNAL_SERVER_ERROR),
             (DcAppErrorKind::Other, StatusCode::INTERNAL_SERVER_ERROR),
         ];
 

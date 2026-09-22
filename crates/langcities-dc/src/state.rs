@@ -68,7 +68,7 @@ impl AppState {
         for user in &users {
             self.set_username_cache(user.username.clone(), user.id)
                 .await
-                .map_err(DcAppError::other)?;
+                .map_err(DcAppError::cache)?;
         }
         Ok(users)
     }

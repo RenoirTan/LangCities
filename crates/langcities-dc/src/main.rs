@@ -1,6 +1,5 @@
-use std::error::Error;
-
 use axum::{Router, middleware};
+use langcities_common::error::Error;
 use langcities_jwt::axum::claims::parse_token_and_extend_state;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -22,7 +21,7 @@ use crate::state::AppState;
 use crate::util::setup::extract_current_user;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()

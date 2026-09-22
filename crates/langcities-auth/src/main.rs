@@ -1,6 +1,5 @@
-use std::error::Error;
-
 use axum::Router;
+use langcities_common::error::Error;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -23,7 +22,7 @@ pub mod state;
 pub mod util;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Error> {
     println!("Hello, world!");
 
     tracing_subscriber::fmt()

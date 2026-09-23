@@ -322,10 +322,12 @@ impl FromStr for AliasedEntryField {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<_> = s.splitn(3, ".").collect();
-        if parts.len() == 2 {
+        let end_index = if parts.len() >= 2 {
+            parts.len() - 1
+        } else {
             return Err(DslError::bad_value_of(s));
-        }
-        let entry_alias_part = parts[0..2].join(".");
+        };
+        let entry_alias_part = parts[0..end_index].join(".");
         let entry_alias = entry_alias_part.parse::<EntryAlias>()?;
         let slug = parts[2].parse::<Slug>()?;
         Ok(Self { entry_alias, slug })

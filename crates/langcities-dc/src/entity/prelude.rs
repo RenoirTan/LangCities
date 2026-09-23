@@ -2,6 +2,7 @@
 
 pub use super::dc_users::Entity as DcUsers;
 pub use super::entries::Entity as Entries;
+pub use super::entry_field_dependencies::Entity as EntryFieldDependencies;
 pub use super::entry_fields::Entity as EntryFields;
 pub use super::seaql_migrations::Entity as SeaqlMigrations;
 pub use super::vernaculars::Entity as Vernaculars;

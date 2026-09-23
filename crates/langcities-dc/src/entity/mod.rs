@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub mod dc_users;
 pub mod entries;
+pub mod entry_field_dependencies;
 pub mod entry_fields;
 pub mod seaql_migrations;
 pub mod vernaculars;

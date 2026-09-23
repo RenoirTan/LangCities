@@ -21,7 +21,10 @@ macro_rules! impl_deser_fromstr {
                 D: serde::Deserializer<'de>,
             {
                 String::deserialize(deserializer)
-                    .map(|s| s.parse::<$typ>().map_err(|e| D::Error::custom(e)))
+                    .map(|s| {
+                        s.parse::<$typ>()
+                            .map_err(|e| <D::Error as serde::de::Error>::custom(e))
+                    })
                     .flatten()
             }
         }

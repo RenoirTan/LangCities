@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    dependency::{Dependency, DependencyKind},
+    dependency::{Dependency, DependencyUseKind},
     error::{DslError, DslErrorTrait},
     node::{NodeId, NodeKind},
     tree::{TraversalKind, Tree, TreeTraverser},
@@ -53,7 +53,7 @@ impl<'t> DependencyBuilder<'t> {
                     if let NodeKind::FunctionCallExpr(_) = &penultimate_node.node {
                         let dependency = Dependency::new(
                             node.context.raw(&self.traverser.tree),
-                            DependencyKind::Func,
+                            DependencyUseKind::Func,
                         );
                         if !self.seen.contains(&dependency) {
                             self.seen.insert(dependency.clone());
@@ -64,7 +64,7 @@ impl<'t> DependencyBuilder<'t> {
                 NodeKind::IdentifierExpr(_) => {
                     let dependency = Dependency::new(
                         node.context.raw(&self.traverser.tree),
-                        DependencyKind::Var,
+                        DependencyUseKind::Var,
                     );
                     if !self.seen.contains(&dependency) {
                         self.seen.insert(dependency.clone());
@@ -96,8 +96,8 @@ mod tests {
         let mut builder = DependencyBuilder::new(&tree).unwrap();
         let dependencies = builder.find().unwrap();
         assert_eq!(dependencies.len(), 2);
-        assert!(dependencies.contains(&Dependency::new("$f", DependencyKind::Func)));
-        assert!(dependencies.contains(&Dependency::new("$g", DependencyKind::Func)));
+        assert!(dependencies.contains(&Dependency::new("$f", DependencyUseKind::Func)));
+        assert!(dependencies.contains(&Dependency::new("$g", DependencyUseKind::Func)));
     }
 
     #[test]
@@ -106,8 +106,8 @@ mod tests {
         let mut builder = DependencyBuilder::new(&tree).unwrap();
         let dependencies = builder.find().unwrap();
         assert_eq!(dependencies.len(), 3);
-        assert!(dependencies.contains(&Dependency::new("$mt.sc.ot_mt", DependencyKind::Func,)));
-        assert!(dependencies.contains(&Dependency::new("$ot.sc.pd_ot", DependencyKind::Func,)));
-        assert!(dependencies.contains(&Dependency::new("$identifier", DependencyKind::Var,)));
+        assert!(dependencies.contains(&Dependency::new("$mt.sc.ot_mt", DependencyUseKind::Func,)));
+        assert!(dependencies.contains(&Dependency::new("$ot.sc.pd_ot", DependencyUseKind::Func,)));
+        assert!(dependencies.contains(&Dependency::new("$identifier", DependencyUseKind::Var,)));
     }
 }

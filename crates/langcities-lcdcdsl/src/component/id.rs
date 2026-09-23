@@ -1,9 +1,6 @@
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
-use serde::{
-    Deserialize, Serialize,
-    de::{Error as DeError, Visitor},
-};
+use serde::{Deserialize, Serialize, de::Visitor};
 
 use crate::impl_deser_fromstr;
 use crate::{

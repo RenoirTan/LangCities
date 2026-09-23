@@ -5,7 +5,7 @@ use langcities_lcdcdsl::{
         BinaryExpr, BinaryOp, FunctionCallExpr, IdentifierExpr, IdentifierPrim, Node, NodeContext,
         NodeId, NodeKind, StringLiteralExpr, StringLiteralKind,
     },
-    tree::TreeBuilder,
+    tree::{Tree, TreeBuilder},
 };
 use tree_sitter::{Parser as TSParser, Tree as TSTree};
 use tree_sitter_lcdcdsl::LANGUAGE;
@@ -302,6 +302,15 @@ impl Parser {
             .tree_builder
             .register_node(Node::new(node, NodeContext { node_id, span }));
         node_id
+    }
+
+    pub fn to_tree(mut self) -> Result<Tree, ParserError> {
+        self.transfer()?;
+        Ok(self.tree_builder.tree)
+    }
+
+    pub fn parse(source: impl Into<String>) -> Result<Tree, ParserError> {
+        Self::from_source(source)?.to_tree()
     }
 }
 

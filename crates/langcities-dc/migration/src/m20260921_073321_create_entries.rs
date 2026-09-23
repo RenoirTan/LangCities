@@ -46,7 +46,7 @@ impl MigrationTrait for Migration {
                     .col(pk_auto("id"))
                     .col(integer("entry_id"))
                     .col(string("slug"))
-                    .col(string("override"))
+                    .col(string("override_value"))
                     .col(string("dirty_value"))
                     .col(string("clean_value"))
                     .col(timestamp_default_now("updated_at"))

@@ -145,7 +145,7 @@ pub struct EntryFieldDto {
     pub id: i64,
     pub entry_id: i64,
     pub slug: String,
-    pub r#override: String,
+    pub override_value: String,
     pub dirty_value: String,
     pub clean_value: String,
     pub updated_at: DateTime<Utc>,
@@ -157,7 +157,7 @@ impl From<entry_fields::Model> for EntryFieldDto {
             id: value.id,
             entry_id: value.entry_id,
             slug: value.slug,
-            r#override: value.r#override,
+            override_value: value.override_value,
             dirty_value: value.dirty_value,
             clean_value: value.clean_value,
             updated_at: value.updated_at,
@@ -169,7 +169,7 @@ impl From<entry_fields::Model> for EntryFieldDto {
 pub struct CreateEntryFieldDto {
     pub entry: EntryAliasDto,
     pub slug: String,
-    pub r#override: Option<String>,
+    pub override_value: Option<String>,
 }
 
 impl CreateEntryFieldDto {
@@ -190,14 +190,14 @@ impl CreateEntryFieldDto {
     ) -> &'m mut entry_fields::ActiveModel {
         am.entry_id = ActiveValue::Set(entry.id);
         am.slug = ActiveValue::Set(self.slug);
-        am.r#override = ActiveValue::Set(self.r#override.unwrap_or_default());
+        am.override_value = ActiveValue::Set(self.override_value.unwrap_or_default());
         am
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UpdateEntryFieldDto {
-    pub r#override: Option<String>,
+    pub override_value: Option<String>,
 }
 
 impl UpdateEntryFieldDto {
@@ -211,8 +211,8 @@ impl UpdateEntryFieldDto {
         self,
         am: &'m mut entry_fields::ActiveModel,
     ) -> &'m mut entry_fields::ActiveModel {
-        if let Some(o) = self.r#override {
-            am.r#override = ActiveValue::Set(o);
+        if let Some(o) = self.override_value {
+            am.override_value = ActiveValue::Set(o);
         }
         am.updated_at = ActiveValue::Set(Utc::now());
         am

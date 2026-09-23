@@ -10,7 +10,7 @@ pub struct Model {
     pub id: i64,
     pub entry_id: i64,
     pub slug: String,
-    pub r#override: String,
+    pub override_value: String,
     pub dirty_value: String,
     pub clean_value: String,
     pub updated_at: DateTimeUtc,

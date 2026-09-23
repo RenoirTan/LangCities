@@ -1,6 +1,9 @@
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
-use serde::{Deserialize, Serialize, de::Visitor};
+use serde::{
+    Deserialize, Serialize,
+    de::{Error as DeError, Visitor},
+};
 
 use crate::error::{DslError, DslErrorTrait};
 
@@ -383,5 +386,81 @@ impl FromStr for EntryAlias {
         s.parse::<Id>()
             .map(Self::Id)
             .or_else(|_| s.parse::<AliasedEntry>().map(Self::Alias))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AliasedEntryField {
+    pub entry_alias: EntryAlias,
+    pub slug: Slug,
+}
+
+impl Display for AliasedEntryField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.entry_alias, self.slug)
+    }
+}
+
+impl FromStr for AliasedEntryField {
+    type Err = DslError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.splitn(3, ".").collect();
+        if parts.len() == 2 {
+            return Err(DslError::bad_value_of(s));
+        }
+        let entry_alias_part = parts[0..2].join(".");
+        let entry_alias = entry_alias_part.parse::<EntryAlias>()?;
+        let slug = parts[2].parse::<Slug>()?;
+        Ok(Self { entry_alias, slug })
+    }
+}
+
+impl Serialize for AliasedEntryField {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for AliasedEntryField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        String::deserialize(deserializer)
+            .map(|s| {
+                s.parse::<AliasedEntryField>()
+                    .map_err(|e| D::Error::custom(e))
+            })
+            .flatten()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EntryFieldAlias {
+    Id(Id),
+    Alias(AliasedEntryField),
+}
+
+impl Display for EntryFieldAlias {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Id(id) => id.fmt(f),
+            Self::Alias(alias) => alias.fmt(f),
+        }
+    }
+}
+
+impl FromStr for EntryFieldAlias {
+    type Err = DslError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<Id>()
+            .map(Self::Id)
+            .or_else(|_| s.parse::<AliasedEntryField>().map(Self::Alias))
     }
 }

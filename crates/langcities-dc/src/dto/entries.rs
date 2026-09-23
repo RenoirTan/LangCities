@@ -17,7 +17,7 @@ use crate::{
     state::AppState,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String)]
 pub struct EntryAliasDto(pub EntryAlias);
 
@@ -63,18 +63,6 @@ impl EntryAliasDto {
             }
         };
         Ok(cond)
-    }
-}
-
-impl<'de> Deserialize<'de> for EntryAliasDto {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse::<EntryAlias>()
-            .map(Self)
-            .map_err(serde::de::Error::custom)
     }
 }
 

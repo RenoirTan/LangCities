@@ -1,6 +1,7 @@
 pub mod component;
 pub mod dependency;
 pub mod error;
+pub mod macrodef;
 pub mod node;
 pub mod tree;
 

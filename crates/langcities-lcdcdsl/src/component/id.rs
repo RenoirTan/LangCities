@@ -5,7 +5,11 @@ use serde::{
     de::{Error as DeError, Visitor},
 };
 
-use crate::error::{DslError, DslErrorTrait};
+use crate::impl_deser_fromstr;
+use crate::{
+    error::{DslError, DslErrorTrait},
+    impl_ser_display,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Id(i64);
@@ -148,31 +152,7 @@ impl FromStr for Slug {
     }
 }
 
-struct SlugVisitor;
-
-impl<'de> Visitor<'de> for SlugVisitor {
-    type Value = Slug;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("invalid slug")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        v.parse::<Slug>().map_err(|e| E::custom(e))
-    }
-}
-
-impl<'de> Deserialize<'de> for Slug {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(SlugVisitor)
-    }
-}
+impl_deser_fromstr!(Slug);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -231,40 +211,8 @@ impl FromStr for SlugOwnerId {
     }
 }
 
-impl Serialize for SlugOwnerId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-struct SlugOwnerIdVisitor;
-
-impl<'de> Visitor<'de> for SlugOwnerIdVisitor {
-    type Value = SlugOwnerId;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("invalid slug_owner_id")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        v.parse::<SlugOwnerId>().map_err(|e| E::custom(e))
-    }
-}
-
-impl<'de> Deserialize<'de> for SlugOwnerId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(SlugOwnerIdVisitor)
-    }
-}
+impl_ser_display!(SlugOwnerId);
+impl_deser_fromstr!(SlugOwnerId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -328,40 +276,8 @@ impl FromStr for AliasedEntry {
     }
 }
 
-impl Serialize for AliasedEntry {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-struct AliasedEntryVisitor;
-
-impl<'de> Visitor<'de> for AliasedEntryVisitor {
-    type Value = AliasedEntry;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("invalid slug_owner_id")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        v.parse::<AliasedEntry>().map_err(|e| E::custom(e))
-    }
-}
-
-impl<'de> Deserialize<'de> for AliasedEntry {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(AliasedEntryVisitor)
-    }
-}
+impl_ser_display!(AliasedEntry);
+impl_deser_fromstr!(AliasedEntry);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -416,28 +332,8 @@ impl FromStr for AliasedEntryField {
     }
 }
 
-impl Serialize for AliasedEntryField {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl<'de> Deserialize<'de> for AliasedEntryField {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        String::deserialize(deserializer)
-            .map(|s| {
-                s.parse::<AliasedEntryField>()
-                    .map_err(|e| D::Error::custom(e))
-            })
-            .flatten()
-    }
-}
+impl_ser_display!(AliasedEntryField);
+impl_deser_fromstr!(AliasedEntryField);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]

@@ -17,7 +17,7 @@ use crate::{
     state::AppState,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String)]
 pub struct VernacularAliasDto(pub VernacularAlias);
 
@@ -76,18 +76,6 @@ impl VernacularAliasDto {
         caller_id
             .map(|id| Self::generate_owner_enforcement(id))
             .ok_or_else(|| DcAppError::new(None, DcAppErrorKind::Unauthorized))
-    }
-}
-
-impl<'de> Deserialize<'de> for VernacularAliasDto {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse::<VernacularAlias>()
-            .map(Self)
-            .map_err(serde::de::Error::custom)
     }
 }
 

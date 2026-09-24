@@ -10,3 +10,4 @@ repository.workspace = true
 [dependencies]
 langcities-common = { path = "../langcities-common" }
 serde = { version = "1.0.229", features = ["derive"] }
+smallvec = { version = "1.16.1", features = ["serde", "const_generics"] }

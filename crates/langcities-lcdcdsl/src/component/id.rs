@@ -8,7 +8,7 @@ use crate::{
     impl_ser_display,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct Id(i64);
 
 impl AsRef<i64> for Id {
@@ -97,7 +97,7 @@ impl<'de> Deserialize<'de> for Id {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct Slug(String);
 
 impl Deref for Slug {
@@ -151,7 +151,7 @@ impl FromStr for Slug {
 
 impl_deser_fromstr!(Slug);
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Alias {
     Id(Id),
@@ -177,7 +177,7 @@ impl FromStr for Alias {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SlugOwnerId {
     pub slug: Slug,
     pub user_alias: Alias,
@@ -211,7 +211,7 @@ impl FromStr for SlugOwnerId {
 impl_ser_display!(SlugOwnerId);
 impl_deser_fromstr!(SlugOwnerId);
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum VernacularAlias {
     Id(Id),
@@ -240,7 +240,7 @@ impl FromStr for VernacularAlias {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AliasedEntry {
     pub vernacular_alias: VernacularAlias,
     pub index: Id,
@@ -276,7 +276,7 @@ impl FromStr for AliasedEntry {
 impl_ser_display!(AliasedEntry);
 impl_deser_fromstr!(AliasedEntry);
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum EntryAlias {
     Id(Id),
@@ -302,7 +302,7 @@ impl FromStr for EntryAlias {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AliasedEntryField {
     pub entry_alias: EntryAlias,
     pub slug: Slug,
@@ -334,7 +334,7 @@ impl FromStr for AliasedEntryField {
 impl_ser_display!(AliasedEntryField);
 impl_deser_fromstr!(AliasedEntryField);
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum EntryFieldAlias {
     Id(Id),

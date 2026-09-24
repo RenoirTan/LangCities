@@ -1,7 +1,5 @@
-use std::collections::HashSet;
-
 use crate::{
-    dependency::{Dependency, DependencyUseKind},
+    dependency::{DepData, Dependency},
     error::{DslError, DslErrorTrait},
     node::{NodeId, NodeKind},
     tree::{TraversalKind, Tree, TreeTraverser},
@@ -9,7 +7,7 @@ use crate::{
 
 pub struct DependencyBuilder<'t> {
     traverser: TreeTraverser<'t>,
-    seen: HashSet<Dependency>,
+    list: Vec<Dependency>,
     node_ids: Vec<NodeId>,
 }
 
@@ -21,7 +19,7 @@ impl<'t> DependencyBuilder<'t> {
         let traverser = TreeTraverser::new(tree, start_id, TraversalKind::Preorder)?;
         Ok(Self {
             traverser,
-            seen: HashSet::new(),
+            list: vec![],
             node_ids: vec![],
         })
     }
@@ -53,23 +51,19 @@ impl<'t> DependencyBuilder<'t> {
                     if let NodeKind::FunctionCallExpr(_) = &penultimate_node.node {
                         let dependency = Dependency::new(
                             node.context.raw(&self.traverser.tree),
-                            DependencyUseKind::Func,
+                            DepData::new(node_id),
                         );
-                        if !self.seen.contains(&dependency) {
-                            self.seen.insert(dependency.clone());
-                            return Ok(self.seen.get(&dependency));
-                        }
+                        self.list.push(dependency.clone());
+                        return Ok(self.list.last());
                     }
                 }
                 NodeKind::IdentifierExpr(_) => {
                     let dependency = Dependency::new(
                         node.context.raw(&self.traverser.tree),
-                        DependencyUseKind::Var,
+                        DepData::new(node_id),
                     );
-                    if !self.seen.contains(&dependency) {
-                        self.seen.insert(dependency.clone());
-                        return Ok(self.seen.get(&dependency));
-                    }
+                    self.list.push(dependency.clone());
+                    return Ok(self.list.last());
                 }
                 _ => continue,
             }
@@ -78,15 +72,19 @@ impl<'t> DependencyBuilder<'t> {
         Ok(None)
     }
 
-    pub fn find(&mut self) -> Result<&HashSet<Dependency>, DslError> {
+    pub fn find(&mut self) -> Result<&Vec<Dependency>, DslError> {
         while let Some(_) = self.find_next()? {}
-        Ok(&self.seen)
+        println!("{:#?}", self.list);
+        Ok(&self.list)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::{create_tree_0, create_tree_1};
+    use crate::{
+        dependency::DepMap,
+        tests::{create_tree_0, create_tree_1},
+    };
 
     use super::*;
 
@@ -94,20 +92,34 @@ mod tests {
     fn test_dependency_stream_0() {
         let tree = create_tree_0();
         let mut builder = DependencyBuilder::new(&tree).unwrap();
-        let dependencies = builder.find().unwrap();
-        assert_eq!(dependencies.len(), 2);
-        assert!(dependencies.contains(&Dependency::new("$f", DependencyUseKind::Func)));
-        assert!(dependencies.contains(&Dependency::new("$g", DependencyUseKind::Func)));
+        let dep_map: DepMap = builder.find().unwrap().clone().into_iter().collect();
+        assert_eq!(dep_map.len(), 2);
+        let f = Dependency::new("$f", DepData::new(0 as NodeId));
+        let g = Dependency::new("$g", DepData::new(1 as NodeId));
+        assert!(dep_map.has_dep(&f));
+        assert!(dep_map.has_dep(&g));
+        assert!(dep_map.has_identifier(&f.identifier));
+        assert!(dep_map.has_identifier(&g.identifier));
     }
 
     #[test]
     fn test_dependency_stream_1() {
         let tree = create_tree_1();
         let mut builder = DependencyBuilder::new(&tree).unwrap();
-        let dependencies = builder.find().unwrap();
-        assert_eq!(dependencies.len(), 3);
-        assert!(dependencies.contains(&Dependency::new("$mt.sc.ot_mt", DependencyUseKind::Func,)));
-        assert!(dependencies.contains(&Dependency::new("$ot.sc.pd_ot", DependencyUseKind::Func,)));
-        assert!(dependencies.contains(&Dependency::new("$identifier", DependencyUseKind::Var,)));
+        let dep_map: DepMap = builder.find().unwrap().clone().into_iter().collect();
+        assert_eq!(dep_map.len(), 4);
+        let otmt_0 = Dependency::new("$mt.sc.ot_mt", DepData::new(0 as NodeId));
+        let pdot = Dependency::new("$ot.sc.pd_ot", DepData::new(1 as NodeId));
+        let otmt_1 = Dependency::new("$mt.sc.ot_mt", DepData::new(7 as NodeId));
+        let identifier = Dependency::new("$identifier", DepData::new(8 as NodeId));
+        assert_eq!(otmt_0.identifier, otmt_1.identifier);
+        assert!(dep_map.has_dep(&otmt_0));
+        assert!(dep_map.has_dep(&pdot));
+        assert!(dep_map.has_dep(&otmt_1));
+        assert!(dep_map.has_dep(&identifier));
+        assert!(dep_map.has_identifier(&otmt_0.identifier));
+        assert!(dep_map.has_identifier(&pdot.identifier));
+        assert!(dep_map.has_identifier(&otmt_1.identifier));
+        assert!(dep_map.has_identifier(&identifier.identifier));
     }
 }

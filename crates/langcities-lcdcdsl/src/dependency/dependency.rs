@@ -1,25 +1,31 @@
-use crate::{dependency::DepAlias, error::DslError};
+use crate::{dependency::DepAlias, error::DslError, node::NodeId};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Dependency {
     pub identifier: String,
-    pub kind: DependencyUseKind,
+    pub data: DepData,
 }
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub enum DependencyUseKind {
-    Func,
-    Var,
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct DepData {
+    pub node_id: NodeId,
+}
+
+impl DepData {
+    pub fn new(node_id: impl Into<NodeId>) -> Self {
+        let node_id = node_id.into();
+        Self { node_id }
+    }
 }
 
 impl Dependency {
-    pub fn new<I, U>(identifier: I, use_kind: U) -> Self
+    pub fn new<I, D>(identifier: I, data: D) -> Self
     where
         I: Into<String>,
-        U: Into<DependencyUseKind>,
+        D: Into<DepData>,
     {
-        let (identifier, kind) = (identifier.into(), use_kind.into());
-        Self { identifier, kind }
+        let (identifier, data) = (identifier.into(), data.into());
+        Self { identifier, data }
     }
 
     pub fn to_dep_alias(&self) -> Result<DepAlias, DslError> {

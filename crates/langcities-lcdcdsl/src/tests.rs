@@ -56,56 +56,61 @@ pub(crate) fn create_tree_1() -> Tree {
     let mut builder = TreeBuilder::new(
         "$mt.sc.ot_mt($ot.sc.pd_ot(something + \"more\")) + $mt.sc.ot_mt($identifier)",
     );
-    let mut node_id = builder.get_next_node_id();
+    let mut node_id = builder.get_next_node_id(); // 0
     builder.register_node(Node::new(
         NodeKind::IdentifierPrim(IdentifierPrim),
         NodeContext::new(node_id, 0..12),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 1
     builder.register_node(Node::new(
         NodeKind::IdentifierPrim(IdentifierPrim),
         NodeContext::new(node_id, 13..25),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 2
     builder.register_node(Node::new(
         NodeKind::StringLiteralExpr(StringLiteralExpr::new(StringLiteralKind::Unquoted)),
         NodeContext::new(node_id, 26..35),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 3
     builder.register_node(Node::new(
         NodeKind::StringLiteralExpr(StringLiteralExpr::new(StringLiteralKind::Dquoted)),
         NodeContext::new(node_id, 38..44),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 4
     builder.register_node(Node::new(
         NodeKind::BinaryExpr(BinaryExpr::new(BinaryOp::Add, 2 as NodeId, 3 as NodeId)),
         NodeContext::new(node_id, 26..44),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 5
     builder.register_node(Node::new(
         NodeKind::FunctionCallExpr(FunctionCallExpr::new(1 as NodeId, [4])),
         NodeContext::new(node_id, 13..45),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 6
+    builder.register_node(Node::new(
+        NodeKind::FunctionCallExpr(FunctionCallExpr::new(0 as NodeId, [5])),
+        NodeContext::new(node_id, 0..46),
+    ));
+    node_id = builder.get_next_node_id(); // 7
     builder.register_node(Node::new(
         NodeKind::IdentifierPrim(IdentifierPrim),
         NodeContext::new(node_id, 49..61),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 8
     builder.register_node(Node::new(
         NodeKind::IdentifierExpr(Default::default()),
         NodeContext::new(node_id, 62..73),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 9
     builder.register_node(Node::new(
-        NodeKind::FunctionCallExpr(FunctionCallExpr::new(6 as NodeId, [7])),
+        NodeKind::FunctionCallExpr(FunctionCallExpr::new(7 as NodeId, [8])),
         NodeContext::new(node_id, 49..74),
     ));
-    node_id = builder.get_next_node_id();
+    node_id = builder.get_next_node_id(); // 10
     builder.register_node(Node::new(
-        NodeKind::BinaryExpr(BinaryExpr::new(BinaryOp::Add, 5 as NodeId, 8 as NodeId)),
+        NodeKind::BinaryExpr(BinaryExpr::new(BinaryOp::Add, 6 as NodeId, 9 as NodeId)),
         NodeContext::new(node_id, 0..74),
     ));
-    builder.tree.root_node_id = Some(9);
+    builder.tree.root_node_id = Some(10);
     builder.tree
 }

@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// $<vernacular_alias>.(<entry_index>/_).<field_slug>
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EfDepFullFormat {
     pub vernacular_alias: VernacularAlias,
     pub entry_index: Option<Id>,
@@ -69,7 +69,7 @@ impl_ser_display!(EfDepFullFormat);
 impl_deser_fromstr!(EfDepFullFormat);
 
 /// $<entry_id>.<field_slug>
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EfDepEsFormat {
     pub entry_id: Id,
     pub field_slug: Slug,
@@ -109,7 +109,7 @@ impl_ser_display!(EfDepEsFormat);
 impl_deser_fromstr!(EfDepEsFormat);
 
 /// $ef.<field_id>
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EfDepIdFormat {
     pub field_id: Id,
 }
@@ -141,7 +141,7 @@ impl FromStr for EfDepIdFormat {
 impl_ser_display!(EfDepIdFormat);
 impl_deser_fromstr!(EfDepIdFormat);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum EfDepAlias {
     Full(EfDepFullFormat),
     Es(EfDepEsFormat),
@@ -184,7 +184,7 @@ impl FromStr for EfDepAlias {
 impl_ser_display!(EfDepAlias);
 impl_deser_fromstr!(EfDepAlias);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ScDepFullFormat {
     pub vernacular_alias: VernacularAlias,
     pub sc_slug: Slug,
@@ -224,7 +224,7 @@ impl FromStr for ScDepFullFormat {
 impl_ser_display!(ScDepFullFormat);
 impl_deser_fromstr!(ScDepFullFormat);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ScDepIdFormat {
     pub sc_id: Id,
 }
@@ -256,7 +256,7 @@ impl FromStr for ScDepIdFormat {
 impl_ser_display!(ScDepIdFormat);
 impl_deser_fromstr!(ScDepIdFormat);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ScDepAlias {
     Full(ScDepFullFormat),
     Id(ScDepIdFormat),
@@ -289,7 +289,7 @@ impl FromStr for ScDepAlias {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum DepAlias {
     Ef(EfDepAlias),
     Sc(ScDepAlias),

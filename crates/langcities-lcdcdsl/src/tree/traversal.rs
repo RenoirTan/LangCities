@@ -189,7 +189,7 @@ pub(crate) mod tests {
         let mut traverser =
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Bfs).unwrap();
         let path = traverser.try_collect().unwrap();
-        assert_eq!(path, [9, 5, 8, 1, 4, 6, 7, 2, 3]);
+        assert_eq!(path, [10, 6, 9, 0, 5, 7, 8, 1, 4, 2, 3]);
     }
 
     #[test]
@@ -198,7 +198,7 @@ pub(crate) mod tests {
         let mut traverser =
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Preorder).unwrap();
         let path = traverser.try_collect().unwrap();
-        assert_eq!(path, [9, 5, 1, 4, 2, 3, 8, 6, 7]);
+        assert_eq!(path, [10, 6, 0, 5, 1, 4, 2, 3, 9, 7, 8]);
     }
 
     #[test]
@@ -208,6 +208,6 @@ pub(crate) mod tests {
             TreeTraverser::new(&tree, tree.root_node_id.unwrap(), TraversalKind::Postorder)
                 .unwrap();
         let path = traverser.try_collect().unwrap();
-        assert_eq!(path, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(path, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
 }

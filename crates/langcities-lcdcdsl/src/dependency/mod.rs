@@ -1,7 +1,9 @@
+pub mod alias;
 pub mod builder;
 pub mod dependency;
-pub mod id;
+pub mod map;
 
+pub use self::alias::*;
 pub use self::builder::*;
 pub use self::dependency::*;
-pub use self::id::*;
+pub use self::map::*;

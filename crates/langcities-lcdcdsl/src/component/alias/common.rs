@@ -199,51 +199,6 @@ impl Display for ComplexHead {
 }
 
 #[macro_export]
-macro_rules! complex_id_aliased_resource {
-    {
-        $(#[$attribute:meta])*
-        struct $name:ident<($($p:ty),+)>;
-    } => {
-        $(#[$attribute])*
-        pub struct $name {
-            id: $crate::component::id::Id,
-            path: ($( Option<$p> ),*),
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! complex_head_aliased_resource {
-    {
-        $(#[$attribute:meta])*
-        struct $name:ident<($($p:ty),+)>;
-    } => {
-        $(#[$attribute])*
-        pub struct $name {
-            head: $crate::component::alias::common::ComplexHead,
-            path: ($($p),*),
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! complex_aliased_resource {
-    {
-        $(#[$attribute:meta])*
-        enum $name:ident {
-            IdFormat($id:ident),
-            HeadFormat($head:ident)
-        }
-    } => {
-        $(#[attribute])*
-        pub enum $name {
-            IdFormat($id),
-            HeadFormat($head),
-        }
-    }
-}
-
-#[macro_export]
 macro_rules! parse_car {
     (parse_field {
         s: $s:ident;
@@ -387,62 +342,101 @@ macro_rules! parse_car {
 }
 
 #[macro_export]
+macro_rules! impl_display_using {
+    ($fn:ident for $type:ident) => {
+        impl std::fmt::Display for $type {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                $fn(self, fmt)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_fromstr_using {
+    ($fn:ident for $type:ident) => {
+        impl std::str::FromStr for $type {
+            type Err = $crate::error::DslError;
+
+            fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+                $fn(s)
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! complex_resource_alias {
     {
+        struct Fields {
+            $(
+                $field_name:ident: $field_type:ty
+            ),+$(,)?
+        }
+
         id_format:
             $(#[$if_attribute:meta])*
-            struct $if_name:ident {
-                $(
-                    $if_field_name:ident: $if_field_type:ty
-                ),+
-            }
+            $if_vis:vis struct $if_name:ident;
 
-        if_display_fmt: $if_display_fmt:ident() {}
+        if_display_fmt:
+            $(#[$if_display_fmt_attribute:meta])*
+            $if_display_fmt_vis:vis $if_display_fmt:ident() {}
 
         head_format:
             $(#[$hf_attribute:meta])*
-            struct $hf_name:ident {
-                $(
-                    $hf_field_name:ident: $hf_field_type:ty
-                ),+
-            }
+            $hf_vis:vis struct $hf_name:ident;
 
-        hf_display_fmt: $hf_display_fmt:ident() {}
+        hf_display_fmt:
+            $(#[$hf_display_fmt_attribute:meta])*
+            $hf_display_fmt_vis:vis $hf_display_fmt:ident() {}
 
         aliased:
             $(#[$ad_attribute:meta])*
-            enum $ad_name:ident;
+            $ad_vis:vis enum $ad_name:ident;
 
-        ad_display_fmt: $ad_display_fmt:ident() {}
+        ad_display_fmt:
+            $(#[$ad_display_fmt_attribute:meta])*
+            $ad_display_fmt_vis:vis $ad_display_fmt:ident() {}
+
+        ad_from_str:
+            $(#[$ad_from_str_attribute:meta])*
+            $ad_from_str_vis:vis $ad_from_str:ident() {}
 
         alias:
             $(#[$as_attribute:meta])*
-            enum $as_name:ident;
+            $as_vis:vis enum $as_name:ident;
 
-        as_display_fmt: $as_display_fmt:ident() {}
+        as_display_fmt:
+            $(#[$as_display_fmt_attribute:meta])*
+            $as_display_fmt_vis:vis $as_display_fmt:ident() {}
+
+        as_from_str:
+            $(#[$as_from_str_attribute:meta])*
+            $as_from_str_vis:vis $as_from_str:ident() {}
+
+        impl trait { $($t:tt)* }
     } => {
         $(#[$if_attribute])*
-        pub struct $if_name {
-            id: $crate::component::id::Id,
+        $if_vis struct $if_name {
+            $if_vis id: $crate::component::id::Id,
             $(
-                $if_field_name: Option<$if_field_type>
+                $if_vis $field_name: Option<$field_type>
             ),+
         }
 
-        fn $if_display_fmt(me: &$if_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        $(#[$if_display_fmt_attribute])*
+        $if_display_fmt_vis fn $if_display_fmt(me: &$if_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             let $if_name {
                 id,
                 $(
-                    $if_field_name
+                    $field_name
                 ),+
             } = me;
 
             write!(f, "{}", id)?;
             $(
-                if let Some(t) = $if_field_name {
+                if let Some(t) = $field_name {
                     write!(f, ".{}", t)?;
-                } else {
-                    return Ok(());
                 }
             )*
 
@@ -450,54 +444,336 @@ macro_rules! complex_resource_alias {
         }
 
         $(#[$hf_attribute])*
-        pub struct $hf_name {
-            head: $crate::component::alias::common::ComplexHead,
+        $hf_vis struct $hf_name {
+            $hf_vis head: $crate::component::alias::common::ComplexHead,
             $(
-                $hf_field_name: $hf_field_type
+                $hf_vis $field_name: $field_type
             ),+
         }
 
-        fn $hf_display_fmt(me: &$hf_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        $(#[$hf_display_fmt_attribute])*
+        $hf_display_fmt_vis fn $hf_display_fmt(me: &$hf_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             let $hf_name {
                 head,
                 $(
-                    $hf_field_name
+                    $field_name
                 ),+
             } = me;
 
             write!(f, "{}", head)?;
             $(
-                write!(f, ".{}", $hf_field_name)?;
+                write!(f, ".{}", $field_name)?;
             )*
 
             Ok(())
         }
 
         $(#[$ad_attribute])*
-        pub enum $ad_name {
+        $ad_vis enum $ad_name {
             IdFormat($if_name),
             HeadFormat($hf_name),
         }
 
-        fn $ad_display_fmt(me: &$ad_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        $(#[$ad_display_fmt_attribute])*
+        $ad_display_fmt_vis fn $ad_display_fmt(me: &$ad_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match me {
                 $ad_name::IdFormat(a) => $if_display_fmt(a, f),
                 $ad_name::HeadFormat(a) => $hf_display_fmt(a, f),
             }
         }
 
+        $(#[$ad_from_str_attribute])*
+        $ad_from_str_vis fn $ad_from_str(s: &str) -> std::result::Result<$ad_name, $crate::error::DslError> {
+            let mut parts = s.rsplit('.').peekable();
+            parse_car!(parse_field {
+                s: s;
+                parts: parts;
+                Self: $ad_name;
+                id_format: $if_name;
+                $($field_name: $field_type),*;
+            });
+            parse_car!(epilogue {
+                s: s;
+                parts: parts;
+                Self: $ad_name;
+                id_format: $if_name;
+                head_format: $hf_name;
+                $($field_name: $field_type),*
+            })
+
+        }
+
         $(#[$as_attribute])*
-        pub enum $as_name {
+        $as_vis enum $as_name {
             Id($crate::component::id::Id),
             Alias($ad_name),
         }
 
-        fn $as_display_fmt(me: &$as_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        $(#[$as_display_fmt_attribute])*
+        $as_display_fmt_vis fn $as_display_fmt(me: &$as_name, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match me {
                 $as_name::Id(id) => std::fmt::Display::fmt(id, f),
                 $as_name::Alias(a) => $ad_display_fmt(a, f),
             }
         }
+
+        $(#[$as_from_str_attribute])*
+        $as_from_str_vis fn $as_from_str(s: &str) -> std::result::Result<$as_name, $crate::error::DslError> {
+            s.parse::<$crate::component::id::Id>().map($as_name::Id).or_else(|_| {
+                $ad_from_str(s).map($as_name::Alias)
+            })
+        }
+
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+}
+
+#[macro_export]
+macro_rules! impl_complex_resource_alias {
+    (impl {} where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {};
+    (impl {
+        all
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_complex_resource_alias!(impl {
+            Display for id_format;
+            Display for head_format;
+            Display for aliased;
+            FromStr for aliased;
+            Display for alias;
+            FromStr for alias;
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        Display for id_format;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_display_using!($if_display_fmt for $if_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        Display for head_format;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_display_using!($hf_display_fmt for $hf_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        Display for aliased;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_display_using!($ad_display_fmt for $ad_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        Display for alias;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_display_using!($as_display_fmt for $as_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        FromStr for aliased;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_fromstr_using!($ad_from_str for $ad_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
+    };
+    (impl {
+        FromStr for alias;
+        $($t:tt)*
+    } where {
+        $if_name:ident;
+        $if_display_fmt:ident;
+        $hf_name:ident;
+        $hf_display_fmt:ident;
+        $ad_name:ident;
+        $ad_display_fmt:ident;
+        $ad_from_str:ident;
+        $as_name:ident;
+        $as_display_fmt:ident;
+        $as_from_str:ident;
+    }) => {
+        $crate::impl_fromstr_using!($as_from_str for $as_name);
+        $crate::impl_complex_resource_alias!(impl {
+            $($t)*
+        } where {
+            $if_name;
+            $if_display_fmt;
+            $hf_name;
+            $hf_display_fmt;
+            $ad_name;
+            $ad_display_fmt;
+            $ad_from_str;
+            $as_name;
+            $as_display_fmt;
+            $as_from_str;
+        });
     };
 }
 

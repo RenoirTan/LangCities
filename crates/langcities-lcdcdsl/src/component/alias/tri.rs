@@ -1,61 +1,50 @@
-use crate::component::{Id, Slug};
-use crate::error::DslError;
-use crate::{complex_resource_alias, parse_car};
+use crate::{
+    complex_resource_alias,
+    component::{Id, Slug},
+    parse_car,
+};
 
 complex_resource_alias! {
+    struct Fields {
+        index: Id,
+        field: Slug,
+        misc: Id,
+        other: Slug,
+    }
+
     id_format:
-        struct IdAliasedTri {
-            index: Id,
-            field: Slug,
-            misc: Id,
-            other: Slug
-        }
+        pub struct IdAliasedTri;
 
     if_display_fmt:
+        #[inline]
         iae_displayfmt() {}
 
     head_format:
-        struct HeadAliasedTri {
-            index: Id,
-            field: Slug,
-            misc: Id,
-            other: Slug
-        }
+        pub struct HeadAliasedTri;
 
-    hf_display_fmt: hae_display_fmt() {}
+    hf_display_fmt:
+        #[inline]
+        hae_display_fmt() {}
 
     aliased:
-        enum AliasedTri;
+        pub enum AliasedTri;
 
-    ad_display_fmt: ae_display_fmt() {}
+    ad_display_fmt:
+        #[inline]
+        ae_display_fmt() {}
+    ad_from_str:
+        #[inline]
+        ae_from_str() {}
 
     alias:
-        enum TriAlias;
+        pub enum TriAlias;
 
-    as_display_fmt: as_display_fmt() {}
-}
+    as_display_fmt:
+        #[inline]
+        as_display_fmt() {}
+    as_from_str:
+        #[inline]
+        as_from_str() {}
 
-fn parse_tri(s: &str) -> Result<AliasedTri, DslError> {
-    let mut parts = s.rsplit('.').peekable();
-    parse_car!(parse_field {
-        s: s;
-        parts: parts;
-        Self: AliasedTri;
-        id_format: IdAliasedTri;
-        index: Id,
-        field: Slug,
-        misc: Id,
-        other: Slug;
-    });
-    parse_car!(epilogue {
-        s: s;
-        parts: parts;
-        Self: AliasedTri;
-        id_format: IdAliasedTri;
-        head_format: HeadAliasedTri;
-        index: Id,
-        field: Slug,
-        misc: Id,
-        other: Slug
-    })
+    impl trait { all }
 }

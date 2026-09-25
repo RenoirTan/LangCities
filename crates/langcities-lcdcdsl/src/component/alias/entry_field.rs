@@ -1,53 +1,69 @@
 use crate::component::{Id, Slug};
-use crate::error::DslError;
 use crate::{complex_resource_alias, parse_car};
 
 complex_resource_alias! {
+    struct Fields {
+        index: Id,
+        field: Slug
+    }
+
     id_format:
-        struct IdAliasedEntryField {
-            index: Id,
-            field: Slug
-        }
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub struct IdAliasedEntryField;
 
     if_display_fmt:
+        #[inline]
         iae_displayfmt() {}
 
     head_format:
-        struct HeadAliasedEntryField {
-            index: Id,
-            field: Slug
-        }
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub struct HeadAliasedEntryField;
 
-    hf_display_fmt: hae_display_fmt() {}
+    hf_display_fmt:
+        #[inline]
+        hae_display_fmt() {}
 
     aliased:
-        enum AliasedEntryField;
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub enum AliasedEntryField;
 
-    ad_display_fmt: ae_display_fmt() {}
+    ad_display_fmt:
+        #[inline]
+        ae_display_fmt() {}
+    ad_from_str:
+        #[inline]
+        ae_from_str() {}
 
     alias:
-        enum EntryFieldAlias;
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub enum EntryFieldAlias;
 
-    as_display_fmt: as_display_fmt() {}
+    as_display_fmt:
+        #[inline]
+        as_display_fmt() {}
+    as_from_str:
+        #[inline]
+        as_from_str() {}
+
+    impl trait { all }
 }
 
-fn parse_aef(s: &str) -> Result<AliasedEntryField, DslError> {
-    let mut parts = s.rsplit('.').peekable();
-    parse_car!(parse_field {
-        s: s;
-        parts: parts;
-        Self: AliasedEntryField;
-        id_format: IdAliasedEntryField;
-        field: Slug,
-        index: Id;
-    });
-    parse_car!(epilogue {
-        s: s;
-        parts: parts;
-        Self: AliasedEntryField;
-        id_format: IdAliasedEntryField;
-        head_format: HeadAliasedEntryField;
-        index: Id,
-        field: Slug
-    })
+#[cfg(test)]
+mod test {
+    use crate::component::{EntryFieldAlias, FromFullIdentifier, ToFullIdentifier};
+
+    #[test]
+    fn test_valid_entry_field_alias() {
+        let cases = [
+            "$lang@me.123.ipa",
+            "$lang.456.transliteration",
+            "$789.oof",
+            "$123.456.hello",
+        ];
+
+        for case in cases {
+            let result = EntryFieldAlias::from_full(case).unwrap();
+            assert_eq!(result.to_full(), case);
+        }
+    }
 }

@@ -1,50 +1,62 @@
 use crate::component::Id;
-use crate::error::DslError;
 use crate::{complex_resource_alias, parse_car};
 
 complex_resource_alias! {
+    struct Fields {
+        index: Id
+    }
+
     id_format:
-        struct IdAliasedEntry {
-            index: Id
-        }
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub struct IdAliasedEntry;
 
     if_display_fmt:
+        #[inline]
         iae_displayfmt() {}
 
     head_format:
-        struct HeadAliasedEntry {
-            index: Id
-        }
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub struct HeadAliasedEntry;
 
-    hf_display_fmt: hae_display_fmt() {}
+    hf_display_fmt:
+        #[inline]
+        hae_display_fmt() {}
 
     aliased:
-        enum AliasedEntry;
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub enum AliasedEntry;
 
-    ad_display_fmt: ae_display_fmt() {}
+    ad_display_fmt:
+        #[inline]
+        ae_display_fmt() {}
+    ad_from_str:
+        #[inline]
+        ae_from_str() {}
 
     alias:
-        enum EntryAlias;
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub enum EntryAlias;
 
-    as_display_fmt: as_display_fmt() {}
+    as_display_fmt:
+        #[inline]
+        as_display_fmt() {}
+    as_from_str:
+        #[inline]
+        as_from_str() {}
+    impl trait { all }
 }
 
-fn linux(s: &str) -> Result<AliasedEntry, DslError> {
-    let mut parts = s.rsplit('.').peekable();
-    parse_car!(parse_field {
-        s: s;
-        parts: parts;
-        Self: AliasedEntry;
-        id_format: IdAliasedEntry;
-        index: Id;
-    });
-    parse_car!(epilogue {
-        s: s;
-        parts: parts;
-        Self: AliasedEntry;
-        id_format: IdAliasedEntry;
-        head_format: HeadAliasedEntry;
-        index: Id
-    });
-    todo!();
+#[cfg(test)]
+mod test {
+    use crate::component::{EntryAlias, FromFullIdentifier, ToFullIdentifier};
+
+    #[test]
+    fn test_valid_entry_field_alias() {
+        let cases = ["$lang@me.123", "$lang.456", "$789", "$123.456"];
+
+        for case in cases {
+            let result = EntryAlias::from_full(case).unwrap();
+            assert_eq!(result.to_full(), case);
+        }
+    }
 }

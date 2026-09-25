@@ -7,6 +7,7 @@ use crate::impl_deser_fromstr;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct Id(i64);
+pub type Index = Id;
 
 impl AsRef<i64> for Id {
     fn as_ref(&self) -> &i64 {

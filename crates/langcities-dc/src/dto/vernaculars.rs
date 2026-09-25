@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::Utc;
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
-use langcities_lcdcdsl::component::{Alias, Id, VernacularAlias};
+use langcities_lcdcdsl::component::{Id, UserAlias, VernacularAlias};
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, QueryFilter,
     entity::prelude::DateTimeUtc,
@@ -33,8 +33,8 @@ impl VernacularAliasDto {
             VernacularAlias::Alias(alias) => {
                 let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
                 let owner_expr = match &alias.user_alias {
-                    Alias::Id(id) => Self::generate_owner_from_auth_user_id(**id),
-                    Alias::Slug(username) => {
+                    UserAlias::Id(id) => Self::generate_owner_from_auth_user_id(**id),
+                    UserAlias::Slug(username) => {
                         let auth_user_id = state.resolve_auth_user_id(&**username).await?;
                         Self::generate_owner_from_auth_user_id(auth_user_id)
                     }

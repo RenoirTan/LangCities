@@ -7,7 +7,7 @@ use axum_extra::extract::Query;
 use langcities_common_server::dto::users::{
     AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto,
 };
-use langcities_lcdcdsl::component::Alias;
+use langcities_lcdcdsl::component::UserAlias;
 use sea_orm::{ColumnTrait, Condition, EntityTrait, QueryFilter};
 
 use crate::{error::AuthAppError, state::AppState};
@@ -26,8 +26,8 @@ pub async fn get_user(
     State(state): State<AppState>,
 ) -> Result<Json<AuthUserDto>, AuthAppError> {
     let sql = match &alias.0 {
-        Alias::Id(id) => users::Entity::find_by_id(**id),
-        Alias::Slug(username) => users::Entity::find_by_username(&**username),
+        UserAlias::Id(id) => users::Entity::find_by_id(**id),
+        UserAlias::Slug(username) => users::Entity::find_by_username(&**username),
     };
     sql.one(&state.db)
         .await
@@ -58,8 +58,8 @@ pub async fn get_many_users(
         .aliases
         .into_iter()
         .fold(Condition::any(), |q, a| match a.0 {
-            Alias::Id(id) => q.add(users::Column::Id.eq(*id)),
-            Alias::Slug(username) => q.add(users::Column::Username.eq(&*username)),
+            UserAlias::Id(id) => q.add(users::Column::Id.eq(*id)),
+            UserAlias::Slug(username) => q.add(users::Column::Username.eq(&*username)),
         });
     let sql = users::Entity::find().filter(condition);
     sql.all(&state.db)

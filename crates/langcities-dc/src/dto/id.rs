@@ -1,33 +1,33 @@
 use std::ops::Deref;
 
-use langcities_lcdcdsl::component::Alias;
+use langcities_lcdcdsl::component::UserAlias;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UserAliasDto(Alias);
+pub struct UserAliasDto(UserAlias);
 
 impl Deref for UserAliasDto {
-    type Target = Alias;
+    type Target = UserAlias;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl AsRef<Alias> for UserAliasDto {
-    fn as_ref(&self) -> &Alias {
+impl AsRef<UserAlias> for UserAliasDto {
+    fn as_ref(&self) -> &UserAlias {
         self
     }
 }
 
-impl From<Alias> for UserAliasDto {
-    fn from(value: Alias) -> Self {
+impl From<UserAlias> for UserAliasDto {
+    fn from(value: UserAlias) -> Self {
         Self(value)
     }
 }
 
-impl Into<Alias> for UserAliasDto {
-    fn into(self) -> Alias {
+impl Into<UserAlias> for UserAliasDto {
+    fn into(self) -> UserAlias {
         self.0
     }
 }

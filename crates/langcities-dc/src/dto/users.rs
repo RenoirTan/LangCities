@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use axum::extract::FromRequestParts;
-use langcities_lcdcdsl::component::Alias;
+use langcities_lcdcdsl::component::UserAlias;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -18,7 +18,7 @@ pub struct GetUsersQueryDto {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String)]
-pub struct GetUserParamsDto(pub Alias);
+pub struct GetUserParamsDto(pub UserAlias);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {

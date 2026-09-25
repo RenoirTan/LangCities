@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
-use langcities_lcdcdsl::component::Alias;
+use langcities_lcdcdsl::component::UserAlias;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
 #[into_params(names("alias"))]
 #[schema(value_type = String)]
-pub struct UserAliasDto(#[param(value_type = String)] pub Alias);
+pub struct UserAliasDto(#[param(value_type = String)] pub UserAlias);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct ManyUserAliasDto {

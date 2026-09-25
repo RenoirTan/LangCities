@@ -9,7 +9,7 @@ use axum::{
     extract::{Path, Query, State},
     routing::get,
 };
-use langcities_lcdcdsl::component::Alias;
+use langcities_lcdcdsl::component::UserAlias;
 use sea_orm::EntityTrait;
 
 #[utoipa::path(
@@ -50,8 +50,8 @@ pub async fn get_user_by_alias(
     State(state): State<AppState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     let user = match alias.0.clone() {
-        Alias::Id(id) => dc_users::Entity::find_by_id(*id).one(&state.db).await,
-        Alias::Slug(username) => {
+        UserAlias::Id(id) => dc_users::Entity::find_by_id(*id).one(&state.db).await,
+        UserAlias::Slug(username) => {
             let auth_id = state.resolve_auth_user_id(&**username).await?;
             dc_users::Entity::find_by_auth_user_id(auth_id)
                 .one(&state.db)

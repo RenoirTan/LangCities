@@ -4,50 +4,58 @@ use crate::{complex_resource_alias, parse_car};
 
 complex_resource_alias! {
     id_format:
-        struct IdAliasedEntryField {
+        struct IdAliasedTri {
             index: Id,
-            field: Slug
+            field: Slug,
+            misc: Id,
+            other: Slug
         }
 
     if_display_fmt:
         iae_displayfmt() {}
 
     head_format:
-        struct HeadAliasedEntryField {
+        struct HeadAliasedTri {
             index: Id,
-            field: Slug
+            field: Slug,
+            misc: Id,
+            other: Slug
         }
 
     hf_display_fmt: hae_display_fmt() {}
 
     aliased:
-        enum AliasedEntryField;
+        enum AliasedTri;
 
     ad_display_fmt: ae_display_fmt() {}
 
     alias:
-        enum EntryFieldAlias;
+        enum TriAlias;
 
     as_display_fmt: as_display_fmt() {}
 }
 
-fn parse_aef(s: &str) -> Result<AliasedEntryField, DslError> {
+fn parse_tri(s: &str) -> Result<AliasedTri, DslError> {
     let mut parts = s.rsplit('.').peekable();
     parse_car!(parse_field {
         s: s;
         parts: parts;
-        Self: AliasedEntryField;
-        id_format: IdAliasedEntryField;
+        Self: AliasedTri;
+        id_format: IdAliasedTri;
+        index: Id,
         field: Slug,
-        index: Id;
+        misc: Id,
+        other: Slug;
     });
     parse_car!(epilogue {
         s: s;
         parts: parts;
-        Self: AliasedEntryField;
-        id_format: IdAliasedEntryField;
-        head_format: HeadAliasedEntryField;
+        Self: AliasedTri;
+        id_format: IdAliasedTri;
+        head_format: HeadAliasedTri;
         index: Id,
-        field: Slug
+        field: Slug,
+        misc: Id,
+        other: Slug
     })
 }

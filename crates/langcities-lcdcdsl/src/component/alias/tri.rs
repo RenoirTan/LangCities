@@ -1,6 +1,6 @@
 use crate::{
     complex_resource_alias,
-    component::{Id, Slug},
+    component::{FromFullIdentifier, Id, Slug, ToFullIdentifier},
     parse_car,
 };
 
@@ -13,21 +13,21 @@ complex_resource_alias! {
     }
 
     id_format:
-        pub struct IdAliasedTri;
+        struct IdAliasedTri;
 
     if_display_fmt:
         #[inline]
         iae_displayfmt() {}
 
     head_format:
-        pub struct HeadAliasedTri;
+        struct HeadAliasedTri;
 
     hf_display_fmt:
         #[inline]
         hae_display_fmt() {}
 
     aliased:
-        pub enum AliasedTri;
+        enum AliasedTri;
 
     ad_display_fmt:
         #[inline]
@@ -37,7 +37,7 @@ complex_resource_alias! {
         ae_from_str() {}
 
     alias:
-        pub enum TriAlias;
+        enum TriAlias;
 
     as_display_fmt:
         #[inline]
@@ -47,4 +47,19 @@ complex_resource_alias! {
         as_from_str() {}
 
     impl trait { all }
+}
+
+#[test]
+fn test_valid_tri_alias() {
+    let cases = [
+        "$lang@me.123.ipa.123.ipa",
+        "$lang.456.transliteration.789.e",
+        "$789.oof",
+        "$123.456.hello",
+    ];
+
+    for case in cases {
+        let result = TriAlias::from_full(case).unwrap();
+        assert_eq!(result.to_full(), case);
+    }
 }

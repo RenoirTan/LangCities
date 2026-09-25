@@ -51,7 +51,7 @@ mod test {
     use crate::component::{EntryAlias, FromFullIdentifier, ToFullIdentifier};
 
     #[test]
-    fn test_valid_entry_field_alias() {
+    fn test_valid_entry_alias() {
         let cases = ["$lang@me.123", "$lang.456", "$789", "$123.456"];
 
         for case in cases {

@@ -10,6 +10,7 @@ pub mod entity;
 pub mod error;
 pub mod openapi;
 pub mod pre;
+pub mod repo;
 pub mod route;
 pub mod state;
 pub mod util;

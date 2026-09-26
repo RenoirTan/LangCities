@@ -4,15 +4,14 @@ use axum::{
     routing::{delete, get, patch, post},
 };
 use langcities_common_server::dto::request::RequestContext;
-use sea_orm::{ActiveModelTrait, DbErr, ModelTrait};
 
 use crate::{
     dto::vernaculars::{
-        CreateVernacularDto, UpdateVernacularDto, VernacularAccessDto, VernacularAliasDto,
-        VernacularDto,
+        CreateVernacularDto, UpdateVernacularDto, VernacularAliasDto, VernacularDto,
     },
-    entity::{dc_users, vernaculars},
+    entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
+    repo::vernacular::VernacularRepo,
     state::AppState,
 };
 
@@ -36,12 +35,12 @@ pub async fn get_vernacular(
     request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularAccessDto::read(alias.clone(), request_context)
-        .resolve(&state.db, &state)
+    VernacularRepo::new(state.clone())
+        .get_vernacular(&state.db, alias.0.clone(), request_context)
         .await
-        .map(|o| {
-            o.map(|m| Json(m.into()))
-                .ok_or_else(|| DcAppError::not_found(format!("vernacular {} not found", alias)))
+        .map(|m| {
+            m.map(|m| Json(m.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
         })
         .flatten()
 }
@@ -59,15 +58,13 @@ pub async fn get_vernacular(
 pub async fn create_vernacular(
     State(state): State<AppState>,
     user: dc_users::Model,
+    request_context: RequestContext,
     Json(dto): Json<CreateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    let owner_id = user.id;
-    let active_model = dto.to_active_model(owner_id);
-    match active_model.insert(&state.db).await {
-        Ok(model) => Ok(Json(model.into())),
-        Err(DbErr::RecordNotInserted) => Err(DcAppError::conflict(DbErr::RecordNotInserted)),
-        Err(e) => Err(DcAppError::database(e)),
-    }
+    VernacularRepo::new(state.clone())
+        .create_vernacular(&state.db, dto, user.auth_user_id, request_context)
+        .await
+        .map(|m| Json(m.into()))
 }
 
 #[utoipa::path(
@@ -92,19 +89,14 @@ pub async fn update_vernacular(
     State(state): State<AppState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    let mut active: vernaculars::ActiveModel =
-        VernacularAccessDto::write(alias.clone(), request_context)
-            .resolve(&state.db, &state)
-            .await
-            .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("{alias}"))))
-            .flatten()?
-            .into();
-    dto.update_active_model(&mut active);
-    active
-        .update(&state.db)
+    VernacularRepo::new(state.clone())
+        .update_vernacular(&state.db, alias.0.clone(), dto, request_context)
         .await
-        .map(|m| Json(VernacularDto::from(m)))
-        .map_err(DcAppError::database)
+        .map(|o| {
+            o.map(|m| Json(m.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
+        })
+        .flatten()
 }
 
 #[utoipa::path(
@@ -127,17 +119,14 @@ pub async fn delete_vernacular(
     request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    let model = VernacularAccessDto::delete(alias.clone(), request_context)
-        .resolve(&state.db, &state)
+    VernacularRepo::new(state.clone())
+        .delete_vernacular(&state.db, alias.0.clone(), request_context)
         .await
-        .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("vernacular {} not found", alias))))
-        .flatten()?;
-    let dto = Json(VernacularDto::from(model.clone()));
-    model
-        .delete(&state.db)
-        .await
-        .map_err(DcAppError::database)?;
-    Ok(dto)
+        .map(|o| {
+            o.map(|m| Json(m.into()))
+                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
+        })
+        .flatten()
 }
 
 pub fn get_v1_vernaculars_router() -> Router<AppState> {

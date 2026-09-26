@@ -4,18 +4,13 @@ use axum::{
     routing::{delete, get, patch, post},
 };
 use langcities_common_server::dto::request::RequestContext;
-use sea_orm::{ActiveModelTrait, DbErr, ModelTrait, TransactionError, TransactionTrait};
 
 use crate::{
-    dto::{
-        entries::EntryAccessDto,
-        entry_fields::{
-            CreateEntryFieldDto, EntryFieldAccessDto, EntryFieldAliasDto, EntryFieldDto,
-            UpdateEntryFieldDto,
-        },
+    dto::entry_fields::{
+        CreateEntryFieldDto, EntryFieldAliasDto, EntryFieldDto, UpdateEntryFieldDto,
     },
-    entity::entry_fields,
     error::{DcAppError, DcAppErrorTrait},
+    repo::entry_field::EntryFieldRepo,
     state::AppState,
 };
 
@@ -39,14 +34,11 @@ pub async fn get_entry_field(
     request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldAccessDto::read(alias.clone(), request_context)
-        .resolve(&state.db, &state)
-        .await
-        .map(|o| {
-            o.map(|m| Json(m.into()))
-                .ok_or_else(|| DcAppError::not_found(format!("entry field {} not found", alias)))
-        })
-        .flatten()
+    EntryFieldRepo::from_state(state.clone())
+        .get_entry_field(&state.db, alias.0.clone(), request_context)
+        .await?
+        .map(|f| Json(f.into()))
+        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
 }
 
 #[utoipa::path(
@@ -64,33 +56,10 @@ pub async fn create_entry_field(
     request_context: RequestContext,
     Json(dto): Json<CreateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    let entry_access = EntryAccessDto::write(dto.entry.clone(), request_context);
-
-    let out = state
-        .db
-        .clone() // sea orm clone is cheap
-        .transaction(|txn| {
-            Box::pin(async move {
-                let entry = entry_access
-                    .resolve(txn, &state)
-                    .await?
-                    .ok_or_else(|| DcAppError::not_found(format!("{}", dto.entry)))?;
-                let field = dto.to_active_model(&entry);
-                match field.insert(txn).await {
-                    Ok(model) => Ok(Json(model.into())),
-                    Err(DbErr::RecordNotInserted) => {
-                        Err(DcAppError::conflict(DbErr::RecordNotInserted))
-                    }
-                    Err(e) => Err(DcAppError::database(e)),
-                }
-            })
-        })
-        .await;
-
-    out.map_err(|e| match e {
-        TransactionError::Connection(e) => DcAppError::database(e),
-        TransactionError::Transaction(e) => e,
-    })
+    EntryFieldRepo::from_state(state.clone())
+        .create_entry_field(&state.db, dto, request_context)
+        .await
+        .map(|f| Json(f.into()))
 }
 
 #[utoipa::path(
@@ -115,19 +84,11 @@ pub async fn update_entry_field(
     State(state): State<AppState>,
     Json(dto): Json<UpdateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    let mut active: entry_fields::ActiveModel =
-        EntryFieldAccessDto::write(alias.clone(), request_context)
-            .resolve(&state.db, &state)
-            .await
-            .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("{alias}"))))
-            .flatten()?
-            .into();
-    dto.update_active_model(&mut active);
-    active
-        .update(&state.db)
-        .await
-        .map(|m| Json(EntryFieldDto::from(m)))
-        .map_err(DcAppError::database)
+    EntryFieldRepo::from_state(state.clone())
+        .update_entry_field(&state.db, alias.0.clone(), dto, request_context)
+        .await?
+        .map(|f| Json(f.into()))
+        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
 }
 
 #[utoipa::path(
@@ -150,17 +111,11 @@ pub async fn delete_entry_field(
     request_context: RequestContext,
     State(state): State<AppState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    let model = EntryFieldAccessDto::delete(alias.clone(), request_context)
-        .resolve(&state.db, &state)
-        .await
-        .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias))))
-        .flatten()?;
-    let dto = Json(EntryFieldDto::from(model.clone()));
-    model
-        .delete(&state.db)
-        .await
-        .map_err(DcAppError::database)?;
-    Ok(dto)
+    EntryFieldRepo::from_state(state.clone())
+        .delete_entry_field(&state.db, alias.0.clone(), request_context)
+        .await?
+        .map(|f| Json(f.into()))
+        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
 }
 
 pub fn get_v1_entry_fields_router() -> Router<AppState> {

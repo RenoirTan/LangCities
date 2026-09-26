@@ -65,4 +65,19 @@ impl UserRepo {
             TryInsertResult::Inserted(model) => Ok(model),
         }
     }
+
+    pub async fn get_or_create_user<C>(
+        &self,
+        conn: &C,
+        auth_user_id: i64,
+    ) -> Result<dc_users::Model, DcAppError>
+    where
+        C: ConnectionTrait,
+    {
+        if let Some(user) = self.get_user_by_auth_user_id(conn, auth_user_id).await? {
+            return Ok(user);
+        } else {
+            self.create_user(conn, auth_user_id).await
+        }
+    }
 }

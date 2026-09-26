@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
     let state = AppState::create(config).await?;
 
     if state.config.dc.seed_testing {
-        Seeder::new(&state).seed_testing().await?;
+        Seeder::new(state.clone()).seed_testing().await?;
     }
 
     let swagger = SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi());

@@ -10,4 +10,5 @@ pub struct RequestContext {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RequestAccessKind {
     NormalUser,
+    System,
 }

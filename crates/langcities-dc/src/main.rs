@@ -8,6 +8,7 @@ pub mod config;
 pub mod dto;
 pub mod entity;
 pub mod error;
+pub mod message;
 pub mod openapi;
 pub mod pre;
 pub mod repo;

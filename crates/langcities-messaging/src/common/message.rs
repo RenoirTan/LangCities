@@ -48,5 +48,16 @@ pub trait Message: Serialize + DeserializeOwned {
         encoder.to_bytes(self)
     }
 
-    fn sent_at(&self) -> DateTime<Utc>;
+    fn message_at(&self) -> DateTime<Utc>;
+}
+
+#[macro_export]
+macro_rules! impl_message {
+    ($type:ty) => {
+        impl ::langcities_messaging::common::message::Message for $type {
+            fn message_at(&self) -> ::chrono::DateTime<::chrono::Utc> {
+                self.message_at
+            }
+        }
+    };
 }

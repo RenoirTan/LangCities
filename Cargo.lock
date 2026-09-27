@@ -1929,6 +1929,7 @@ dependencies = [
  "langcities-jwt",
  "langcities-lcdcdsl",
  "langcities-lcdcdsl-parser",
+ "langcities-messaging",
  "log",
  "sea-orm",
  "serde",

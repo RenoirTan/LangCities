@@ -20,7 +20,7 @@ impl MessagePacker {
     }
 
     #[inline]
-    fn inner_encode<T>(&mut self, data: T) -> Result<Vec<u8>, MessagingError>
+    fn inner_encode<T>(&mut self, data: &T) -> Result<Vec<u8>, MessagingError>
     where
         T: Message,
     {
@@ -30,7 +30,7 @@ impl MessagePacker {
         Ok(serializer.into_inner())
     }
 
-    pub fn encode<T>(&mut self, data: T) -> Result<Vec<u8>, MessagingError>
+    pub fn encode<T>(&mut self, data: &T) -> Result<Vec<u8>, MessagingError>
     where
         T: Message,
     {
@@ -39,7 +39,7 @@ impl MessagePacker {
 }
 
 impl BytesEncoder for MessagePacker {
-    fn to_bytes<T>(&mut self, data: T) -> Result<Vec<u8>, MessagingError>
+    fn to_bytes<T>(&mut self, data: &T) -> Result<Vec<u8>, MessagingError>
     where
         T: Message,
     {

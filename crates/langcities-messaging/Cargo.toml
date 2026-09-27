@@ -8,12 +8,14 @@ categories.workspace = true
 repository.workspace = true
 
 [features]
-default = ["messagepack"]
+default = ["messagepack", "tokio_chan"]
 messagepack = ["dep:rmp-serde"]
+tokio_chan = ["tokio/sync"]
 
 [dependencies]
 chrono = "0.4.45"
 langcities-common = { path = "../langcities-common" }
 rmp-serde = { version = "1.3.1", optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
+tokio = { version = "1.53.1", features = ["rt"] }
 

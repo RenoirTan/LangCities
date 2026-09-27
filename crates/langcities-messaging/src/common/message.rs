@@ -6,7 +6,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use crate::error::MessagingError;
 
 pub trait BytesEncoder {
-    fn to_bytes<T>(&mut self, data: T) -> Result<Vec<u8>, MessagingError>
+    fn to_bytes<T>(&mut self, data: &T) -> Result<Vec<u8>, MessagingError>
     where
         T: Message;
 }
@@ -41,7 +41,7 @@ pub trait Message: Serialize + DeserializeOwned {
         decoder.from_bytes(bytes)
     }
 
-    fn to_bytes<E>(self, encoder: &mut E) -> Result<Vec<u8>, MessagingError>
+    fn to_bytes<E>(&self, encoder: &mut E) -> Result<Vec<u8>, MessagingError>
     where
         E: BytesEncoder,
     {

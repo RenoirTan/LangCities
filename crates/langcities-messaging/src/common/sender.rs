@@ -1,5 +1,7 @@
 use std::sync::mpsc::{SendError as MpscSendError, TrySendError as MpscTrySendError};
 
+use async_trait::async_trait;
+
 use crate::common::message::Message;
 
 pub struct SendError<T>(pub T);
@@ -15,6 +17,12 @@ pub enum TrySendError<T> {
     Closed(T),
 }
 
+impl<T> From<SendError<T>> for TrySendError<T> {
+    fn from(value: SendError<T>) -> Self {
+        Self::Closed(value.0)
+    }
+}
+
 impl<T> From<MpscTrySendError<T>> for TrySendError<T> {
     fn from(value: MpscTrySendError<T>) -> Self {
         match value {
@@ -24,7 +32,8 @@ impl<T> From<MpscTrySendError<T>> for TrySendError<T> {
     }
 }
 
+#[async_trait]
 pub trait MessageSender<T: Message> {
-    fn send(&self, value: T) -> impl Future<Output = Result<(), SendError<T>>>;
+    async fn send(&self, value: T) -> Result<(), SendError<T>>;
     fn try_send(&self, value: T) -> Result<(), TrySendError<T>>;
 }

@@ -25,7 +25,7 @@ pub trait BytesDecoder {
     }
 }
 
-pub trait Message: Serialize + DeserializeOwned {
+pub trait Message: Send + Serialize + DeserializeOwned {
     fn from_read<R, D>(read: R, decoder: &mut D) -> Result<Self, MessagingError>
     where
         R: Read,

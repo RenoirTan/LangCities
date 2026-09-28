@@ -1,5 +1,7 @@
+use async_trait::async_trait;
 use tokio::sync::mpsc::{
-    Receiver as MpscReceiver, Sender as MpscSender,
+    Receiver as MpscReceiver, Sender as MpscSender, UnboundedReceiver as MpscUnboundedReceiver,
+    UnboundedSender as MpscUnboundedSender,
     error::{
         SendError as MpscSendError, TryRecvError as MpscTryRecvError,
         TrySendError as MpscTrySendError,
@@ -36,6 +38,7 @@ impl<T> From<MpscTrySendError<T>> for TrySendError<T> {
     }
 }
 
+#[async_trait]
 impl<T> MessageReceiver<T> for MpscReceiver<T>
 where
     T: Message,
@@ -53,6 +56,7 @@ where
     }
 }
 
+#[async_trait]
 impl<T> MessageSender<T> for MpscSender<T>
 where
     T: Message,
@@ -63,5 +67,37 @@ where
 
     fn try_send(&self, value: T) -> Result<(), TrySendError<T>> {
         self.try_send(value).map_err(TrySendError::from)
+    }
+}
+
+#[async_trait]
+impl<T> MessageReceiver<T> for MpscUnboundedReceiver<T>
+where
+    T: Message,
+{
+    async fn recv(&mut self) -> Option<T> {
+        self.recv().await
+    }
+
+    async fn recv_many(&mut self, buffer: &mut Vec<T>, limit: usize) -> usize {
+        self.recv_many(buffer, limit).await
+    }
+
+    fn try_recv(&mut self) -> Result<T, TryRecvError> {
+        self.try_recv().map_err(TryRecvError::from)
+    }
+}
+
+#[async_trait]
+impl<T> MessageSender<T> for MpscUnboundedSender<T>
+where
+    T: Message,
+{
+    async fn send(&self, value: T) -> Result<(), SendError<T>> {
+        self.send(value).map_err(SendError::from)
+    }
+
+    fn try_send(&self, value: T) -> Result<(), TrySendError<T>> {
+        self.send(value).map_err(|e| SendError::from(e).into())
     }
 }

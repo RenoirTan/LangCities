@@ -1,5 +1,7 @@
 use std::sync::mpsc::TryRecvError as MpscTryRecvError;
 
+use async_trait::async_trait;
+
 use crate::common::message::Message;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -18,22 +20,21 @@ impl From<MpscTryRecvError> for TryRecvError {
 }
 
 /// Based on [`tokio::sync::mpsc::Receiver`]
+#[async_trait]
 pub trait MessageReceiver<T: Message> {
-    fn recv(&mut self) -> impl Future<Output = Option<T>>;
+    async fn recv(&mut self) -> Option<T>;
 
-    fn recv_many(&mut self, buffer: &mut Vec<T>, limit: usize) -> impl Future<Output = usize> {
-        async move {
-            let mut i: usize = 0;
-            while i < limit {
-                if let Some(message) = self.recv().await {
-                    buffer.push(message);
-                } else {
-                    break;
-                }
-                i += 1;
+    async fn recv_many(&mut self, buffer: &mut Vec<T>, limit: usize) -> usize {
+        let mut i: usize = 0;
+        while i < limit {
+            if let Some(message) = self.recv().await {
+                buffer.push(message);
+            } else {
+                break;
             }
-            i
+            i += 1;
         }
+        i
     }
 
     fn try_recv(&mut self) -> Result<T, TryRecvError>;

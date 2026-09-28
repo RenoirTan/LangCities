@@ -4,10 +4,12 @@ use langcities_jwt::axum::claims::parse_token_and_extend_state;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+pub mod api;
 pub mod config;
 pub mod dto;
 pub mod entity;
 pub mod error;
+pub mod manager;
 pub mod message;
 pub mod openapi;
 pub mod pre;
@@ -15,6 +17,7 @@ pub mod repo;
 pub mod route;
 pub mod state;
 pub mod util;
+pub mod worker;
 
 use crate::config::{Config, PartialConfig};
 use crate::openapi::ApiDoc;

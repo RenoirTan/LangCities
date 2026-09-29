@@ -13,5 +13,5 @@ pub struct DcWorkerMessaging {
     pub nefouj_rx: Arc<Mutex<Box<dyn MessageReceiver<NewEntryFieldOverrideUpdateJob>>>>,
     pub defouj_tx: Arc<dyn MessageSender<DoneEntryFieldOverrideUpdateJob>>,
     pub nefcdj_rx: Arc<Mutex<Box<dyn MessageReceiver<NewEntryFieldCalculateDirtyJob>>>>,
-    pub defcfj_tx: Arc<dyn MessageSender<DoneEntryFieldCalculateDirtyJob>>,
+    pub defcdj_tx: Arc<dyn MessageSender<DoneEntryFieldCalculateDirtyJob>>,
 }

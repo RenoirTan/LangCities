@@ -27,15 +27,19 @@ use crate::{
 
 const DEFAULT_BOUNDED_MAX_BUFFER_SIZE: usize = 65536;
 
-pub struct DcManagerMessaging {
+pub struct DcManagerRxs {
     pub efue_rx: Box<dyn MessageReceiver<EntryFieldUpdateEvent>>,
     pub scue_rx: Box<dyn MessageReceiver<SoundChangeUpdateEvent>>,
     pub efde_rx: Box<dyn MessageReceiver<EntryFieldDeleteEvent>>,
     pub scde_rx: Box<dyn MessageReceiver<SoundChangeDeleteEvent>>,
-    pub nefouj_tx: Box<dyn MessageSender<NewEntryFieldOverrideUpdateJob>>,
     pub defouj_rx: Box<dyn MessageReceiver<DoneEntryFieldOverrideUpdateJob>>,
-    pub nefcdj_tx: Box<dyn MessageSender<NewEntryFieldCalculateDirtyJob>>,
     pub defcdj_rx: Box<dyn MessageReceiver<DoneEntryFieldCalculateDirtyJob>>,
+}
+
+#[derive(Clone)]
+pub struct DcManagerTxs {
+    pub nefouj_tx: Arc<dyn MessageSender<NewEntryFieldOverrideUpdateJob>>,
+    pub nefcdj_tx: Arc<dyn MessageSender<NewEntryFieldCalculateDirtyJob>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,7 +84,15 @@ impl DcManagerMessagingBuilder {
 
     pub fn build(
         self,
-    ) -> Result<(DcApiMessaging, DcManagerMessaging, DcWorkerMessaging), DcAppError> {
+    ) -> Result<
+        (
+            DcApiMessaging,
+            DcManagerRxs,
+            DcManagerTxs,
+            DcWorkerMessaging,
+        ),
+        DcAppError,
+    > {
         let (efue_tx, efue_rx) =
             make_paired_channels::<EntryFieldUpdateEvent>(self.efue_max_buffer);
         let (scue_tx, scue_rx) =
@@ -97,15 +109,17 @@ impl DcManagerMessagingBuilder {
             make_paired_channels::<NewEntryFieldCalculateDirtyJob>(self.nefcdj_max_buffer);
         let (defcdj_tx, defcdj_rx) =
             make_paired_channels::<DoneEntryFieldCalculateDirtyJob>(self.defcdj_max_buffer);
-        let manager = DcManagerMessaging {
+        let manager_rxs = DcManagerRxs {
             efue_rx,
             scue_rx,
             efde_rx,
             scde_rx,
-            nefouj_tx,
             defouj_rx,
-            nefcdj_tx,
             defcdj_rx,
+        };
+        let manager_txs = DcManagerTxs {
+            nefouj_tx: Arc::from(nefouj_tx),
+            nefcdj_tx: Arc::from(nefcdj_tx),
         };
         let api = DcApiMessaging {
             efue_tx: Arc::from(efue_tx),
@@ -117,9 +131,9 @@ impl DcManagerMessagingBuilder {
             nefouj_rx: Arc::new(Mutex::new(nefouj_rx)),
             defouj_tx: Arc::from(defouj_tx),
             nefcdj_rx: Arc::new(Mutex::new(nefcdj_rx)),
-            defcfj_tx: Arc::from(defcdj_tx),
+            defcdj_tx: Arc::from(defcdj_tx),
         };
-        Ok((api, manager, worker))
+        Ok((api, manager_rxs, manager_txs, worker))
     }
 }
 

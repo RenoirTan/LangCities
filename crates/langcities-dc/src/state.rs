@@ -20,6 +20,7 @@ pub struct AppState {
     pub jwt_decoder: Arc<JwtDecoder>,
     pub auth_client: AuthClient,
     /// Maps usernames to auth user IDs (not DC user IDs).
+    /// Cheap to clone because internally it all points to the same RC-ed inner data
     pub username_cache: MokaWrapper<String, i64>,
 }
 

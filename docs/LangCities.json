@@ -1379,7 +1379,7 @@
         }
       ],
       "updateConstraint": "Cascade",
-      "deleteConstraint": "Cascade",
+      "deleteConstraint": "No action",
       "name": "fk_entry_field_jobs_entry_field_id_entry_fields",
       "id": "1Znv9Bg85xekH_zI0zWZ8"
     },
@@ -1423,7 +1423,7 @@
       "startFieldId": "4qHxdwqMz_wlYA1KAb-KE",
       "endTableId": "2rEw1jX8IqCmDpJBXNupW",
       "endFieldId": "H377Baj32s77PKMFT_Owy",
-      "cardinality": "one_to_one",
+      "cardinality": "many_to_one",
       "fields": [
         {
           "startFieldId": "4qHxdwqMz_wlYA1KAb-KE",
@@ -1431,7 +1431,7 @@
         }
       ],
       "updateConstraint": "Cascade",
-      "deleteConstraint": "Cascade",
+      "deleteConstraint": "No action",
       "name": "fk_entry_field_job_attempts_job_id_entry_field_jobs",
       "color": "#808080",
       "id": "P9QP79kRrQZtnEOVS1pan"

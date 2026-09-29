@@ -24,6 +24,8 @@ pub struct Model {
     pub entries: BelongsTo<super::entries::Entity>,
     #[sea_orm(has_many)]
     pub entry_field_dependencies: HasMany<super::entry_field_dependencies::Entity>,
+    #[sea_orm(has_many)]
+    pub entry_field_jobs: HasMany<super::entry_field_jobs::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -4,6 +4,7 @@ mod m20260831_000001_create_users;
 mod m20260905_092406_create_vernaculars;
 mod m20260921_073321_create_entries;
 mod m20260923_123303_create_entry_field_dependencies;
+mod m20260929_131653_entry_field_jobs;
 
 pub struct Migrator;
 
@@ -15,6 +16,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260905_092406_create_vernaculars::Migration),
             Box::new(m20260921_073321_create_entries::Migration),
             Box::new(m20260923_123303_create_entry_field_dependencies::Migration),
+            Box::new(m20260929_131653_entry_field_jobs::Migration),
         ]
     }
 }

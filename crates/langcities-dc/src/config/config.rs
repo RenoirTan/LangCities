@@ -22,6 +22,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
+pub enum DcSubcommand {
+    #[default]
+    Aio,
+    Api,
+    Manager,
+    Relay,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
 pub struct PartialDcConfig {
     #[arg(long)]
     pub auth_base_url: Option<String>,
@@ -42,6 +51,10 @@ pub struct PartialDcConfig {
 
     #[arg(long)]
     pub entry_field_job_ttl: Option<Milliseconds>,
+
+    #[command(subcommand)]
+    #[serde(skip)]
+    pub subcommand: DcSubcommand,
 }
 
 impl PartialDcConfig {
@@ -64,6 +77,7 @@ impl Merge<PartialDcConfig> for PartialDcConfig {
         self.username_cache_max_capacity
             .merge_with(rhs.username_cache_max_capacity);
         self.entry_field_job_ttl.merge_with(rhs.entry_field_job_ttl);
+        self.subcommand = rhs.subcommand;
     }
 }
 
@@ -155,6 +169,7 @@ pub struct DcConfig {
     pub username_cache_expiry: Expiry,
     pub username_cache_max_capacity: u64,
     pub entry_field_job_ttl: Duration,
+    pub subcommand: DcSubcommand,
 }
 
 impl DcConfig {
@@ -180,6 +195,7 @@ impl DcConfig {
             entry_field_job_ttl: Duration::milliseconds(
                 partial.entry_field_job_ttl.unwrap_or(600000) as i64,
             ),
+            subcommand: partial.subcommand,
         })
     }
 }

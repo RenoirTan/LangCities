@@ -16,7 +16,7 @@ pub mod util;
 pub mod worker;
 
 use crate::api::api_main;
-use crate::config::{Config, PartialConfig};
+use crate::config::{Config, DcSubcommand, PartialConfig};
 use crate::state::AppState;
 
 #[tokio::main]
@@ -32,5 +32,8 @@ async fn main() -> Result<(), Error> {
 
     let state = AppState::create(config).await?;
 
-    api_main(state).await
+    match state.config.dc.subcommand.clone() {
+        DcSubcommand::Api => api_main(state).await,
+        _ => unimplemented!(),
+    }
 }

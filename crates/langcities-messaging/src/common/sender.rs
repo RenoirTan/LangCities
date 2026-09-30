@@ -1,4 +1,8 @@
-use std::sync::mpsc::{SendError as MpscSendError, TrySendError as MpscTrySendError};
+use std::{
+    error::Error as StdError,
+    fmt::{Debug, Display},
+    sync::mpsc::{SendError as MpscSendError, TrySendError as MpscTrySendError},
+};
 
 use async_trait::async_trait;
 
@@ -12,8 +16,23 @@ impl<T> From<MpscSendError<T>> for SendError<T> {
     }
 }
 
+impl<T> Debug for SendError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl<T> Display for SendError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SendError")
+    }
+}
+
+impl<T> StdError for SendError<T> {}
+
 pub enum TrySendError<T> {
     Full(T),
+    // TODO: rename to Disconnected
     Closed(T),
 }
 
@@ -31,6 +50,23 @@ impl<T> From<MpscTrySendError<T>> for TrySendError<T> {
         }
     }
 }
+
+impl<T> Debug for TrySendError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl<T> Display for TrySendError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Full(_) => f.write_str("TrySendError::Full"),
+            Self::Closed(_) => f.write_str("TrySendError::Closed"),
+        }
+    }
+}
+
+impl<T> StdError for TrySendError<T> {}
 
 #[async_trait]
 pub trait MessageSender<T: Message> {

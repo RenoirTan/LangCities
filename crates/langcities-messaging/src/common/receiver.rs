@@ -1,4 +1,4 @@
-use std::sync::mpsc::TryRecvError as MpscTryRecvError;
+use std::{error::Error as StdError, fmt::Display, sync::mpsc::TryRecvError as MpscTryRecvError};
 
 use async_trait::async_trait;
 
@@ -18,6 +18,17 @@ impl From<MpscTryRecvError> for TryRecvError {
         }
     }
 }
+
+impl Display for TryRecvError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Empty => f.write_str("Empty"),
+            Self::Disconnected => f.write_str("Disconnected"),
+        }
+    }
+}
+
+impl StdError for TryRecvError {}
 
 /// Based on [`tokio::sync::mpsc::Receiver`]
 #[async_trait]

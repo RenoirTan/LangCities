@@ -79,6 +79,7 @@ impl Into<Value> for &EntryFieldJobStatus {
     }
 }
 
+/// TODO: Add refreshed_at so that finishing workers can check if their initial data was stale
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldJobDto {
     pub id: i64,

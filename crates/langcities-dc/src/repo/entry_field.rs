@@ -61,10 +61,12 @@ impl EntryFieldRepo {
         Self::new(EntryRepo::from_state(state))
     }
 
+    #[inline]
     pub fn state(&self) -> &AppState {
         self.entry_repo.state()
     }
 
+    #[inline]
     pub fn vernacular_repo(&self) -> &VernacularRepo {
         &self.entry_repo.vernacular_repo
     }

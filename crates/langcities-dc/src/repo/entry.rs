@@ -51,6 +51,7 @@ impl EntryRepo {
         Self::new(VernacularRepo::new(state))
     }
 
+    #[inline]
     pub fn state(&self) -> &AppState {
         &self.vernacular_repo.state
     }

@@ -1,3 +1,4 @@
+use chrono::Duration;
 use clap::Parser;
 use figment::{
     Figment,
@@ -38,6 +39,9 @@ pub struct PartialDcConfig {
 
     #[arg(long)]
     pub username_cache_max_capacity: Option<u64>,
+
+    #[arg(long)]
+    pub entry_field_job_ttl: Option<Milliseconds>,
 }
 
 impl PartialDcConfig {
@@ -59,6 +63,7 @@ impl Merge<PartialDcConfig> for PartialDcConfig {
         self.username_cache_ttl.merge_with(rhs.username_cache_ttl);
         self.username_cache_max_capacity
             .merge_with(rhs.username_cache_max_capacity);
+        self.entry_field_job_ttl.merge_with(rhs.entry_field_job_ttl);
     }
 }
 
@@ -149,6 +154,7 @@ pub struct DcConfig {
     pub seed_testing: bool,
     pub username_cache_expiry: Expiry,
     pub username_cache_max_capacity: u64,
+    pub entry_field_job_ttl: Duration,
 }
 
 impl DcConfig {
@@ -169,6 +175,11 @@ impl DcConfig {
                 Some(ms) => Expiry::Ttl(ms),
             },
             username_cache_max_capacity: partial.username_cache_max_capacity.unwrap_or(10000),
+            // 10 minutes
+            // TODO: check conversion from u64 to i64
+            entry_field_job_ttl: Duration::milliseconds(
+                partial.entry_field_job_ttl.unwrap_or(600000) as i64,
+            ),
         })
     }
 }

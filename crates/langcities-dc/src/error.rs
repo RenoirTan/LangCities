@@ -10,6 +10,8 @@ pub enum DcAppErrorKind {
     Unauthorized,
     InvalidAccessToken,
     Conflict,
+    /// When server (potentially) causes a invalid state
+    BadState,
     BadRequest,
     NotFound,
     AuthService,
@@ -45,6 +47,7 @@ pub trait DcAppErrorTrait {
     fn invalid_access_token(source: impl Into<Error>) -> Self;
     fn conflict(source: impl Into<Error>) -> Self;
     fn bad_request(source: impl Into<Error>) -> Self;
+    fn bad_state(source: impl Into<Error>) -> Self;
     fn not_found(source: impl Into<Error>) -> Self;
     fn auth_service(source: impl Into<Error>) -> Self;
     fn cache(source: impl Into<Error>) -> Self;
@@ -74,6 +77,10 @@ impl DcAppErrorTrait for DcAppError {
 
     fn bad_request(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), DcAppErrorKind::BadRequest)
+    }
+
+    fn bad_state(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::BadState)
     }
 
     fn not_found(source: impl Into<Error>) -> Self {

@@ -1,6 +1,6 @@
 use axum::Router;
 
-use crate::state::AppState;
+use crate::api::state::ApiState;
 
 pub mod entries;
 pub mod entry_fields;
@@ -8,7 +8,7 @@ pub mod token;
 pub mod users;
 pub mod vernaculars;
 
-pub fn get_v1_router() -> Router<AppState> {
+pub fn get_v1_router() -> Router<ApiState> {
     Router::new()
         .merge(entries::get_v1_entries_router())
         .merge(entry_fields::get_v1_entry_fields_router())

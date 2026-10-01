@@ -6,12 +6,12 @@ use axum::{
 use langcities_common_server::dto::request::RequestContext;
 
 use crate::{
+    api::state::ApiState,
     dto::entry_fields::{
         CreateEntryFieldDto, EntryFieldAliasDto, EntryFieldDto, UpdateEntryFieldDto,
     },
     error::{DcAppError, DcAppErrorTrait},
     repo::entry_field::EntryFieldRepo,
-    state::AppState,
 };
 
 #[utoipa::path(
@@ -32,9 +32,9 @@ use crate::{
 pub async fn get_entry_field(
     Path(alias): Path<EntryFieldAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.clone())
+    EntryFieldRepo::from_state(state.inner.clone())
         .get_entry_field(&state.db, alias.0.clone(), request_context)
         .await?
         .map(|f| Json(f.into()))
@@ -52,11 +52,11 @@ pub async fn get_entry_field(
 )]
 #[axum::debug_handler]
 pub async fn create_entry_field(
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     request_context: RequestContext,
     Json(dto): Json<CreateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.clone())
+    EntryFieldRepo::from_state(state.inner.clone())
         .create_entry_field(&state.db, dto, request_context)
         .await
         .map(|f| Json(f.into()))
@@ -81,10 +81,10 @@ pub async fn create_entry_field(
 pub async fn update_entry_field(
     Path(alias): Path<EntryFieldAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     Json(dto): Json<UpdateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.clone())
+    EntryFieldRepo::from_state(state.inner.clone())
         .update_entry_field(&state.db, alias.0.clone(), dto, request_context)
         .await?
         .map(|f| Json(f.into()))
@@ -109,16 +109,16 @@ pub async fn update_entry_field(
 pub async fn delete_entry_field(
     Path(alias): Path<EntryFieldAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.clone())
+    EntryFieldRepo::from_state(state.inner.clone())
         .delete_entry_field(&state.db, alias.0.clone(), request_context)
         .await?
         .map(|f| Json(f.into()))
         .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
 }
 
-pub fn get_v1_entry_fields_router() -> Router<AppState> {
+pub fn get_v1_entry_fields_router() -> Router<ApiState> {
     Router::new()
         .route("/entry_fields/{alias}", get(get_entry_field))
         .route("/entry_fields", post(create_entry_field))

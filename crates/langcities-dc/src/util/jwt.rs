@@ -1,7 +1,7 @@
 use crate::{
+    api::state::ApiState,
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
-    state::AppState,
 };
 use axum::{RequestPartsExt, extract::FromRequestParts, http::request::Parts};
 use axum_extra::{
@@ -48,12 +48,12 @@ impl DerefMut for DcClaimsWrapper {
     }
 }
 
-impl FromRequestParts<AppState> for DcClaimsWrapper {
+impl FromRequestParts<ApiState> for DcClaimsWrapper {
     type Rejection = DcAppError;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &AppState,
+        state: &ApiState,
     ) -> Result<Self, Self::Rejection> {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
@@ -61,7 +61,7 @@ impl FromRequestParts<AppState> for DcClaimsWrapper {
             .map_err(DcAppError::unauthorized)?;
 
         let token_data = state
-            .jwt_decoder
+            .jwt_decoder()
             .decode_token::<()>(&bearer.token())
             .map_err(DcAppError::unauthorized)?;
 
@@ -69,12 +69,12 @@ impl FromRequestParts<AppState> for DcClaimsWrapper {
     }
 }
 
-impl FromRequestParts<AppState> for RequestContext {
+impl FromRequestParts<ApiState> for RequestContext {
     type Rejection = DcAppError;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &AppState,
+        state: &ApiState,
     ) -> Result<Self, Self::Rejection> {
         let user: Option<dc_users::Model> = parts.extract_with_state(state).await?;
         Ok(RequestContext {

@@ -5,13 +5,14 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    openapi::ApiDoc, pre::seed::Seeder, state::AppState, util::setup::extract_current_user,
+    api::state::ApiState, config::Config, openapi::ApiDoc, pre::seed::Seeder,
+    util::setup::extract_current_user,
 };
 
-pub async fn api_main(state: AppState) -> Result<(), Error> {
+pub async fn api_main_with_state(state: ApiState) -> Result<(), Error> {
     let bind_host = state.config.server.bind_host();
     if state.config.dc.seed_testing {
-        Seeder::new(state.clone()).seed_testing().await?;
+        Seeder::new(state.inner.clone()).seed_testing().await?;
     }
 
     let swagger = SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi());
@@ -24,7 +25,7 @@ pub async fn api_main(state: AppState) -> Result<(), Error> {
         ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
-            parse_token_and_extend_state::<AppState>,
+            parse_token_and_extend_state::<ApiState>,
         ))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind(bind_host).await?;
@@ -32,4 +33,9 @@ pub async fn api_main(state: AppState) -> Result<(), Error> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+pub async fn api_main(config: Config) -> Result<(), Error> {
+    let state = ApiState::create(config).await?;
+    api_main_with_state(state).await
 }

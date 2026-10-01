@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
+    api::state::ApiState,
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
@@ -53,12 +54,12 @@ where
     }
 }
 
-impl FromRequestParts<AppState> for Option<dc_users::Model> {
+impl FromRequestParts<ApiState> for Option<dc_users::Model> {
     type Rejection = DcAppError;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
-        state: &AppState,
+        state: &ApiState,
     ) -> Result<Self, Self::Rejection> {
         Ok(dc_users::Model::from_request_parts(parts, state).await.ok())
     }

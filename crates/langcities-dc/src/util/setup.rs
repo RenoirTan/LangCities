@@ -1,7 +1,7 @@
+use crate::api::state::ApiState;
 use crate::entity::dc_users;
 use crate::error::{DcAppError, DcAppErrorTrait};
 use crate::repo::user::UserRepo;
-use crate::state::AppState;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -21,13 +21,13 @@ pub(crate) async fn resolve_current_user<C: ConnectionTrait + TransactionTrait>(
 }
 
 pub async fn extract_current_user(
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     mut request: Request,
     next: Next,
 ) -> Response {
     let parsed_claims = request
         .extensions()
-        .get::<Arc<ParsedClaims<<AppState as ParseJwtClaims>::Error>>>()
+        .get::<Arc<ParsedClaims<<ApiState as ParseJwtClaims>::Error>>>()
         .cloned();
     if let Some(parsed_claims) = parsed_claims {
         if let ParsedClaims::Valid(claims) = &*parsed_claims {

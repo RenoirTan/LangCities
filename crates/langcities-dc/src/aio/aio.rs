@@ -1,11 +1,31 @@
 use langcities_common::error::Error;
 
-use crate::{api::api_main, manager::messaging::DcManagerMessagingBuilder, state::AppState};
+use crate::{
+    api::{
+        api_main_with_state,
+        state::{ApiState, OuterApiState},
+    },
+    config::Config,
+    error::DcAppError,
+    manager::{DcManager, messaging::DcManagerMessagingBuilder},
+    state::AppState,
+};
 
-pub async fn aio_main(state: AppState) -> Result<(), Error> {
-    let messaging_builder = DcManagerMessagingBuilder::new();
-    let (_api_msg, _rxs, _txs, _worker_msg) = messaging_builder.build()?;
-    let api_handle = tokio::spawn(api_main(state.clone()));
+pub async fn generate_states(config: Config) -> Result<(ApiState, DcManager), DcAppError> {
+    let dcmm_builder = DcManagerMessagingBuilder::new();
+    // TODO: configure dcmm_builder
+    let (_api_mx, rxs, txs, worker_mx) = dcmm_builder.build()?;
+    let outer_api_state = OuterApiState::create(&config)?;
+    let app_state = AppState::create(config).await?;
+    let dcm = DcManager::new(app_state.clone(), rxs, txs, worker_mx);
+    let api_state = ApiState::new(app_state, outer_api_state);
+    Ok((api_state, dcm))
+}
+
+pub async fn aio_main(config: Config) -> Result<(), Error> {
+    let (api_state, _dcm) = generate_states(config).await?;
+    let api_handle = tokio::spawn(api_main_with_state(api_state.clone()));
+    // let dcm_handle = tokio::spawn(dcm.run());
     let (api_result,) = tokio::join!(api_handle);
     api_result??;
     Ok(())

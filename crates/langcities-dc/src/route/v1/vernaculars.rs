@@ -6,13 +6,13 @@ use axum::{
 use langcities_common_server::dto::request::RequestContext;
 
 use crate::{
+    api::state::ApiState,
     dto::vernaculars::{
         CreateVernacularDto, UpdateVernacularDto, VernacularAliasDto, VernacularDto,
     },
     entity::dc_users,
     error::{DcAppError, DcAppErrorTrait},
     repo::vernacular::VernacularRepo,
-    state::AppState,
 };
 
 #[utoipa::path(
@@ -33,9 +33,9 @@ use crate::{
 pub async fn get_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.clone())
+    VernacularRepo::new(state.inner.clone())
         .get_vernacular(&state.db, alias.0.clone(), request_context)
         .await
         .map(|m| {
@@ -56,12 +56,12 @@ pub async fn get_vernacular(
 )]
 #[axum::debug_handler]
 pub async fn create_vernacular(
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     user: dc_users::Model,
     request_context: RequestContext,
     Json(dto): Json<CreateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.clone())
+    VernacularRepo::new(state.inner.clone())
         .create_vernacular(&state.db, dto, user.auth_user_id, request_context)
         .await
         .map(|m| Json(m.into()))
@@ -86,10 +86,10 @@ pub async fn create_vernacular(
 pub async fn update_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.clone())
+    VernacularRepo::new(state.inner.clone())
         .update_vernacular(&state.db, alias.0.clone(), dto, request_context)
         .await
         .map(|o| {
@@ -117,9 +117,9 @@ pub async fn update_vernacular(
 pub async fn delete_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.clone())
+    VernacularRepo::new(state.inner.clone())
         .delete_vernacular(&state.db, alias.0.clone(), request_context)
         .await
         .map(|o| {
@@ -129,7 +129,7 @@ pub async fn delete_vernacular(
         .flatten()
 }
 
-pub fn get_v1_vernaculars_router() -> Router<AppState> {
+pub fn get_v1_vernaculars_router() -> Router<ApiState> {
     Router::new()
         .route("/vernaculars/{alias}", get(get_vernacular))
         .route("/vernaculars", post(create_vernacular))

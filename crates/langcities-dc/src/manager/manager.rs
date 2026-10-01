@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
 use chrono::Utc;
-use rayon::ThreadPool;
 
 use crate::{
     dto::entry_field_jobs::CreateEntryFieldJobDto,
@@ -21,11 +18,10 @@ pub(crate) struct InnerDcManager {
     pub state: AppState,
     pub txs: DcManagerTxs,
     pub worker_msg: DcWorkerMessaging,
-    pub thread_pool: Arc<ThreadPool>,
 }
 
 impl InnerDcManager {
-    pub(crate) async fn do_efue(mut self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
+    pub(crate) async fn do_efue(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         match &efue.changed {
             EntryFieldValueChanged::Override => self.do_efue_override(efue).await,
             EntryFieldValueChanged::Clean => self.do_efue_clean(efue).await,
@@ -33,7 +29,7 @@ impl InnerDcManager {
     }
 
     /// create job to get new
-    async fn do_efue_override(mut self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
+    async fn do_efue_override(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         let dto = CreateEntryFieldJobDto {
             entry_field_id: *efue.entry_field_id,
         };
@@ -43,7 +39,7 @@ impl InnerDcManager {
         Ok(())
     }
 
-    async fn do_efue_clean(mut self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
+    async fn do_efue_clean(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         let dependency_repo = EntryFieldDependencyRepo::from_state(self.state.clone());
         let dependencies = dependency_repo
             .get_dependencies_of(&self.state.db, efue.entry_field_id)
@@ -71,32 +67,19 @@ pub struct DcManager {
 }
 
 impl DcManager {
-    pub(crate) fn new<A, R, T, W, P>(
-        state: A,
-        rxs: R,
-        txs: T,
-        worker_msg: W,
-        thread_pool: ThreadPool,
-    ) -> Self
+    pub(crate) fn new<A, R, T, W>(state: A, rxs: R, txs: T, worker_msg: W) -> Self
     where
         A: Into<AppState>,
         R: Into<DcManagerRxs>,
         T: Into<DcManagerTxs>,
         W: Into<DcWorkerMessaging>,
-        P: Into<ThreadPool>,
     {
-        let (state, rxs, txs, worker_msg, thread_pool) = (
-            state.into(),
-            rxs.into(),
-            txs.into(),
-            worker_msg.into(),
-            thread_pool.into(),
-        );
+        let (state, rxs, txs, worker_msg) =
+            (state.into(), rxs.into(), txs.into(), worker_msg.into());
         let inner = InnerDcManager {
             state,
             txs,
             worker_msg,
-            thread_pool,
         };
         Self { inner, rxs }
     }

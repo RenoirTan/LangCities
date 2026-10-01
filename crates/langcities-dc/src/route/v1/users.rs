@@ -1,8 +1,8 @@
 use crate::{
+    api::state::ApiState,
     dto::users::{GetUserParamsDto, GetUsersQueryDto, UserDto},
     error::{DcAppError, DcAppErrorTrait},
     repo::user::UserRepo,
-    state::AppState,
 };
 use axum::{
     Json, Router,
@@ -22,7 +22,7 @@ use langcities_lcdcdsl::component::UserAlias;
 #[axum::debug_handler]
 pub async fn get_user(
     Query(query): Query<GetUsersQueryDto>,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     UserRepo
         .get_user_by_auth_user_id(&state.db, query.auth_user_id)
@@ -45,7 +45,7 @@ pub async fn get_user(
 #[axum::debug_handler]
 pub async fn get_user_by_alias(
     Path(alias): Path<GetUserParamsDto>,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     match &alias.0 {
         UserAlias::Id(id) => UserRepo.get_user_by_id(&state.db, **id).await,
@@ -63,7 +63,7 @@ pub async fn get_user_by_alias(
     .flatten()
 }
 
-pub fn get_v1_users_router() -> Router<AppState> {
+pub fn get_v1_users_router() -> Router<ApiState> {
     Router::new()
         .route("/users", get(get_user))
         .route("/users/{alias}", get(get_user_by_alias))

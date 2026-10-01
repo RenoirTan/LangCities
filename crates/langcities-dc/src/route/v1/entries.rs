@@ -6,10 +6,10 @@ use axum::{
 use langcities_common_server::dto::request::RequestContext;
 
 use crate::{
+    api::state::ApiState,
     dto::entries::{CreateEntryDto, EntryAliasDto, EntryDto},
     error::{DcAppError, DcAppErrorTrait},
     repo::entry::EntryRepo,
-    state::AppState,
 };
 
 #[utoipa::path(
@@ -30,9 +30,9 @@ use crate::{
 pub async fn get_entry(
     Path(alias): Path<EntryAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.clone())
+    EntryRepo::from_state(state.inner.clone())
         .get_entry(&state.db, alias.0.clone(), request_context)
         .await?
         .map(|m| Json(m.into()))
@@ -50,11 +50,11 @@ pub async fn get_entry(
 )]
 #[axum::debug_handler]
 pub async fn create_entry(
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     request_context: RequestContext,
     Json(dto): Json<CreateEntryDto>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.clone())
+    EntryRepo::from_state(state.inner.clone())
         .create_entry(&state.db, dto, request_context)
         .await
         .map(|m| Json(m.into()))
@@ -80,7 +80,7 @@ pub async fn create_entry(
 pub async fn update_vernacular(
     Path(alias): Path<VernacularAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
     let mut active: vernaculars::ActiveModel =
@@ -117,16 +117,16 @@ pub async fn update_vernacular(
 pub async fn delete_entry(
     Path(alias): Path<EntryAliasDto>,
     request_context: RequestContext,
-    State(state): State<AppState>,
+    State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.clone())
+    EntryRepo::from_state(state.inner.clone())
         .delete_entry(&state.db, alias.0.clone(), request_context)
         .await?
         .map(|m| Json(m.into()))
         .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
 }
 
-pub fn get_v1_entries_router() -> Router<AppState> {
+pub fn get_v1_entries_router() -> Router<ApiState> {
     Router::new()
         .route("/entries/{alias}", get(get_entry))
         .route("/entries", post(create_entry))

@@ -18,7 +18,6 @@ pub mod worker;
 
 use crate::api::api_main;
 use crate::config::{Config, DcSubcommand, PartialConfig};
-use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -31,10 +30,8 @@ async fn main() -> Result<(), Error> {
     let config = Config::from_partial(partial_config)?;
     println!("{:#?}", config);
 
-    let state = AppState::create(config).await?;
-
-    match state.config.dc.subcommand.clone() {
-        DcSubcommand::Api => api_main(state).await,
+    match config.dc.subcommand {
+        DcSubcommand::Api => api_main(config).await,
         _ => unimplemented!(),
     }
 }

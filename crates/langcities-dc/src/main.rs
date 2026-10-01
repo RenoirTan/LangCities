@@ -1,5 +1,6 @@
 use langcities_common::error::Error;
 
+pub mod aio;
 pub mod api;
 pub mod config;
 pub mod dto;

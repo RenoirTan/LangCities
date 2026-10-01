@@ -48,6 +48,7 @@ pub enum DcManagerMessagingBackendKind {
     Tokio,
 }
 
+/// TODO: Add more configs to allow more backends
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DcManagerMessagingBuilder {
     pub backend_kind: DcManagerMessagingBackendKind,

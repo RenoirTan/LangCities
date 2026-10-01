@@ -32,7 +32,7 @@ impl StdError for TryRecvError {}
 
 /// Based on [`tokio::sync::mpsc::Receiver`]
 #[async_trait]
-pub trait MessageReceiver<T: Message> {
+pub trait MessageReceiver<T: Message>: Send + Sync {
     async fn recv(&mut self) -> Option<T>;
 
     async fn recv_many(&mut self, buffer: &mut Vec<T>, limit: usize) -> usize {

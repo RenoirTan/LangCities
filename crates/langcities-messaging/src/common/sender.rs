@@ -69,7 +69,7 @@ impl<T> Display for TrySendError<T> {
 impl<T> StdError for TrySendError<T> {}
 
 #[async_trait]
-pub trait MessageSender<T: Message> {
+pub trait MessageSender<T: Message>: Send + Sync {
     async fn send(&self, value: T) -> Result<(), SendError<T>>;
     fn try_send(&self, value: T) -> Result<(), TrySendError<T>>;
 }

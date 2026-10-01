@@ -23,10 +23,11 @@ pub async fn generate_states(config: Config) -> Result<(ApiState, DcManager), Dc
 }
 
 pub async fn aio_main(config: Config) -> Result<(), Error> {
-    let (api_state, _dcm) = generate_states(config).await?;
+    let (api_state, dcm) = generate_states(config).await?;
     let api_handle = tokio::spawn(api_main_with_state(api_state.clone()));
-    // let dcm_handle = tokio::spawn(dcm.run());
-    let (api_result,) = tokio::join!(api_handle);
+    let dcm_handle = tokio::spawn(dcm.run());
+    let (api_result, dcm_result) = tokio::join!(api_handle, dcm_handle);
     api_result??;
+    dcm_result?;
     Ok(())
 }

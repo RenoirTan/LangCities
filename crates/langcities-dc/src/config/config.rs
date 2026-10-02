@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
+#[serde(rename_all = "lowercase")]
 pub enum DcSubcommand {
     #[default]
     Aio,
@@ -32,6 +33,14 @@ pub enum DcSubcommand {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Parser)]
 pub struct PartialDcConfig {
+    #[arg(
+        long,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
+    pub show_config_only: Option<bool>,
+
     #[arg(long)]
     pub auth_base_url: Option<String>,
 
@@ -53,8 +62,7 @@ pub struct PartialDcConfig {
     pub entry_field_job_ttl: Option<Milliseconds>,
 
     #[command(subcommand)]
-    #[serde(skip)]
-    pub subcommand: DcSubcommand,
+    pub subcommand: Option<DcSubcommand>,
 }
 
 impl PartialDcConfig {
@@ -71,13 +79,14 @@ impl PartialDcConfig {
 
 impl Merge<PartialDcConfig> for PartialDcConfig {
     fn merge_with(&mut self, rhs: PartialDcConfig) {
+        self.show_config_only.merge_with(rhs.show_config_only);
         self.auth_base_url.merge_with(rhs.auth_base_url);
         self.seed_testing.merge_with(rhs.seed_testing);
         self.username_cache_ttl.merge_with(rhs.username_cache_ttl);
         self.username_cache_max_capacity
             .merge_with(rhs.username_cache_max_capacity);
         self.entry_field_job_ttl.merge_with(rhs.entry_field_job_ttl);
-        self.subcommand = rhs.subcommand;
+        self.subcommand.merge_with(rhs.subcommand);
     }
 }
 
@@ -164,6 +173,7 @@ impl Into<PartialConfig> for PartialCli {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DcConfig {
+    pub show_config_only: bool,
     pub auth_base_url: url::Url,
     pub seed_testing: bool,
     pub username_cache_expiry: Expiry,
@@ -183,6 +193,7 @@ impl DcConfig {
         .map_err(LcConfigError::bad_parse)?;
         validate_base_url(&auth_base_url)?;
         Ok(Self {
+            show_config_only: partial.show_config_only.unwrap_or(false),
             auth_base_url,
             seed_testing: partial.seed_testing.unwrap_or(false),
             username_cache_expiry: match partial.username_cache_ttl {
@@ -195,7 +206,7 @@ impl DcConfig {
             entry_field_job_ttl: Duration::milliseconds(
                 partial.entry_field_job_ttl.unwrap_or(600000) as i64,
             ),
-            subcommand: partial.subcommand,
+            subcommand: partial.subcommand.unwrap_or_default(),
         })
     }
 }

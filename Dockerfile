@@ -17,8 +17,8 @@ RUN rustup component add rustfmt
 
 FROM dev-base AS dev-auth
 
-CMD ["/app/target/debug/langcities-auth"]
+ENTRYPOINT ["/app/target/debug/langcities-auth"]
 
 FROM dev-base AS dev-dc
 
-CMD ["/app/target/debug/langcities-dc", "api"]
+ENTRYPOINT ["/app/target/debug/langcities-dc"]

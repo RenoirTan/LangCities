@@ -28,7 +28,10 @@ async fn main() -> Result<(), Error> {
 
     let partial_config = PartialConfig::collect()?;
     let config = Config::from_partial(partial_config)?;
-    println!("{:#?}", config);
+    if config.dc.show_config_only {
+        println!("{:#?}", config);
+        return Ok(());
+    }
 
     match config.dc.subcommand {
         DcSubcommand::Api => api_main(config).await,

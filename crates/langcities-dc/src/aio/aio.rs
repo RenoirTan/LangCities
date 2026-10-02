@@ -7,14 +7,15 @@ use crate::{
     },
     config::Config,
     error::DcAppError,
-    manager::{Manager, messaging::ManagerMxBuilder},
+    manager::Manager,
+    message::builder::MxBuilder,
     state::AppState,
 };
 
 pub async fn generate_states(config: Config) -> Result<(ApiState, Manager), DcAppError> {
-    let dcmm_builder = ManagerMxBuilder::new();
+    let mx_builder = MxBuilder::new();
     // TODO: configure dcmm_builder
-    let (_api_mx, rxs, txs, worker_mx) = dcmm_builder.build()?;
+    let (_api_mx, rxs, txs, worker_mx) = mx_builder.build()?;
     let outer_api_state = OuterApiState::create(&config)?;
     let app_state = AppState::create(config).await?;
     let dcm = Manager::new(app_state.clone(), rxs, txs, worker_mx);

@@ -15,10 +15,10 @@ use crate::{
 pub async fn generate_states(config: Config) -> Result<(ApiState, Hub), DcAppError> {
     // TODO: configure mx_builder
     let mx_builder = MxBuilder::new();
-    let (api_mx, rxs, txs, worker_mx) = mx_builder.build()?;
+    let (api_mx, rxs, txs, _relay_mx) = mx_builder.build()?;
     let outer_api_state = OuterApiState::create(&config, api_mx)?;
     let app_state = AppState::create(config).await?;
-    let hub = Hub::new(app_state.clone(), rxs, txs, worker_mx);
+    let hub = Hub::new(app_state.clone(), rxs, txs);
     let api_state = ApiState::new(app_state, outer_api_state);
     Ok((api_state, hub))
 }

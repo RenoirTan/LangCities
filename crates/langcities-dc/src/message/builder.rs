@@ -4,15 +4,13 @@ use langcities_messaging::common::{
     message::Message, receiver::MessageReceiver, sender::MessageSender,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{
-    Mutex,
-    mpsc::{channel, unbounded_channel},
-};
+use tokio::sync::mpsc::{channel, unbounded_channel};
 
 use crate::{
     api::messaging::{ApiMxs, DummyApiRxs},
     error::{DcAppError, DcAppErrorTrait},
     hub::messaging::{HubRxs, HubTxs},
+    manager::messaging::ManagerRelayMxs,
     message::{
         event::{
             EntryFieldDeleteEvent, EntryFieldUpdateEvent, SoundChangeDeleteEvent,
@@ -23,7 +21,6 @@ use crate::{
             NewEntryFieldCalculateDirtyJob, NewEntryFieldOverrideUpdateJob,
         },
     },
-    worker::messaging::WorkerMxs,
 };
 
 const DEFAULT_BOUNDED_MAX_BUFFER_SIZE: usize = 65536;
@@ -106,7 +103,7 @@ impl MxBuilder {
         Ok((api, dummy))
     }
 
-    pub fn build(self) -> Result<(ApiMxs, HubRxs, HubTxs, WorkerMxs), DcAppError> {
+    pub fn build(self) -> Result<(ApiMxs, HubRxs, HubTxs, ManagerRelayMxs), DcAppError> {
         let (efue_tx, efue_rx) =
             make_paired_channels::<EntryFieldUpdateEvent>(self.efue_max_buffer);
         let (scue_tx, scue_rx) =
@@ -141,13 +138,13 @@ impl MxBuilder {
             efde_tx: Arc::from(efde_tx),
             scde_tx: Arc::from(scde_tx),
         };
-        let worker = WorkerMxs {
-            nefouj_rx: Arc::new(Mutex::new(nefouj_rx)),
-            defouj_tx: Arc::from(defouj_tx),
-            nefcdj_rx: Arc::new(Mutex::new(nefcdj_rx)),
-            defcdj_tx: Arc::from(defcdj_tx),
+        let relay = ManagerRelayMxs {
+            nefouj_rx,
+            defouj_tx,
+            nefcdj_rx,
+            defcdj_tx,
         };
-        Ok((api, hub_rxs, hub_txs, worker))
+        Ok((api, hub_rxs, hub_txs, relay))
     }
 }
 

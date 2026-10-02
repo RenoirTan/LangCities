@@ -1,17 +1,11 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use langcities_messaging::common::{receiver::MessageReceiver, sender::MessageSender};
-use tokio::sync::Mutex;
+use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::message::job::{
-    DoneEntryFieldCalculateDirtyJob, DoneEntryFieldOverrideUpdateJob,
-    NewEntryFieldCalculateDirtyJob, NewEntryFieldOverrideUpdateJob,
-};
+use crate::message::job::{ToManagerJob, ToWorkerJob};
 
 #[derive(Clone)]
 pub struct WorkerMxs {
-    pub nefouj_rx: Arc<Mutex<Box<dyn MessageReceiver<NewEntryFieldOverrideUpdateJob>>>>,
-    pub defouj_tx: Arc<dyn MessageSender<DoneEntryFieldOverrideUpdateJob>>,
-    pub nefcdj_rx: Arc<Mutex<Box<dyn MessageReceiver<NewEntryFieldCalculateDirtyJob>>>>,
-    pub defcdj_tx: Arc<dyn MessageSender<DoneEntryFieldCalculateDirtyJob>>,
+    pub to_manager: Sender<ToManagerJob>,
+    pub to_worker: Arc<Mutex<Receiver<ToWorkerJob>>>,
 }

@@ -32,3 +32,15 @@ pub struct DoneEntryFieldCalculateDirtyJob {
     pub message_at: DateTime<Utc>,
 }
 impl_message!(DoneEntryFieldCalculateDirtyJob);
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToWorkerJob {
+    Nefouj(NewEntryFieldOverrideUpdateJob),
+    Nefcdj(NewEntryFieldCalculateDirtyJob),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToManagerJob {
+    Defouj(DoneEntryFieldOverrideUpdateJob),
+    Defcdj(DoneEntryFieldCalculateDirtyJob),
+}

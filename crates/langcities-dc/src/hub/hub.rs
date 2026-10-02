@@ -10,14 +10,12 @@ use crate::{
     },
     repo::{entry_field_dependency::EntryFieldDependencyRepo, entry_field_job::EntryFieldJobRepo},
     state::AppState,
-    worker::messaging::WorkerMxs,
 };
 
 #[derive(Clone)]
 pub(crate) struct InnerHub {
     pub state: AppState,
     pub txs: HubTxs,
-    pub worker_mxs: WorkerMxs,
 }
 
 impl InnerHub {
@@ -69,20 +67,14 @@ pub struct Hub {
 }
 
 impl Hub {
-    pub(crate) fn new<A, R, T, W>(state: A, rxs: R, txs: T, worker_mxs: W) -> Self
+    pub(crate) fn new<A, R, T>(state: A, rxs: R, txs: T) -> Self
     where
         A: Into<AppState>,
         R: Into<HubRxs>,
         T: Into<HubTxs>,
-        W: Into<WorkerMxs>,
     {
-        let (state, rxs, txs, worker_mxs) =
-            (state.into(), rxs.into(), txs.into(), worker_mxs.into());
-        let inner = InnerHub {
-            state,
-            txs,
-            worker_mxs,
-        };
+        let (state, rxs, txs) = (state.into(), rxs.into(), txs.into());
+        let inner = InnerHub { state, txs };
         Self { inner, rxs }
     }
 

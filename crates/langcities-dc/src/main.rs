@@ -7,6 +7,7 @@ pub mod dto;
 pub mod entity;
 pub mod error;
 pub mod hub;
+pub mod manager;
 pub mod message;
 pub mod openapi;
 pub mod pre;

@@ -12,38 +12,46 @@ use langcities_jwt::{
 };
 
 use crate::{
+    api::messaging::ApiMxs,
     config::Config,
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct OuterApiState {
     pub jwt_decoder: Arc<JwtDecoder>,
+    pub api_mxs: ApiMxs,
 }
 
 impl OuterApiState {
-    pub fn new<J>(jwt_decoder: J) -> Self
+    pub fn new<J, M>(jwt_decoder: J, api_mxs: M) -> Self
     where
         J: Into<JwtDecoder>,
+        M: Into<ApiMxs>,
     {
         let jwt_decoder = Arc::new(jwt_decoder.into());
-        Self { jwt_decoder }
+        let api_mxs = api_mxs.into();
+        Self {
+            jwt_decoder,
+            api_mxs,
+        }
     }
 
-    pub fn create<C>(config: C) -> Result<Self, DcAppError>
+    pub fn create<C, M>(config: C, api_mxs: M) -> Result<Self, DcAppError>
     where
         C: Borrow<Config>,
+        M: Into<ApiMxs>,
     {
         let config = config.borrow();
         let jwt_decoder =
             JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences())
                 .map_err(DcAppError::failed_init)?;
-        Ok(Self::new(jwt_decoder))
+        Ok(Self::new(jwt_decoder, api_mxs))
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ApiState {
     pub inner: AppState,
     pub outer: OuterApiState,
@@ -59,21 +67,27 @@ impl ApiState {
         Self { inner, outer }
     }
 
-    pub async fn create_with_state<I, C>(inner: I, config: C) -> Result<Self, DcAppError>
+    pub async fn create_with_state<I, C, M>(
+        inner: I,
+        config: C,
+        api_mxs: ApiMxs,
+    ) -> Result<Self, DcAppError>
     where
         I: Into<AppState>,
         C: Borrow<Config>,
+        M: Into<ApiMxs>,
     {
-        let outer = OuterApiState::create(config)?;
+        let outer = OuterApiState::create(config, api_mxs)?;
         Ok(Self::new(inner, outer))
     }
 
-    pub async fn create<C>(config: C) -> Result<Self, DcAppError>
+    pub async fn create<C, M>(config: C, api_mxs: M) -> Result<Self, DcAppError>
     where
         C: Into<Config>,
+        M: Into<ApiMxs>,
     {
         let config = config.into();
-        let outer = OuterApiState::create(&config)?;
+        let outer = OuterApiState::create(&config, api_mxs)?;
         let inner = AppState::create(config).await?;
         Ok(Self::new(inner, outer))
     }
@@ -119,8 +133,10 @@ impl ParseJwtClaims for ApiState {
 mod tests {
     use super::*;
     use crate::{
+        api::messaging::DummyApiRxs,
         config::{PartialConfig, PartialDcConfig},
         error::DcAppErrorKind,
+        message::builder::MxBuilder,
     };
     use axum::{Json, Router, extract::RawQuery, http::StatusCode, routing::get};
     use langcities_common_db::config::PartialDbConfig;
@@ -143,6 +159,9 @@ mod tests {
         url: String,
         requests: Arc<Mutex<Vec<String>>>,
         task: tokio::task::JoinHandle<()>,
+        api_mxs: ApiMxs,
+        #[allow(unused)]
+        dummy: DummyApiRxs,
     }
 
     impl MockAuth {
@@ -165,10 +184,13 @@ mod tests {
             let task = tokio::spawn(async move {
                 axum::serve(listener, app).await.unwrap();
             });
+            let (api_mxs, dummy) = MxBuilder::new().build_dummy_api().unwrap();
             Self {
                 url,
                 requests,
                 task,
+                api_mxs,
+                dummy,
             }
         }
 
@@ -193,7 +215,7 @@ mod tests {
             .unwrap();
             let jwt_decoder =
                 JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences()).unwrap();
-            let outer = OuterApiState::new(jwt_decoder);
+            let outer = OuterApiState::new(jwt_decoder, self.api_mxs.clone());
             let inner = AppState::new(config, DatabaseConnection::default()).unwrap();
             ApiState::new(inner, outer)
         }

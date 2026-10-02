@@ -13,10 +13,10 @@ use crate::{
 };
 
 pub async fn generate_states(config: Config) -> Result<(ApiState, Manager), DcAppError> {
+    // TODO: configure mx_builder
     let mx_builder = MxBuilder::new();
-    // TODO: configure dcmm_builder
-    let (_api_mx, rxs, txs, worker_mx) = mx_builder.build()?;
-    let outer_api_state = OuterApiState::create(&config)?;
+    let (api_mx, rxs, txs, worker_mx) = mx_builder.build()?;
+    let outer_api_state = OuterApiState::create(&config, api_mx)?;
     let app_state = AppState::create(config).await?;
     let dcm = Manager::new(app_state.clone(), rxs, txs, worker_mx);
     let api_state = ApiState::new(app_state, outer_api_state);

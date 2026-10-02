@@ -5,8 +5,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::state::ApiState, config::Config, openapi::ApiDoc, pre::seed::Seeder,
-    util::setup::extract_current_user,
+    api::state::ApiState, config::Config, message::builder::MxBuilder, openapi::ApiDoc,
+    pre::seed::Seeder, util::setup::extract_current_user,
 };
 
 pub async fn api_main_with_state(state: ApiState) -> Result<(), Error> {
@@ -36,6 +36,8 @@ pub async fn api_main_with_state(state: ApiState) -> Result<(), Error> {
 }
 
 pub async fn api_main(config: Config) -> Result<(), Error> {
-    let state = ApiState::create(config).await?;
+    // TODO: configure MxBuilder
+    let api_mxs = MxBuilder::new().build_only_api()?;
+    let state = ApiState::create(config, api_mxs).await?;
     api_main_with_state(state).await
 }

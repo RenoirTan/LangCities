@@ -7,7 +7,7 @@ use crate::message::event::{
 };
 
 #[derive(Clone)]
-pub struct DcApiMessaging {
+pub struct ApiMxs {
     pub efue_tx: Arc<dyn MessageSender<EntryFieldUpdateEvent>>,
     pub scue_tx: Arc<dyn MessageSender<SoundChangeUpdateEvent>>,
     pub efde_tx: Arc<dyn MessageSender<EntryFieldDeleteEvent>>,

@@ -3,24 +3,24 @@ use chrono::Utc;
 use crate::{
     dto::entry_field_jobs::CreateEntryFieldJobDto,
     error::{DcAppError, DcAppErrorTrait},
-    manager::messaging::{DcManagerRxs, DcManagerTxs},
+    manager::messaging::{ManagerRxs, ManagerTxs},
     message::{
         event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
         job::NewEntryFieldCalculateDirtyJob,
     },
     repo::{entry_field_dependency::EntryFieldDependencyRepo, entry_field_job::EntryFieldJobRepo},
     state::AppState,
-    worker::messaging::DcWorkerMessaging,
+    worker::messaging::WorkerMxs,
 };
 
 #[derive(Clone)]
-pub(crate) struct InnerDcManager {
+pub(crate) struct InnerManager {
     pub state: AppState,
-    pub txs: DcManagerTxs,
-    pub worker_msg: DcWorkerMessaging,
+    pub txs: ManagerTxs,
+    pub worker_mxs: WorkerMxs,
 }
 
-impl InnerDcManager {
+impl InnerManager {
     pub(crate) async fn do_efue(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         match &efue.changed {
             EntryFieldValueChanged::Override => self.do_efue_override(efue).await,
@@ -61,25 +61,25 @@ impl InnerDcManager {
     }
 }
 
-pub struct DcManager {
-    pub(crate) inner: InnerDcManager,
-    pub rxs: DcManagerRxs,
+pub struct Manager {
+    pub(crate) inner: InnerManager,
+    pub rxs: ManagerRxs,
 }
 
-impl DcManager {
-    pub(crate) fn new<A, R, T, W>(state: A, rxs: R, txs: T, worker_msg: W) -> Self
+impl Manager {
+    pub(crate) fn new<A, R, T, W>(state: A, rxs: R, txs: T, worker_mxs: W) -> Self
     where
         A: Into<AppState>,
-        R: Into<DcManagerRxs>,
-        T: Into<DcManagerTxs>,
-        W: Into<DcWorkerMessaging>,
+        R: Into<ManagerRxs>,
+        T: Into<ManagerTxs>,
+        W: Into<WorkerMxs>,
     {
-        let (state, rxs, txs, worker_msg) =
-            (state.into(), rxs.into(), txs.into(), worker_msg.into());
-        let inner = InnerDcManager {
+        let (state, rxs, txs, worker_mxs) =
+            (state.into(), rxs.into(), txs.into(), worker_mxs.into());
+        let inner = InnerManager {
             state,
             txs,
-            worker_msg,
+            worker_mxs,
         };
         Self { inner, rxs }
     }

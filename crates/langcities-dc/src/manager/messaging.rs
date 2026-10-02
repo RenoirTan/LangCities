@@ -10,7 +10,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    api::messaging::DcApiMessaging,
+    api::messaging::ApiMxs,
     error::DcAppError,
     message::{
         event::{
@@ -22,12 +22,12 @@ use crate::{
             NewEntryFieldCalculateDirtyJob, NewEntryFieldOverrideUpdateJob,
         },
     },
-    worker::messaging::DcWorkerMessaging,
+    worker::messaging::WorkerMxs,
 };
 
 const DEFAULT_BOUNDED_MAX_BUFFER_SIZE: usize = 65536;
 
-pub struct DcManagerRxs {
+pub struct ManagerRxs {
     pub efue_rx: Box<dyn MessageReceiver<EntryFieldUpdateEvent>>,
     pub scue_rx: Box<dyn MessageReceiver<SoundChangeUpdateEvent>>,
     pub efde_rx: Box<dyn MessageReceiver<EntryFieldDeleteEvent>>,
@@ -37,7 +37,7 @@ pub struct DcManagerRxs {
 }
 
 #[derive(Clone)]
-pub struct DcManagerTxs {
+pub struct ManagerTxs {
     pub nefouj_tx: Arc<dyn MessageSender<NewEntryFieldOverrideUpdateJob>>,
     pub nefcdj_tx: Arc<dyn MessageSender<NewEntryFieldCalculateDirtyJob>>,
 }
@@ -50,7 +50,7 @@ pub enum DcManagerMessagingBackendKind {
 
 /// TODO: Add more configs to allow more backends
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DcManagerMessagingBuilder {
+pub struct ManagerMxBuilder {
     pub backend_kind: DcManagerMessagingBackendKind,
     pub efue_max_buffer: Option<usize>,
     pub scue_max_buffer: Option<usize>,
@@ -62,7 +62,7 @@ pub struct DcManagerMessagingBuilder {
     pub defcdj_max_buffer: Option<usize>,
 }
 
-impl DcManagerMessagingBuilder {
+impl ManagerMxBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -83,17 +83,7 @@ impl DcManagerMessagingBuilder {
         self
     }
 
-    pub fn build(
-        self,
-    ) -> Result<
-        (
-            DcApiMessaging,
-            DcManagerRxs,
-            DcManagerTxs,
-            DcWorkerMessaging,
-        ),
-        DcAppError,
-    > {
+    pub fn build(self) -> Result<(ApiMxs, ManagerRxs, ManagerTxs, WorkerMxs), DcAppError> {
         let (efue_tx, efue_rx) =
             make_paired_channels::<EntryFieldUpdateEvent>(self.efue_max_buffer);
         let (scue_tx, scue_rx) =
@@ -110,7 +100,7 @@ impl DcManagerMessagingBuilder {
             make_paired_channels::<NewEntryFieldCalculateDirtyJob>(self.nefcdj_max_buffer);
         let (defcdj_tx, defcdj_rx) =
             make_paired_channels::<DoneEntryFieldCalculateDirtyJob>(self.defcdj_max_buffer);
-        let manager_rxs = DcManagerRxs {
+        let manager_rxs = ManagerRxs {
             efue_rx,
             scue_rx,
             efde_rx,
@@ -118,17 +108,17 @@ impl DcManagerMessagingBuilder {
             defouj_rx,
             defcdj_rx,
         };
-        let manager_txs = DcManagerTxs {
+        let manager_txs = ManagerTxs {
             nefouj_tx: Arc::from(nefouj_tx),
             nefcdj_tx: Arc::from(nefcdj_tx),
         };
-        let api = DcApiMessaging {
+        let api = ApiMxs {
             efue_tx: Arc::from(efue_tx),
             scue_tx: Arc::from(scue_tx),
             efde_tx: Arc::from(efde_tx),
             scde_tx: Arc::from(scde_tx),
         };
-        let worker = DcWorkerMessaging {
+        let worker = WorkerMxs {
             nefouj_rx: Arc::new(Mutex::new(nefouj_rx)),
             defouj_tx: Arc::from(defouj_tx),
             nefcdj_rx: Arc::new(Mutex::new(nefcdj_rx)),

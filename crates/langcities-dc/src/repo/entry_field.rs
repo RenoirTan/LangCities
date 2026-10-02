@@ -206,20 +206,35 @@ impl EntryFieldRepo {
     where
         C: ConnectionTrait,
     {
-        let mut entry_field = match self
+        self.update_entry_field_returning_original(conn, alias, dto, context)
+            .await
+            .map(|o| o.map(|(_old, new)| new))
+    }
+
+    pub async fn update_entry_field_returning_original<C>(
+        &self,
+        conn: &C,
+        alias: EntryFieldAlias,
+        dto: UpdateEntryFieldDto,
+        context: RequestContext,
+    ) -> Result<Option<(entry_fields::Model, entry_fields::Model)>, DcAppError>
+    where
+        C: ConnectionTrait,
+    {
+        let old = match self
             .inner_get_entry_field(conn, alias, context, EntryFieldAction::Write)
             .await?
         {
-            Some(model) => model.into_active_model(),
+            Some(model) => model,
             None => return Ok(None),
         };
+        let mut entry_field = old.clone().into_active_model();
         dto.update_active_model(&mut entry_field);
-        entry_field
+        let new = entry_field
             .update(conn)
             .await
-            .map(Some)
-            .map_err(DcAppError::database)
-        // TODO: trigger jobs
+            .map_err(DcAppError::database)?;
+        Ok(Some((old, new)))
     }
 
     pub async fn delete_entry_field<C>(

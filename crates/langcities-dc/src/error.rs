@@ -16,6 +16,8 @@ pub enum DcAppErrorKind {
     NotFound,
     AuthService,
     Cache,
+    /// Cannot send or receive any messages
+    Messaging,
     Other,
 }
 
@@ -51,6 +53,7 @@ pub trait DcAppErrorTrait {
     fn not_found(source: impl Into<Error>) -> Self;
     fn auth_service(source: impl Into<Error>) -> Self;
     fn cache(source: impl Into<Error>) -> Self;
+    fn messaging(source: impl Into<Error>) -> Self;
     fn other(source: impl Into<Error>) -> Self;
 }
 
@@ -97,6 +100,10 @@ impl DcAppErrorTrait for DcAppError {
 
     fn cache(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), DcAppErrorKind::Cache)
+    }
+
+    fn messaging(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Messaging)
     }
 }
 

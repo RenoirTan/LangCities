@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, patch, post},
 };
+use chrono::Utc;
 use langcities_common_server::dto::request::RequestContext;
 
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
         CreateEntryFieldDto, EntryFieldAliasDto, EntryFieldDto, UpdateEntryFieldDto,
     },
     error::{DcAppError, DcAppErrorTrait},
+    message::event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
     repo::entry_field::EntryFieldRepo,
 };
 
@@ -84,11 +86,25 @@ pub async fn update_entry_field(
     State(state): State<ApiState>,
     Json(dto): Json<UpdateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.inner.clone())
-        .update_entry_field(&state.db, alias.0.clone(), dto, request_context)
+    let (old, new) = EntryFieldRepo::from_state(state.inner.clone())
+        .update_entry_field_returning_original(&state.db, alias.0.clone(), dto, request_context)
         .await?
-        .map(|f| Json(f.into()))
-        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))?;
+    if old.override_value != new.override_value {
+        let event = EntryFieldUpdateEvent {
+            entry_field_id: old.id.into(),
+            changed: EntryFieldValueChanged::Override,
+            message_at: Utc::now(),
+        };
+        state
+            .outer
+            .api_mxs
+            .efue_tx
+            .send(event)
+            .await
+            .map_err(DcAppError::messaging)?;
+    }
+    Ok(Json(new.into()))
 }
 
 #[utoipa::path(

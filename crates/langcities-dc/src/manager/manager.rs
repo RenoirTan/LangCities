@@ -22,6 +22,8 @@ pub(crate) struct InnerManager {
 
 impl InnerManager {
     pub(crate) async fn do_efue(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
+        println!("Received EntryFieldUpdateEvent: {efue:#?}");
+        return Ok(());
         match &efue.changed {
             EntryFieldValueChanged::Override => self.do_efue_override(efue).await,
             EntryFieldValueChanged::Clean => self.do_efue_clean(efue).await,
@@ -86,6 +88,7 @@ impl Manager {
 
     /// TODO: figure out what happens if end of rx occurs
     pub async fn run(mut self) {
+        println!("Hi! I'm the manager");
         loop {
             tokio::select! {
                 efue = self.rxs.efue_rx.recv() => {

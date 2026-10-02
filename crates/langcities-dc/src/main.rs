@@ -16,6 +16,7 @@ pub mod state;
 pub mod util;
 pub mod worker;
 
+use crate::aio::aio_main;
 use crate::api::api_main;
 use crate::config::{Config, DcSubcommand, PartialConfig};
 
@@ -35,6 +36,7 @@ async fn main() -> Result<(), Error> {
 
     match config.dc.subcommand {
         DcSubcommand::Api => api_main(config).await,
+        DcSubcommand::Aio => aio_main(config).await,
         _ => unimplemented!(),
     }
 }

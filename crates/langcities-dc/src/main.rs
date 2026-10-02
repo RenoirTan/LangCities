@@ -6,7 +6,7 @@ pub mod config;
 pub mod dto;
 pub mod entity;
 pub mod error;
-pub mod manager;
+pub mod hub;
 pub mod message;
 pub mod openapi;
 pub mod pre;

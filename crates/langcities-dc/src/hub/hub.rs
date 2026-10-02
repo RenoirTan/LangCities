@@ -3,7 +3,7 @@ use chrono::Utc;
 use crate::{
     dto::entry_field_jobs::CreateEntryFieldJobDto,
     error::{DcAppError, DcAppErrorTrait},
-    manager::messaging::{ManagerRxs, ManagerTxs},
+    hub::messaging::{HubRxs, HubTxs},
     message::{
         event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
         job::NewEntryFieldCalculateDirtyJob,
@@ -14,13 +14,13 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub(crate) struct InnerManager {
+pub(crate) struct InnerHub {
     pub state: AppState,
-    pub txs: ManagerTxs,
+    pub txs: HubTxs,
     pub worker_mxs: WorkerMxs,
 }
 
-impl InnerManager {
+impl InnerHub {
     pub(crate) async fn do_efue(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         println!("Received EntryFieldUpdateEvent: {efue:#?}");
         return Ok(());
@@ -63,22 +63,22 @@ impl InnerManager {
     }
 }
 
-pub struct Manager {
-    pub(crate) inner: InnerManager,
-    pub rxs: ManagerRxs,
+pub struct Hub {
+    pub(crate) inner: InnerHub,
+    pub rxs: HubRxs,
 }
 
-impl Manager {
+impl Hub {
     pub(crate) fn new<A, R, T, W>(state: A, rxs: R, txs: T, worker_mxs: W) -> Self
     where
         A: Into<AppState>,
-        R: Into<ManagerRxs>,
-        T: Into<ManagerTxs>,
+        R: Into<HubRxs>,
+        T: Into<HubTxs>,
         W: Into<WorkerMxs>,
     {
         let (state, rxs, txs, worker_mxs) =
             (state.into(), rxs.into(), txs.into(), worker_mxs.into());
-        let inner = InnerManager {
+        let inner = InnerHub {
             state,
             txs,
             worker_mxs,
@@ -88,7 +88,7 @@ impl Manager {
 
     /// TODO: figure out what happens if end of rx occurs
     pub async fn run(mut self) {
-        println!("Hi! I'm the manager");
+        println!("Hi! I'm the hub");
         loop {
             tokio::select! {
                 efue = self.rxs.efue_rx.recv() => {

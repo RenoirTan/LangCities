@@ -12,7 +12,7 @@ use tokio::sync::{
 use crate::{
     api::messaging::{ApiMxs, DummyApiRxs},
     error::{DcAppError, DcAppErrorTrait},
-    manager::messaging::{ManagerRxs, ManagerTxs},
+    hub::messaging::{HubRxs, HubTxs},
     message::{
         event::{
             EntryFieldDeleteEvent, EntryFieldUpdateEvent, SoundChangeDeleteEvent,
@@ -106,7 +106,7 @@ impl MxBuilder {
         Ok((api, dummy))
     }
 
-    pub fn build(self) -> Result<(ApiMxs, ManagerRxs, ManagerTxs, WorkerMxs), DcAppError> {
+    pub fn build(self) -> Result<(ApiMxs, HubRxs, HubTxs, WorkerMxs), DcAppError> {
         let (efue_tx, efue_rx) =
             make_paired_channels::<EntryFieldUpdateEvent>(self.efue_max_buffer);
         let (scue_tx, scue_rx) =
@@ -123,7 +123,7 @@ impl MxBuilder {
             make_paired_channels::<NewEntryFieldCalculateDirtyJob>(self.nefcdj_max_buffer);
         let (defcdj_tx, defcdj_rx) =
             make_paired_channels::<DoneEntryFieldCalculateDirtyJob>(self.defcdj_max_buffer);
-        let manager_rxs = ManagerRxs {
+        let hub_rxs = HubRxs {
             efue_rx,
             scue_rx,
             efde_rx,
@@ -131,7 +131,7 @@ impl MxBuilder {
             defouj_rx,
             defcdj_rx,
         };
-        let manager_txs = ManagerTxs {
+        let hub_txs = HubTxs {
             nefouj_tx: Arc::from(nefouj_tx),
             nefcdj_tx: Arc::from(nefcdj_tx),
         };
@@ -147,7 +147,7 @@ impl MxBuilder {
             nefcdj_rx: Arc::new(Mutex::new(nefcdj_rx)),
             defcdj_tx: Arc::from(defcdj_tx),
         };
-        Ok((api, manager_rxs, manager_txs, worker))
+        Ok((api, hub_rxs, hub_txs, worker))
     }
 }
 

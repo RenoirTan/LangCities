@@ -13,7 +13,7 @@ use crate::message::{
     },
 };
 
-pub struct ManagerRxs {
+pub struct HubRxs {
     pub efue_rx: Box<dyn MessageReceiver<EntryFieldUpdateEvent>>,
     pub scue_rx: Box<dyn MessageReceiver<SoundChangeUpdateEvent>>,
     pub efde_rx: Box<dyn MessageReceiver<EntryFieldDeleteEvent>>,
@@ -23,7 +23,7 @@ pub struct ManagerRxs {
 }
 
 #[derive(Clone)]
-pub struct ManagerTxs {
+pub struct HubTxs {
     pub nefouj_tx: Arc<dyn MessageSender<NewEntryFieldOverrideUpdateJob>>,
     pub nefcdj_tx: Arc<dyn MessageSender<NewEntryFieldCalculateDirtyJob>>,
 }

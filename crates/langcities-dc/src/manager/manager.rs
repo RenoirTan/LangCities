@@ -120,6 +120,7 @@ impl Manager {
                 nefouj = relay_mxs.nefouj_rx.recv(), if nefouj_open && defouj_open && !w_tx.is_closed() => {
                     let Some(nefouj) = nefouj else {
                         nefouj_open = false;
+                        println!("nefouj_rx closed!");
                         continue;
                     };
                     let w_job = ToWorkerJob::Nefouj(nefouj);
@@ -128,6 +129,7 @@ impl Manager {
                 nefcdj = relay_mxs.nefcdj_rx.recv(), if nefcdj_open && defcdj_open && !w_tx.is_closed() => {
                     let Some(nefcdj) = nefcdj else {
                         nefcdj_open = false;
+                        println!("nefcdj_rx closed!");
                         continue;
                     };
                     let w_job = ToWorkerJob::Nefcdj(nefcdj);
@@ -135,6 +137,7 @@ impl Manager {
                 },
                 m_job = m_rx.recv(), if !m_rx.is_closed() && (defouj_open || defcdj_open) => {
                     let Some(m_job) = m_job else {
+                        println!("m_rx closed!");
                         continue;
                     };
                     match m_job {
@@ -145,6 +148,7 @@ impl Manager {
                                 .await
                             {
                                 defouj_open = false;
+                                println!("defouj_tx closed");
                             }
                         }
                         ToManagerJob::Defcdj(defcdj) => {
@@ -154,6 +158,7 @@ impl Manager {
                                 .await
                             {
                                 defcdj_open = false;
+                                println!("defcdj_tx closed");
                             }
                         }
                     };
@@ -161,6 +166,7 @@ impl Manager {
                 else => break,
             }
         }
+        println!("Exiting Manager::run_relay");
     }
 
     async fn run_inner(
@@ -173,14 +179,16 @@ impl Manager {
         loop {
             tokio::select! {
                 // don't receive if workers are full
-                w_job = w_rx.recv(), if !w_rx.is_closed() && join_set.len() >= max_jobs => {
+                w_job = w_rx.recv(), if !w_rx.is_closed() && join_set.len() < max_jobs => {
                     let Some(w_job) = w_job else {
+                        println!("w_rx closed!");
                         continue;
                     };
                     Self::handle_wjob(w_job, &mut join_set, &mut job_queue).await;
                 },
                 done = join_set.join_next(), if !m_tx.is_closed() && !join_set.is_empty() => {
                     let Some(done) = done else {
+                        println!("m_tx closed!");
                         continue;
                     };
                     match done {
@@ -212,6 +220,7 @@ impl Manager {
                 }
             };
         }
+        println!("Exiting Manager::run_inner");
     }
 
     async fn handle_wjob(

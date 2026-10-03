@@ -6,7 +6,7 @@ use crate::{
     hub::messaging::{HubRxs, HubTxs},
     message::{
         event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
-        job::NewEntryFieldCalculateDirtyJob,
+        job::{NewEntryFieldCalculateDirtyJob, NewEntryFieldOverrideUpdateJob},
     },
     repo::{entry_field_dependency::EntryFieldDependencyRepo, entry_field_job::EntryFieldJobRepo},
     state::AppState,
@@ -21,7 +21,6 @@ pub(crate) struct InnerHub {
 impl InnerHub {
     pub(crate) async fn do_efue(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         println!("Received EntryFieldUpdateEvent: {efue:#?}");
-        return Ok(());
         match &efue.changed {
             EntryFieldValueChanged::Override => self.do_efue_override(efue).await,
             EntryFieldValueChanged::Clean => self.do_efue_clean(efue).await,
@@ -36,6 +35,14 @@ impl InnerHub {
         let db = self.state.db.clone();
         let repo = EntryFieldJobRepo::from_state(self.state);
         repo.create_or_refresh_entry_field_job(&db, dto).await?;
+        self.txs
+            .nefouj_tx
+            .send(NewEntryFieldOverrideUpdateJob {
+                entry_field_id: efue.entry_field_id,
+                message_at: Utc::now(),
+            })
+            .await
+            .map_err(DcAppError::messaging)?;
         Ok(())
     }
 
@@ -81,30 +88,63 @@ impl Hub {
     /// TODO: figure out what happens if end of rx occurs
     pub async fn run(mut self) {
         println!("Hi! I'm the hub");
+        let mut efue_rx_open = true;
+        let mut scue_rx_open = true;
+        let mut efde_rx_open = true;
+        let mut scde_rx_open = true;
+        let mut defouj_rx_open = true;
+        let mut defcdj_rx_open = true;
         loop {
             tokio::select! {
-                efue = self.rxs.efue_rx.recv() => {
+                efue = self.rxs.efue_rx.recv(), if efue_rx_open => {
                     if let Some(efue) = efue {
                         let _ = self.inner.clone().do_efue(efue).await;
                     } else {
-                        return;
+                        println!("efue_rx closed");
+                        efue_rx_open = false;
                     }
                 },
-                _scue = self.rxs.scue_rx.recv() => {
-                    unimplemented!();
+                scue = self.rxs.scue_rx.recv(), if scue_rx_open => {
+                    if let Some(scue) = scue {
+                        println!("received {scue:#?}");
+                    } else {
+                        println!("scue_rx closed");
+                        scue_rx_open = false;
+                    }
                 },
-                _efde = self.rxs.efde_rx.recv() => {
-                    unimplemented!();
+                efde = self.rxs.efde_rx.recv(), if efde_rx_open => {
+                    if let Some(efde) = efde {
+                        println!("received {efde:#?}")
+                    } else {
+                        println!("efde_rx closed");
+                        efde_rx_open = false;
+                    }
                 },
-                _scde = self.rxs.scde_rx.recv() => {
-                    unimplemented!();
+                scde = self.rxs.scde_rx.recv(), if scde_rx_open => {
+                    if let Some(scde) = scde {
+                        println!("received {scde:#?}")
+                    } else {
+                        println!("scde_rx closed");
+                        scde_rx_open = false;
+                    }
                 },
-                _defouj = self.rxs.defouj_rx.recv() => {
-                    unimplemented!();
+                defouj = self.rxs.defouj_rx.recv(), if defouj_rx_open => {
+                    if let Some(defouj) = defouj {
+                        println!("received {defouj:#?}");
+                    } else {
+                        println!("defouj_rx closed");
+                        defouj_rx_open = false;
+                    }
                 },
-                _defcdj = self.rxs.defcdj_rx.recv() => {
-                    unimplemented!();
-                }
+                defcdj = self.rxs.defcdj_rx.recv(), if defcdj_rx_open => {
+                    if let Some(defcdj) = defcdj {
+                        println!("received {defcdj:#?}");
+                    } else {
+                        println!("defcdj_rx closed");
+                        defcdj_rx_open = false;
+                    }
+                },
+                else => break,
             }
         }
     }

@@ -54,7 +54,7 @@ impl MigrationTrait for Migration {
                     .col(timestamp_default_now("updated_at"))
                     .col(timestamp_null("finished_at"))
                     .col(timestamp("expires_at"))
-                    .col(text("calculated_value"))
+                    .col(text_null("calculated_value"))
                     .foreign_key(
                         ForeignKey::create()
                             .name(EFJA_FK_JOB_NAME)

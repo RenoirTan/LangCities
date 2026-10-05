@@ -14,8 +14,8 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
     pub finished_at: Option<DateTimeUtc>,
     pub expires_at: DateTimeUtc,
-    #[sea_orm(column_type = "Text")]
-    pub calculated_value: String,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub calculated_value: Option<String>,
     #[sea_orm(
         belongs_to,
         from = "job_id",

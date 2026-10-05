@@ -11,13 +11,20 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldJobAttemptDto {
     pub id: i64,
+    /// parent job
     pub job_id: i64,
+    /// idempotency field
     pub worker_id: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// if [`None`], allowed to complete/fail the attempt as long as not expired
+    /// if [`Some`], not allowed to complete/fail the attempt even before expiry
     pub finished_at: Option<DateTime<Utc>>,
     pub expires_at: DateTime<Utc>,
-    pub calculated_value: String,
+    /// if finished, then result is pending
+    /// if finished and [`None`], then attempt failed
+    /// if finished and [`Some`], then attempt completed
+    pub calculated_value: Option<String>,
 }
 
 impl From<entry_field_job_attempts::Model> for EntryFieldJobAttemptDto {
@@ -57,10 +64,42 @@ impl CreateEntryFieldJobAttemptDto {
             job_id: ActiveValue::Set(self.job_id),
             worker_id: ActiveValue::Set(self.worker_id),
             expires_at: ActiveValue::Set(expires_at),
-            calculated_value: ActiveValue::Set(String::new()),
+            calculated_value: ActiveValue::Set(None),
             ..Default::default()
         };
         Ok(am)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct FailEntryFieldJobAttemptDto {}
+
+impl FailEntryFieldJobAttemptDto {
+    pub fn to_active_model(self) -> entry_field_job_attempts::ActiveModel {
+        let mut am = entry_field_job_attempts::ActiveModel::default();
+        self.unchecked_update_active_model(&mut am);
+        am
+    }
+
+    fn unchecked_update_active_model(
+        self,
+        model: &mut entry_field_job_attempts::ActiveModel,
+    ) -> &mut entry_field_job_attempts::ActiveModel {
+        model.finished_at = ActiveValue::Set(Some(Utc::now()));
+        model
+    }
+
+    pub fn update_active_model(
+        self,
+        model: &mut entry_field_job_attempts::ActiveModel,
+    ) -> Result<&mut entry_field_job_attempts::ActiveModel, DcAppError> {
+        if let ActiveValue::Unchanged(Some(finished_at)) = model.finished_at {
+            return Err(DcAppError::bad_state(format!(
+                "attempted to update finished entry field job attempt: {}",
+                finished_at
+            )));
+        }
+        Ok(self.unchecked_update_active_model(model))
     }
 }
 
@@ -76,12 +115,12 @@ impl FinishEntryFieldJobAttemptDto {
         am
     }
 
-    pub fn unchecked_update_active_model(
+    fn unchecked_update_active_model(
         self,
         model: &mut entry_field_job_attempts::ActiveModel,
     ) -> &mut entry_field_job_attempts::ActiveModel {
         model.finished_at = ActiveValue::Set(Some(Utc::now()));
-        model.calculated_value = ActiveValue::Set(self.calculated_value);
+        model.calculated_value = ActiveValue::Set(Some(self.calculated_value));
         model
     }
 

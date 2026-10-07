@@ -4,6 +4,13 @@ use futures::{Stream, StreamExt, future::ready};
 use tokio::sync::broadcast::Receiver;
 use tokio_stream::wrappers::{BroadcastStream, errors::BroadcastStreamRecvError};
 
+#[cfg(all(unix, feature = "signal-hook"))]
+use crate::unix_signal_hook::UnixSignalHook;
+#[cfg(unix)]
+use crate::unix_tokio::UnixTokioSignaller;
+#[cfg(windows)]
+use crate::windows_tokio::WindowsTokioSignaller;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SignalKind {
     Stop,
@@ -76,3 +83,68 @@ pub trait SignallerExt: Signaller {
 }
 
 impl<T> SignallerExt for T where T: Signaller {}
+
+/// dyn-compatible [`Signaller`] that has no generic parameters
+pub trait SafeSignaller {
+    fn boxed_simple_stream(&self) -> Option<Box<dyn Stream<Item = SignalKind>>>;
+    fn boxed_stream(
+        &self,
+    ) -> Option<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>>;
+    fn shutdown(&mut self);
+}
+
+impl<S> SafeSignaller for S
+where
+    S: Signaller,
+{
+    fn boxed_simple_stream(&self) -> Option<Box<dyn Stream<Item = SignalKind>>> {
+        self.boxed_simple_stream()
+    }
+
+    fn boxed_stream(
+        &self,
+    ) -> Option<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>> {
+        self.boxed_stream()
+    }
+
+    fn shutdown(&mut self) {
+        self.shutdown();
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SignallerKind {
+    #[cfg(unix)]
+    UnixTokio,
+    #[cfg(all(unix, feature = "signal-hook"))]
+    UnixSignalHook,
+    #[cfg(windows)]
+    WindowsTokio,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignallerConfig {
+    kind: SignallerKind,
+}
+
+impl SignallerConfig {
+    pub fn new<K>(kind: K) -> Self
+    where
+        K: Into<SignallerKind>,
+    {
+        let kind = kind.into();
+        Self { kind }
+    }
+
+    pub fn create_signaller(self) -> Result<Box<dyn SafeSignaller>, std::io::Error> {
+        let boxed = match self.kind {
+            #[cfg(unix)]
+            SignallerKind::UnixTokio => Box::new(UnixTokioSignaller::create_default()?),
+            #[cfg(all(unix, feature = "signal-hook"))]
+            SignallerKind::UnixSignalHook => Box::new(UnixSignalHook::create_default()?),
+            #[cfg(windows)]
+            WindowsTokio => Box::new(WindowsTokioSignaller::create_default()?),
+        };
+        Ok(boxed)
+    }
+}

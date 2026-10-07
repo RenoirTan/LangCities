@@ -4,10 +4,9 @@
 //! also includes some opinions on what each signal does what
 
 pub mod lc;
+#[cfg(all(unix, feature = "signal-hook"))]
+pub mod unix_signal_hook;
 #[cfg(unix)]
 pub mod unix_tokio;
 #[cfg(windows)]
 pub mod windows;
-
-#[cfg(feature = "signal-hook")]
-pub mod unix_signal_hook;

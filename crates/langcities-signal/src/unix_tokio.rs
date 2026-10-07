@@ -16,6 +16,9 @@ const SIGQUIT: SignalKind = SignalKind::quit();
 const SIGTERM: SignalKind = SignalKind::terminate();
 const SIGUSR1: SignalKind = SignalKind::user_defined1();
 const SIGUSR2: SignalKind = SignalKind::user_defined2();
+const NON_IGNORED_SIGS: [SignalKind; 8] = [
+    SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
+];
 
 impl From<SignalKind> for LcSignalKind {
     fn from(value: SignalKind) -> Self {
@@ -71,6 +74,10 @@ impl UnixTokioSignaller {
             // will be treated as SIGINT
         });
         Ok(Self::new(join_handle, weak_tx))
+    }
+
+    pub fn create_default() -> Result<Self, std::io::Error> {
+        Self::create(NON_IGNORED_SIGS)
     }
 }
 

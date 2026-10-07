@@ -8,7 +8,6 @@ categories.workspace = true
 repository.workspace = true
 
 [features]
-default = ["signal-hook"]
 signal-hook = ["dep:signal-hook", "dep:signal-hook-tokio"]
 
 [dependencies]

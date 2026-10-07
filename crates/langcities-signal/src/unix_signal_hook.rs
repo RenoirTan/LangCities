@@ -10,6 +10,10 @@ use tokio::{
 
 use crate::lc::{SignalKind, Signaller};
 
+const NON_IGNORED_SIGS: [c_int; 8] = [
+    SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
+];
+
 impl From<c_int> for SignalKind {
     fn from(value: c_int) -> Self {
         match value {
@@ -57,6 +61,10 @@ impl UnixSignalHook {
             }
         });
         Ok(Self::new(signal_handle, join_handle, weak_tx))
+    }
+
+    pub fn create_default() -> Result<Self, std::io::Error> {
+        Self::create(NON_IGNORED_SIGS)
     }
 }
 

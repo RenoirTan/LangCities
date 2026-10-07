@@ -14,6 +14,14 @@ use tokio::{
 
 use crate::lc::{SignalKind, Signaller};
 
+const NON_IGNORED_SIGS: [WindowsTokioSignalKind; 5] = [
+    WindowsTokioSignalKind::CtrlBreak,
+    WindowsTokioSignalKind::CtrlC,
+    WindowsTokioSignalKind::CtrlClose,
+    WindowsTokioSignalKind::CtrlLogoff,
+    WindowsTokioSignalKind::CtrlShutdown,
+];
+
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum WindowsTokioSignalKind {
     CtrlBreak,
@@ -163,6 +171,10 @@ impl WindowsTokioSignaller {
             }
         });
         Self::new(join_handle, weak_tx)
+    }
+
+    pub fn create_default() -> Result<Self, std::io::Error> {
+        Self::create(NON_IGNORED_SIGS)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, pin::Pin};
 
 use futures::{Stream, StreamExt, future::ready};
 use tokio::sync::broadcast::Receiver;
@@ -48,24 +48,26 @@ where
     })
 }
 
+pub type BoxedSignalStream =
+    Pin<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>>;
+pub type BoxedSimpleSignalStream = Pin<Box<dyn Stream<Item = SignalKind>>>;
+
 pub trait Signaller {
     type Signal: 'static + Into<SignalKind> + Clone + Send;
 
     fn receiver(&self) -> Option<Receiver<Self::Signal>>;
 
-    fn boxed_simple_stream(&self) -> Option<Box<dyn Stream<Item = SignalKind>>> {
+    fn boxed_simple_stream(&self) -> Option<BoxedSimpleSignalStream> {
         let rx = self.receiver()?;
         let stream = receiver_to_simple_stream(rx);
-        let boxed = Box::new(stream);
+        let boxed = Box::pin(stream);
         Some(boxed)
     }
 
-    fn boxed_stream(
-        &self,
-    ) -> Option<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>> {
+    fn boxed_stream(&self) -> Option<BoxedSignalStream> {
         let rx = self.receiver()?;
         let stream = receiver_to_stream(rx);
-        let boxed = Box::new(stream);
+        let boxed = Box::pin(stream);
         Some(boxed)
     }
 
@@ -86,10 +88,8 @@ impl<T> SignallerExt for T where T: Signaller {}
 
 /// dyn-compatible [`Signaller`] that has no generic parameters
 pub trait SafeSignaller {
-    fn boxed_simple_stream(&self) -> Option<Box<dyn Stream<Item = SignalKind>>>;
-    fn boxed_stream(
-        &self,
-    ) -> Option<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>>;
+    fn boxed_simple_stream(&self) -> Option<BoxedSimpleSignalStream>;
+    fn boxed_stream(&self) -> Option<BoxedSignalStream>;
     fn shutdown(&mut self);
 }
 
@@ -97,13 +97,11 @@ impl<S> SafeSignaller for S
 where
     S: Signaller,
 {
-    fn boxed_simple_stream(&self) -> Option<Box<dyn Stream<Item = SignalKind>>> {
+    fn boxed_simple_stream(&self) -> Option<BoxedSimpleSignalStream> {
         self.boxed_simple_stream()
     }
 
-    fn boxed_stream(
-        &self,
-    ) -> Option<Box<dyn Stream<Item = Result<SignalKind, BroadcastStreamRecvError>>>> {
+    fn boxed_stream(&self) -> Option<BoxedSignalStream> {
         self.boxed_stream()
     }
 
@@ -122,7 +120,20 @@ pub enum SignallerKind {
     WindowsTokio,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+impl Default for SignallerKind {
+    fn default() -> Self {
+        #[cfg(all(unix, not(feature = "signal-hook")))]
+        return Self::UnixTokio;
+
+        #[cfg(all(unix, feature = "signal-hook"))]
+        return Self::UnixSignalHook;
+
+        #[cfg(windows)]
+        return Self::WindowsTokio;
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SignallerConfig {
     kind: SignallerKind,
 }

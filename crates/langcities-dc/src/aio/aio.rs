@@ -1,4 +1,7 @@
+use std::pin::Pin;
+
 use langcities_common::error::Error;
+use tokio::sync::broadcast::{Sender, channel};
 
 use crate::{
     api::{
@@ -25,15 +28,32 @@ pub async fn generate_states(config: Config) -> Result<(ApiState, Hub, Manager),
     Ok((api_state, hub, manager))
 }
 
-pub async fn aio_main(config: Config) -> Result<(), Error> {
+fn stop_rx(stop_tx: &Sender<()>) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
+    let mut stop_rx = stop_tx.subscribe();
+    Box::pin(async move {
+        let _ = stop_rx.recv().await;
+        ()
+    })
+}
+
+pub async fn aio_main(
+    config: Config,
+    shutdown_signal: impl Future<Output = ()> + Send + 'static,
+) -> Result<(), Error> {
     let (api_state, dcm, manager) = generate_states(config).await?;
-    let api_handle = tokio::spawn(api_main_with_state(api_state.clone()));
+    let (stop_tx, _) = channel::<()>(1);
+    let api_handle = tokio::spawn(api_main_with_state(api_state.clone(), stop_rx(&stop_tx)));
     let hub_handle = tokio::spawn(dcm.run());
     let manager_handle = tokio::spawn(manager.run());
-    let (api_result, hub_result, manager_result) =
-        tokio::join!(api_handle, hub_handle, manager_handle);
+    let stop_handle = tokio::spawn(async move {
+        shutdown_signal.await;
+        let _ = stop_tx.send(());
+    });
+    let (api_result, hub_result, manager_result, stop_result) =
+        tokio::join!(api_handle, hub_handle, manager_handle, stop_handle);
     api_result??;
     hub_result?;
     manager_result??;
+    stop_result?;
     Ok(())
 }

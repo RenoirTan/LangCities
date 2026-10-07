@@ -29,6 +29,7 @@ langcities-jwt = { path = "../langcities-jwt", features = ["axum"] }
 langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }
 langcities-lcdcdsl-parser = { path = "../langcities-lcdcdsl-parser" }
 langcities-messaging = { path = "../langcities-messaging", features = ["messagepack", "tokio_chan"] }
+langcities-signal = { path = "../langcities-signal" }
 serde = { version = "1.0.229", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "json"] }
 clap = { version = "4.6.6", features = ["derive"] }
@@ -41,6 +42,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 utoipauto = "0.3.1"
 url = { version = "2", features = ["serde"] }
 rayon = "1.12.0"
+futures = "0.3.34"
 
 [dependencies.log]
 version = "0.4.33"

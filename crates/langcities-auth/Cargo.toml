@@ -26,6 +26,7 @@ langcities-common-server = { path = "../langcities-common-server", features = ["
 langcities-config = { path = "../langcities-config" }
 langcities-jwt = { path = "../langcities-jwt" }
 langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }
+langcities-signal = { path = "../langcities-signal" }
 serde = { version = "1.0.229", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "json"] }
 clap = { version = "4.6.6", features = ["derive"] }
@@ -47,6 +48,7 @@ time = "0.3.55"
 utoipauto = "0.3.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
+futures = "0.3.34"
 
 [dependencies.log]
 version = "0.4.33"

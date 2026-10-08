@@ -43,8 +43,8 @@ pub async fn aio_main(
     let (api_state, dcm, manager) = generate_states(config).await?;
     let (stop_tx, _) = channel::<()>(1);
     let api_handle = tokio::spawn(api_main_with_state(api_state.clone(), stop_rx(&stop_tx)));
-    let hub_handle = tokio::spawn(dcm.run());
-    let manager_handle = tokio::spawn(manager.run());
+    let hub_handle = tokio::spawn(dcm.run(stop_rx(&stop_tx)));
+    let manager_handle = tokio::spawn(manager.run(stop_rx(&stop_tx)));
     let stop_handle = tokio::spawn(async move {
         shutdown_signal.await;
         let _ = stop_tx.send(());

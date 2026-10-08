@@ -2,7 +2,10 @@ use std::collections::VecDeque;
 
 use tokio::{
     runtime::{Builder, Runtime},
-    sync::mpsc::{Receiver, Sender, channel},
+    sync::{
+        mpsc::{Receiver, Sender, channel},
+        oneshot,
+    },
     task::{JoinError, JoinSet},
 };
 
@@ -61,7 +64,10 @@ impl Manager {
         Ok(Self::new(state, relay_mxs, runtime))
     }
 
-    pub async fn run(mut self) -> Result<(), DcAppError> {
+    pub async fn run(
+        mut self,
+        shutdown_signal: impl Future<Output = ()> + Send + 'static,
+    ) -> Result<(), DcAppError> {
         let Some(runtime) = &self.runtime else {
             return Err(DcAppError::failed_init("manager async runtime is missing"));
         };
@@ -74,20 +80,26 @@ impl Manager {
         ) else {
             return Err(DcAppError::failed_init("manager channels consumed"));
         };
-        let result = runtime
-            .spawn(async move {
-                let mut join_set = JoinSet::<()>::new();
-                join_set.spawn(Self::run_relay(relay_mxs, w_tx, m_rx));
-                join_set.spawn(Self::run_inner(w_rx, m_tx, 8));
-                let mut join_errors = Vec::<JoinError>::new();
-                while let Some(result) = join_set.join_next().await {
-                    if let Err(je) = result {
-                        join_errors.push(je);
-                    }
+        let (relay_stop_tx, relay_stop_rx) = oneshot::channel::<()>();
+        let (inner_stop_tx, inner_stop_rx) = oneshot::channel::<()>();
+        let stop_handle = tokio::spawn(async move {
+            shutdown_signal.await;
+            let _ = relay_stop_tx.send(());
+            let _ = inner_stop_tx.send(());
+        });
+        let runtime_handle = runtime.spawn(async move {
+            let mut join_set = JoinSet::<()>::new();
+            join_set.spawn(Self::run_relay(relay_mxs, w_tx, m_rx, relay_stop_rx));
+            join_set.spawn(Self::run_inner(w_rx, m_tx, 8, inner_stop_rx));
+            let mut join_errors = Vec::<JoinError>::new();
+            while let Some(result) = join_set.join_next().await {
+                if let Err(je) = result {
+                    join_errors.push(je);
                 }
-                join_errors
-            })
-            .await;
+            }
+            join_errors
+        });
+        let (_, result) = tokio::join!(stop_handle, runtime_handle);
         match result {
             Ok(errors) => {
                 if errors.len() <= 0 {
@@ -108,6 +120,7 @@ impl Manager {
         mut relay_mxs: ManagerRelayMxs,
         w_tx: Sender<ToWorkerJob>,
         mut m_rx: Receiver<ToManagerJob>,
+        mut stop_rx: oneshot::Receiver<()>,
     ) {
         let mut nefouj_open = true;
         let mut nefcdj_open = true;
@@ -117,6 +130,10 @@ impl Manager {
         // that means run_inner has stopped
         loop {
             tokio::select! {
+                _ = &mut stop_rx => {
+                    println!("relay received stop!");
+                    break;
+                },
                 nefouj = relay_mxs.nefouj_rx.recv(), if nefouj_open && defouj_open && !w_tx.is_closed() => {
                     let Some(nefouj) = nefouj else {
                         nefouj_open = false;
@@ -173,11 +190,16 @@ impl Manager {
         mut w_rx: Receiver<ToWorkerJob>,
         m_tx: Sender<ToManagerJob>,
         max_jobs: usize,
+        mut stop_rx: oneshot::Receiver<()>,
     ) {
         let mut join_set = JoinSet::<Result<ToManagerJob, DcAppError>>::new();
         let mut job_queue = VecDeque::<ToWorkerJob>::new();
         loop {
             tokio::select! {
+                _ = &mut stop_rx => {
+                    println!("inner received stop!");
+                    break;
+                },
                 // don't receive if workers are full
                 w_job = w_rx.recv(), if !w_rx.is_closed() && join_set.len() < max_jobs => {
                     let Some(w_job) = w_job else {

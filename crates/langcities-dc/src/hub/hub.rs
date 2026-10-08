@@ -86,8 +86,9 @@ impl Hub {
     }
 
     /// TODO: figure out what happens if end of rx occurs
-    pub async fn run(mut self) {
+    pub async fn run(mut self, shutdown_signal: impl Future<Output = ()> + Send + 'static) {
         println!("Hi! I'm the hub");
+        let mut shutdown_signal = tokio::spawn(shutdown_signal);
         let mut efue_rx_open = true;
         let mut scue_rx_open = true;
         let mut efde_rx_open = true;
@@ -96,6 +97,10 @@ impl Hub {
         let mut defcdj_rx_open = true;
         loop {
             tokio::select! {
+                _ = &mut shutdown_signal => {
+                    println!("Hub received shutdown signal!");
+                    break;
+                },
                 efue = self.rxs.efue_rx.recv(), if efue_rx_open => {
                     if let Some(efue) = efue {
                         let _ = self.inner.clone().do_efue(efue).await;

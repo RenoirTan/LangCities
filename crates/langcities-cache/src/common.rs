@@ -1,5 +1,6 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
+use async_trait::async_trait;
 use langcities_common::error::Error;
 use langcities_config::datatype::Milliseconds;
 use serde::{Deserialize, Serialize};
@@ -21,23 +22,23 @@ impl Expiry {
     }
 }
 
-pub trait CacheBackend<K, V>: Send + Sync {
-    fn has_key(&self, key: &K) -> impl Future<Output = bool> {
-        async { self.get(key).await.is_some() }
+#[async_trait]
+pub trait CacheBackend<K, V>: Send + Sync
+where
+    K: Sync,
+{
+    fn cloned(&self) -> Box<dyn CacheBackend<K, V>>;
+
+    async fn has_key(&self, key: &K) -> bool {
+        self.get(key).await.is_some()
     }
 
-    fn get(&self, key: &K) -> impl Future<Output = Option<V>>;
-    fn set(
-        &self,
-        key: K,
-        value: V,
-        expiry: Expiry,
-    ) -> impl Future<Output = Result<Option<V>, Error>>;
-    fn take(&self, key: &K) -> impl Future<Output = Option<V>>;
+    async fn get(&self, key: &K) -> Option<V>;
+    async fn get_many(&self, keys: &[&K]) -> HashMap<K, V>;
+    async fn set(&self, key: K, value: V, expiry: Expiry) -> Result<Option<V>, Error>;
+    async fn take(&self, key: &K) -> Option<V>;
 
-    fn delete(&self, key: &K) -> impl Future<Output = ()> {
-        async {
-            self.take(key).await;
-        }
+    async fn delete(&self, key: &K) -> () {
+        self.take(key).await;
     }
 }

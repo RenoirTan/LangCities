@@ -46,7 +46,7 @@ impl EntryFieldAction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EntryFieldRepo {
     pub entry_repo: EntryRepo,
 }

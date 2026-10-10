@@ -1875,6 +1875,7 @@ dependencies = [
 name = "langcities-cache"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "langcities-common",
  "langcities-config",
  "moka",

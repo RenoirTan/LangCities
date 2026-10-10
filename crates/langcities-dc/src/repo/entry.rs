@@ -36,7 +36,7 @@ impl EntryAction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EntryRepo {
     pub vernacular_repo: VernacularRepo,
 }

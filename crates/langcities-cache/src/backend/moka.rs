@@ -1,8 +1,10 @@
 use std::{
+    collections::HashMap,
     hash::{BuildHasher, Hash, RandomState},
     time::Duration,
 };
 
+use async_trait::async_trait;
 use langcities_common::error::Error;
 use moka::{Expiry as MokaExpiry, future::Cache, ops::compute::Op};
 
@@ -37,7 +39,7 @@ impl<K, V> MokaExpiry<K, MokaValue<V>> for MokaExpiryPolicy {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct MokaWrapper<K, V, S = RandomState>
 where
     K: Eq + Hash + Send + Sync + 'static,
@@ -72,18 +74,47 @@ where
     }
 }
 
-impl<K, V, S> CacheBackend<K, V> for MokaWrapper<K, V, S>
+impl<K, V, S> Clone for MokaWrapper<K, V, S>
 where
     K: Eq + Hash + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
     S: BuildHasher + Clone + Send + Sync + 'static,
 {
+    fn clone(&self) -> Self {
+        let inner = self.inner.clone();
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl<K, V, S> CacheBackend<K, V> for MokaWrapper<K, V, S>
+where
+    K: Eq + Hash + Send + Sync + ToOwned<Owned = K> + 'static,
+    V: Clone + Send + Sync + 'static,
+    S: BuildHasher + Clone + Send + Sync + 'static,
+{
+    fn cloned(&self) -> Box<dyn CacheBackend<K, V>> {
+        Box::new(self.clone())
+    }
+
     async fn has_key(&self, key: &K) -> bool {
         self.inner.contains_key(key)
     }
 
     async fn get(&self, key: &K) -> Option<V> {
         self.inner.get(key).await.map(|entry| entry.value)
+    }
+
+    async fn get_many(&self, keys: &[&K]) -> HashMap<K, V> {
+        let mut map = HashMap::new();
+        for key in keys {
+            let key = (*key).to_owned();
+            let Some(value) = self.get(&key).await else {
+                continue;
+            };
+            map.insert(key, value);
+        }
+        map
     }
 
     async fn set(&self, key: K, value: V, expiry: Expiry) -> Result<Option<V>, Error> {

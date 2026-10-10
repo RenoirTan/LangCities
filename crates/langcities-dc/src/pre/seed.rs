@@ -14,7 +14,7 @@ use crate::state::AppState;
 const SEED_USER_ID: i64 = 1;
 const VERNACULAR_COUNT: usize = 10;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Seeder {
     pub state: AppState,
 }

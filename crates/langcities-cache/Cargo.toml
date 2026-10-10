@@ -12,10 +12,9 @@ default = ["moka"]
 moka = ["dep:moka"]
 
 [dependencies]
+async-trait = "0.1.92"
 langcities-common = { path = "../langcities-common" }
 langcities-config = { path = "../langcities-config" }
 moka = { version = "0.12", features = ["future"], optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
-
-[dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "time"] }

@@ -29,7 +29,7 @@ impl VernacularAction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct VernacularRepo {
     pub state: AppState,
 }

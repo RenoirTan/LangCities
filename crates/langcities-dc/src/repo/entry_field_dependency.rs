@@ -14,7 +14,7 @@ use crate::{
     state::AppState,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EntryFieldDependencyRepo {
     pub entry_field_repo: EntryFieldRepo,
 }

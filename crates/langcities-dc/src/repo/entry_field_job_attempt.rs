@@ -13,7 +13,7 @@ use crate::{
     state::AppState,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EntryFieldJobAttemptRepo {
     pub entry_field_job_repo: EntryFieldJobRepo,
 }

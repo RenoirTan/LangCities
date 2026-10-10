@@ -34,11 +34,11 @@ impl InnerHub {
         };
         let db = self.state.db.clone();
         let repo = EntryFieldJobRepo::from_state(self.state);
-        repo.create_or_refresh_entry_field_job(&db, dto).await?;
+        let job = repo.create_or_refresh_entry_field_job(&db, dto).await?;
         self.txs
             .nefouj_tx
             .send(NewEntryFieldOverrideUpdateJob {
-                entry_field_id: efue.entry_field_id,
+                job_id: job.id.into(),
                 message_at: Utc::now(),
             })
             .await
@@ -51,12 +51,19 @@ impl InnerHub {
         let dependencies = dependency_repo
             .get_dependencies_of(&self.state.db, efue.entry_field_id)
             .await?;
-        let msgs = dependencies
+        let dtos = dependencies
             .into_iter()
-            .map(|d| NewEntryFieldCalculateDirtyJob {
-                entry_field_id: d.child_entry_field_id.into(),
-                message_at: Utc::now(),
-            });
+            .map(|dep| CreateEntryFieldJobDto {
+                entry_field_id: dep.child_entry_field_id,
+            })
+            .collect::<Vec<_>>();
+        let db = self.state.db.clone();
+        let repo = EntryFieldJobRepo::from_state(self.state);
+        let jobs = repo.create_or_refresh_entry_field_jobs(&db, dtos).await?;
+        let msgs = jobs.into_iter().map(|job| NewEntryFieldCalculateDirtyJob {
+            job_id: job.id.into(),
+            message_at: Utc::now(),
+        });
         for msg in msgs {
             self.txs
                 .nefcdj_tx

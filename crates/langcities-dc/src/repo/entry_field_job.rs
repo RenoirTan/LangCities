@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::Utc;
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
@@ -36,6 +38,17 @@ impl EntryFieldJobRepo {
 
     pub async fn generate_active_filter_for(&self, entry_field_id: Id) -> Expr {
         let field_expr = entry_field_jobs::Column::EntryFieldId.eq(*entry_field_id);
+        let status_expr = entry_field_jobs::Column::Status.is_in(EntryFieldJobStatus::active());
+        let expiry_expr = entry_field_jobs::Column::ExpiresAt.lt(Utc::now());
+        field_expr.and(status_expr).and(expiry_expr)
+    }
+
+    fn generate_active_filter_for_many<I>(&self, entry_field_ids: I) -> Expr
+    where
+        I: IntoIterator<Item = Id>,
+    {
+        let field_expr =
+            entry_field_jobs::Column::EntryFieldId.is_in(entry_field_ids.into_iter().map(|id| *id));
         let status_expr = entry_field_jobs::Column::Status.is_in(EntryFieldJobStatus::active());
         let expiry_expr = entry_field_jobs::Column::ExpiresAt.lt(Utc::now());
         field_expr.and(status_expr).and(expiry_expr)
@@ -94,6 +107,42 @@ impl EntryFieldJobRepo {
     }
     */
 
+    async fn refresh_latest_active_entry_field_job_for_many<C, I>(
+        &self,
+        conn: &C,
+        entry_field_ids: I,
+    ) -> Result<HashMap<Id, entry_field_jobs::Model>, DcAppError>
+    where
+        C: ConnectionTrait,
+        I: IntoIterator<Item = Id>,
+    {
+        let jobs = entry_field_jobs::Entity::find()
+            .filter(self.generate_active_filter_for_many(entry_field_ids))
+            .order_by_desc(entry_field_jobs::Column::ExpiresAt)
+            .all(conn)
+            .await
+            .map_err(DcAppError::database)?;
+        // select only the latest job of each entry field
+        // distinct on is a postgres-only feature
+        let mut job_ids = HashMap::<i64, i64>::new();
+        for job in jobs {
+            job_ids.entry(job.entry_field_id).or_insert(job.id);
+        }
+        let jobs = entry_field_jobs::Entity::update_many()
+            .filter(entry_field_jobs::Column::Id.is_in(job_ids.values()))
+            .col_expr(
+                entry_field_jobs::Column::ExpiresAt,
+                Expr::value(Utc::now() + self.state().config.dc.entry_field_job_ttl),
+            )
+            .exec_with_returning(conn)
+            .await
+            .map_err(DcAppError::database)?
+            .into_iter()
+            .map(|j| (Id::from(j.entry_field_id), j))
+            .collect::<HashMap<_, _>>();
+        Ok(jobs)
+    }
+
     async fn refresh_latest_active_entry_field_job_for<C>(
         &self,
         conn: &C,
@@ -132,6 +181,23 @@ impl EntryFieldJobRepo {
         am.insert(conn).await.map_err(DcAppError::database)
     }
 
+    async fn inner_create_entry_field_jobs<C, I>(
+        &self,
+        conn: &C,
+        dtos: I,
+    ) -> Result<Vec<entry_field_jobs::Model>, DcAppError>
+    where
+        C: ConnectionTrait,
+        I: IntoIterator<Item = CreateEntryFieldJobDto>,
+    {
+        let expires_at = Utc::now() + self.state().config.dc.entry_field_job_ttl;
+        let ams = dtos.into_iter().map(|dto| dto.to_active_model(expires_at));
+        entry_field_jobs::Entity::insert_many(ams)
+            .exec_with_returning(conn)
+            .await
+            .map_err(DcAppError::database)
+    }
+
     async fn inner_create_or_refresh_entry_field_job<C>(
         &self,
         conn: &C,
@@ -150,6 +216,36 @@ impl EntryFieldJobRepo {
         }
     }
 
+    /// TODO: currently doesn't check if everything refreshed or created!
+    async fn inner_create_or_refresh_entry_field_jobs<C, I>(
+        &self,
+        conn: &C,
+        dtos: I,
+    ) -> Result<Vec<entry_field_jobs::Model>, DcAppError>
+    where
+        C: ConnectionTrait,
+        I: IntoIterator<Item = CreateEntryFieldJobDto>,
+    {
+        let checked_dtos = dtos
+            .into_iter()
+            .map(|dto| (Id::from(dto.entry_field_id), dto))
+            .collect::<HashMap<_, _>>();
+        let updated_jobs = self
+            .refresh_latest_active_entry_field_job_for_many(conn, checked_dtos.keys().cloned())
+            .await?;
+        let mut created_jobs = self
+            .inner_create_entry_field_jobs(
+                conn,
+                checked_dtos
+                    .into_iter()
+                    .filter(|(entry_field_id, _)| !updated_jobs.contains_key(entry_field_id))
+                    .map(|(_, dto)| dto),
+            )
+            .await?;
+        created_jobs.extend(updated_jobs.into_values());
+        Ok(created_jobs)
+    }
+
     pub async fn create_or_refresh_entry_field_job<C>(
         &self,
         conn: &C,
@@ -161,6 +257,26 @@ impl EntryFieldJobRepo {
         let me = self.clone();
         conn.transaction(|txn| {
             Box::pin(async move { me.inner_create_or_refresh_entry_field_job(txn, dto).await })
+        })
+        .await
+        .map_err(|e| match e {
+            TransactionError::Connection(e) => DcAppError::database(e),
+            TransactionError::Transaction(e) => e,
+        })
+    }
+
+    pub async fn create_or_refresh_entry_field_jobs<C, I>(
+        &self,
+        conn: &C,
+        dtos: I,
+    ) -> Result<Vec<entry_field_jobs::Model>, DcAppError>
+    where
+        C: ConnectionTrait + TransactionTrait,
+        I: IntoIterator<Item = CreateEntryFieldJobDto> + Send + 'static,
+    {
+        let me = self.clone();
+        conn.transaction(|txn| {
+            Box::pin(async move { me.inner_create_or_refresh_entry_field_jobs(txn, dtos).await })
         })
         .await
         .map_err(|e| match e {

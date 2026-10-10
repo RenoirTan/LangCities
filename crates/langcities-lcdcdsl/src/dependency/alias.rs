@@ -295,6 +295,30 @@ pub enum DepAlias {
     Sc(ScDepAlias),
 }
 
+impl DepAlias {
+    pub fn partition<E, S>(self, ef: &mut E, sc: &mut S)
+    where
+        E: Extend<EfDepAlias>,
+        S: Extend<ScDepAlias>,
+    {
+        match self {
+            Self::Ef(a) => ef.extend(Some(a)),
+            Self::Sc(a) => sc.extend(Some(a)),
+        }
+    }
+
+    pub fn partition_all<I, E, S>(iter: I, ef: &mut E, sc: &mut S)
+    where
+        I: IntoIterator<Item = DepAlias>,
+        E: Extend<EfDepAlias>,
+        S: Extend<ScDepAlias>,
+    {
+        for alias in iter {
+            alias.partition(ef, sc);
+        }
+    }
+}
+
 impl Display for DepAlias {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

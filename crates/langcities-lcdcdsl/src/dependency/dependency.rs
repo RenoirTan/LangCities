@@ -1,4 +1,9 @@
-use crate::{dependency::DepAlias, error::DslError, node::NodeId};
+use crate::{
+    dependency::{DepAlias, DependencyBuilder},
+    error::DslError,
+    node::NodeId,
+    tree::Tree,
+};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Dependency {
@@ -30,5 +35,11 @@ impl Dependency {
 
     pub fn to_dep_alias(&self) -> Result<DepAlias, DslError> {
         self.identifier.parse::<DepAlias>()
+    }
+
+    pub fn find_all_in(tree: &Tree) -> Result<Vec<Dependency>, DslError> {
+        let mut builder = DependencyBuilder::new(tree)?;
+        builder.find()?;
+        Ok(builder.to_list())
     }
 }

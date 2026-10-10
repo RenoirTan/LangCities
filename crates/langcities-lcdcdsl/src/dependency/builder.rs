@@ -74,8 +74,12 @@ impl<'t> DependencyBuilder<'t> {
 
     pub fn find(&mut self) -> Result<&Vec<Dependency>, DslError> {
         while let Some(_) = self.find_next()? {}
-        println!("{:#?}", self.list);
+        // println!("{:#?}", self.list);
         Ok(&self.list)
+    }
+
+    pub fn to_list(self) -> Vec<Dependency> {
+        self.list
     }
 }
 

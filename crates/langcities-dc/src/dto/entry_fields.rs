@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
-use langcities_lcdcdsl::component::EntryFieldAlias;
+use langcities_lcdcdsl::component::{EntryAlias, EntryFieldAlias, Id, UserAlias, VernacularAlias};
 use sea_orm::ActiveValue;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -97,5 +97,49 @@ impl UpdateEntryFieldDto {
         }
         am.updated_at = ActiveValue::Set(Utc::now());
         am
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct EntryFieldWithContext {
+    pub entry_field: EntryFieldDto,
+    pub entry_index: i64,
+    pub vernacular_id: i64,
+    pub vernacular_slug: String,
+    pub owner_auth_user_id: i64,
+    /// username may not be populated if not specifically called for
+    pub owner_username: Option<String>,
+}
+
+impl EntryFieldWithContext {
+    pub fn matches_alias(&self, alias: &EntryFieldAlias, caller_id: &Id) -> bool {
+        let ef_alias = match alias {
+            EntryFieldAlias::Id(id) => return **id == self.entry_field.id,
+            EntryFieldAlias::Alias(alias) => alias,
+        };
+        if *ef_alias.slug != self.entry_field.slug {
+            return false;
+        }
+        let entry_alias = match &ef_alias.entry_alias {
+            EntryAlias::Id(id) => return **id == self.entry_field.entry_id,
+            EntryAlias::Alias(alias) => alias,
+        };
+        if *entry_alias.index != self.entry_index {
+            return false;
+        }
+        let ver_alias = match &entry_alias.vernacular_alias {
+            VernacularAlias::Id(id) => return **id == self.vernacular_id,
+            VernacularAlias::Slug(slug) => {
+                return **slug == self.vernacular_slug && **caller_id == self.owner_auth_user_id;
+            }
+            VernacularAlias::Alias(alias) => alias,
+        };
+        if *ver_alias.slug != self.vernacular_slug {
+            return false;
+        }
+        match &ver_alias.user_alias {
+            UserAlias::Id(id) => **id == self.owner_auth_user_id,
+            UserAlias::Slug(username) => Some(&**username) == self.owner_username.as_ref(),
+        }
     }
 }

@@ -1,14 +1,20 @@
+use std::collections::{HashMap, HashSet};
+
+use chrono::{DateTime, Utc};
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::EntryFieldAlias;
+use langcities_lcdcdsl::component::{EntryFieldAlias, Id};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, IntoActiveModel,
-    QueryFilter, QuerySelect, TransactionError, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, ExprTrait,
+    FromQueryResult, IntoActiveModel, JoinType, QueryFilter, QuerySelect, RelationTrait,
+    TransactionError, TransactionTrait,
     sea_query::{Expr, Query},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dto::entry_fields::{CreateEntryFieldDto, UpdateEntryFieldDto},
+    dto::entry_fields::{
+        CreateEntryFieldDto, EntryFieldDto, EntryFieldWithContext, UpdateEntryFieldDto,
+    },
     entity::{entries, entry_fields, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
     repo::{
@@ -17,6 +23,89 @@ use crate::{
     },
     state::AppState,
 };
+
+#[derive(Clone, Debug, PartialEq, Eq, FromQueryResult)]
+struct EntryFieldWithSelectableContext {
+    pub id: i64,
+    pub entry_id: i64,
+    pub slug: String,
+    pub override_value: String,
+    pub dirty_value: String,
+    pub clean_value: String,
+    pub updated_at: DateTime<Utc>,
+    pub entry_index: i64,
+    pub vernacular_id: i64,
+    pub vernacular_slug: String,
+    pub owner_auth_user_id: i64,
+    // pub owner_username: String,
+}
+
+impl EntryFieldWithSelectableContext {
+    fn to_normal(self, usernames: &HashMap<i64, String>) -> EntryFieldWithContext {
+        let username = usernames.get(&self.owner_auth_user_id);
+        EntryFieldWithContext {
+            entry_field: EntryFieldDto {
+                id: self.id,
+                entry_id: self.entry_id,
+                slug: self.slug,
+                override_value: self.override_value,
+                dirty_value: self.dirty_value,
+                clean_value: self.clean_value,
+                updated_at: self.updated_at,
+            },
+            entry_index: self.entry_index,
+            vernacular_id: self.vernacular_id,
+            vernacular_slug: self.vernacular_slug,
+            owner_auth_user_id: self.owner_auth_user_id,
+            owner_username: username.cloned(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct FindManyEntryFieldComponents {
+    pub exprs: HashMap<EntryFieldAlias, Expr>,
+    pub usernames: HashMap<i64, String>,
+}
+
+#[derive(Clone)]
+struct FoundManyEntryFieldComponents {
+    pub aliases: HashSet<EntryFieldAlias>,
+    pub entry_fields: Vec<EntryFieldWithSelectableContext>,
+    pub usernames: HashMap<i64, String>,
+    pub caller_id: Id,
+}
+
+impl FoundManyEntryFieldComponents {
+    fn to_matched(self) -> MatchedAliasesToEntryFields {
+        let entry_fields = self
+            .entry_fields
+            .into_iter()
+            .map(|ef| ef.to_normal(&self.usernames))
+            .collect::<Vec<_>>();
+        let mut aliases = HashMap::new();
+        for alias in self.aliases {
+            let mut index = None;
+            for (i, entry_field) in entry_fields.iter().enumerate() {
+                if entry_field.matches_alias(&alias, &self.caller_id) {
+                    index = Some(i);
+                    break;
+                }
+            }
+            aliases.insert(alias, index);
+        }
+        MatchedAliasesToEntryFields {
+            entry_fields,
+            aliases,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct MatchedAliasesToEntryFields {
+    pub aliases: HashMap<EntryFieldAlias, Option<usize>>,
+    pub entry_fields: Vec<EntryFieldWithContext>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -123,6 +212,45 @@ impl EntryFieldRepo {
         Ok(expr)
     }
 
+    /// assumes join between entry_fields, entries, vernaculars and dc_users
+    pub(super) async fn generate_many_filter<I>(
+        &self,
+        aliases: I,
+        caller_id: i64,
+    ) -> Result<FindManyEntryFieldComponents, DcAppError>
+    where
+        I: IntoIterator<Item = EntryFieldAlias>,
+    {
+        let mut required_entries = HashSet::new();
+        let aliases = aliases.into_iter().collect::<Vec<_>>();
+        for alias in &aliases {
+            let EntryFieldAlias::Alias(alias) = alias else {
+                continue;
+            };
+            required_entries.insert(alias.entry_alias.clone());
+        }
+        let entry_comps = self
+            .entry_repo
+            .generate_many_filter(required_entries, caller_id)
+            .await?;
+        let mut exprs = HashMap::new();
+        for alias in aliases {
+            let expr = match &alias {
+                EntryFieldAlias::Id(id) => entry_fields::Column::Id.eq(**id),
+                EntryFieldAlias::Alias(alias) => {
+                    let slug_expr = entry_fields::Column::Slug.eq(&*alias.slug);
+                    let entry_expr = entry_comps.exprs.get(&alias.entry_alias).unwrap().clone();
+                    slug_expr.and(entry_expr)
+                }
+            };
+            exprs.insert(alias, expr);
+        }
+        Ok(FindManyEntryFieldComponents {
+            exprs,
+            usernames: entry_comps.usernames,
+        })
+    }
+
     async fn inner_get_entry_field<C>(
         &self,
         conn: &C,
@@ -139,6 +267,44 @@ impl EntryFieldRepo {
             .one(conn)
             .await
             .map_err(DcAppError::database)
+    }
+
+    async fn doubly_inner_get_entry_fields<C, I>(
+        &self,
+        conn: &C,
+        aliases: I,
+        caller_id: Id,
+    ) -> Result<FoundManyEntryFieldComponents, DcAppError>
+    where
+        C: ConnectionTrait,
+        I: IntoIterator<Item = EntryFieldAlias>,
+    {
+        let ef_comps = self.generate_many_filter(aliases, *caller_id).await?;
+        let mut aliases = HashSet::new();
+        let mut cond = Condition::any();
+        for (alias, expr) in ef_comps.exprs {
+            cond = cond.add(expr);
+            aliases.insert(alias);
+        }
+        let entry_fields = entry_fields::Entity::find()
+            .column_as(entries::Column::Index, "entry_index")
+            .column_as(vernaculars::Column::Id, "vernacular_id")
+            .column_as(vernaculars::Column::Slug, "vernacular_slug")
+            .column_as(vernaculars::Column::OwnerId, "owner_auth_user_id")
+            .filter(cond)
+            .left_join(entries::Entity)
+            .join(JoinType::LeftJoin, entries::Relation::Vernaculars.def())
+            .join(JoinType::LeftJoin, vernaculars::Relation::DcUsers.def())
+            .into_model::<EntryFieldWithSelectableContext>()
+            .all(conn)
+            .await
+            .map_err(DcAppError::database)?;
+        Ok(FoundManyEntryFieldComponents {
+            aliases,
+            entry_fields,
+            usernames: ef_comps.usernames,
+            caller_id,
+        })
     }
 
     pub async fn get_entry_field<C>(

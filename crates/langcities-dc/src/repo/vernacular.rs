@@ -1,5 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::{AliasedVernacular, UserAlias, VernacularAlias};
+use langcities_lcdcdsl::component::{AliasedVernacular, SimpleAlias, UserAlias, VernacularAlias};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
     IntoActiveModel, QueryFilter, QuerySelect, TransactionError, TransactionTrait, TryInsertResult,
@@ -13,6 +15,14 @@ use crate::{
     error::{DcAppError, DcAppErrorTrait},
     state::AppState,
 };
+
+/// Only for finding entry field dependencies
+#[derive(Clone)]
+pub(super) struct FindManyVernacularComponents {
+    pub exprs: HashMap<VernacularAlias, Expr>,
+    /// auth_user_id to username
+    pub usernames: HashMap<i64, String>,
+}
 
 /// Simple permissions enum
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,7 +61,7 @@ impl VernacularRepo {
             VernacularAlias::Alias(alias) => {
                 let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
                 let owner_expr = match alias.user_alias {
-                    UserAlias::Id(owner_id) => vernaculars::Column::OwnerId.eq(*owner_id),
+                    UserAlias::Id(owner_id) => Self::generate_owner_filter(*owner_id),
                     UserAlias::Slug(username) => {
                         let auth_user_id = self.state.resolve_auth_user_id(&username).await?;
                         Self::generate_owner_filter(auth_user_id)
@@ -87,6 +97,68 @@ impl VernacularRepo {
             .select_only()
             .column(dc_users::Column::Id);
         vernaculars::Column::OwnerId.in_subquery(QuerySelect::query(&mut owner_expr).to_owned())
+    }
+
+    /// assumes that dc_users has been joined with vernaculars
+    #[inline]
+    fn generate_joined_owner_filter(auth_user_id: i64) -> Expr {
+        dc_users::Column::AuthUserId.eq(auth_user_id)
+    }
+
+    /// only for use with finding dependencies of entry fields
+    ///
+    /// assumes that dc_users has been joined with vernaculars
+    pub(super) async fn generate_many_filter<I>(
+        &self,
+        aliases: I,
+        caller_id: i64,
+    ) -> Result<FindManyVernacularComponents, DcAppError>
+    where
+        I: IntoIterator<Item = VernacularAlias>,
+    {
+        let aliases = aliases.into_iter().collect::<Vec<_>>();
+        let mut required_usernames = HashSet::<String>::new();
+        for alias in &aliases {
+            let VernacularAlias::Alias(alias) = alias else {
+                continue;
+            };
+            let SimpleAlias::Slug(username) = &alias.user_alias else {
+                continue;
+            };
+            required_usernames.insert(username.clone().into());
+        }
+        let required_usernames = required_usernames.iter().collect::<Vec<_>>();
+        let username_to_auth_user_ids = self
+            .state
+            .resolve_auth_user_ids(&required_usernames)
+            .await?;
+        let mut exprs = HashMap::new();
+        for alias in aliases {
+            let expr = match &alias {
+                VernacularAlias::Id(id) => vernaculars::Column::Id.eq(**id),
+                VernacularAlias::Alias(alias) => {
+                    let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
+                    let owner_auth_user_id = match &alias.user_alias {
+                        UserAlias::Id(id) => **id,
+                        UserAlias::Slug(username) => {
+                            *username_to_auth_user_ids.get(&**username).unwrap()
+                        }
+                    };
+                    let owner_expr = Self::generate_joined_owner_filter(owner_auth_user_id);
+                    slug_expr.and(owner_expr)
+                }
+                VernacularAlias::Slug(slug) => vernaculars::Column::Slug
+                    .eq(&**slug)
+                    .and(Self::generate_joined_owner_filter(caller_id)),
+            };
+            exprs.insert(alias, expr);
+        }
+        let usernames: HashMap<_, _> = username_to_auth_user_ids
+            .into_iter()
+            .map(|(k, v)| (v, k))
+            .collect();
+        let components = FindManyVernacularComponents { exprs, usernames };
+        Ok(components)
     }
 
     pub(crate) async fn inner_get_vernacular<C>(

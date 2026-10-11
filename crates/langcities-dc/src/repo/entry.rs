@@ -1,5 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::EntryAlias;
+use langcities_lcdcdsl::component::{EntryAlias, VernacularAlias};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
     IntoActiveModel, QueryFilter, TransactionError, TransactionTrait,
@@ -14,6 +16,13 @@ use crate::{
     repo::vernacular::{VernacularAction, VernacularRepo},
     state::AppState,
 };
+
+#[derive(Clone)]
+pub(super) struct FindManyEntryComponents {
+    pub exprs: HashMap<EntryAlias, Expr>,
+    /// auth_user_id to username
+    pub usernames: HashMap<i64, String>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -105,6 +114,49 @@ impl EntryRepo {
             entry_expr
         };
         Ok(expr)
+    }
+
+    /// assumes join between entries, vernaculars and dc_users
+    pub(super) async fn generate_many_filter<I>(
+        &self,
+        aliases: I,
+        caller_id: i64,
+    ) -> Result<FindManyEntryComponents, DcAppError>
+    where
+        I: IntoIterator<Item = EntryAlias>,
+    {
+        let aliases = aliases.into_iter().collect::<Vec<_>>();
+        let mut required_vernaculars = HashSet::<VernacularAlias>::new();
+        for alias in &aliases {
+            let EntryAlias::Alias(alias) = alias else {
+                continue;
+            };
+            required_vernaculars.insert(alias.vernacular_alias.clone());
+        }
+        let ver_comps = self
+            .vernacular_repo
+            .generate_many_filter(required_vernaculars, caller_id)
+            .await?;
+        let mut exprs = HashMap::new();
+        for alias in aliases {
+            let expr = match &alias {
+                EntryAlias::Id(id) => entries::Column::Id.eq(**id),
+                EntryAlias::Alias(alias) => {
+                    let index_expr = entries::Column::Index.eq(*alias.index);
+                    let ver_expr = ver_comps
+                        .exprs
+                        .get(&alias.vernacular_alias)
+                        .unwrap()
+                        .clone();
+                    index_expr.and(ver_expr)
+                }
+            };
+            exprs.insert(alias, expr);
+        }
+        Ok(FindManyEntryComponents {
+            exprs,
+            usernames: ver_comps.usernames,
+        })
     }
 
     pub(crate) async fn inner_get_entry<C>(

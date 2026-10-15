@@ -1,7 +1,9 @@
 use std::{borrow::Cow, fmt::Display, str::FromStr};
 
 use crate::{
-    component::{Id, Slug, VernacularAlias},
+    component::{
+        AliasedEntry, AliasedEntryField, EntryAlias, EntryFieldAlias, Id, Slug, VernacularAlias,
+    },
     error::{DslError, DslErrorKind, DslErrorTrait},
     impl_deser_fromstr, impl_ser_display,
 };
@@ -34,6 +36,19 @@ impl EfDepFullFormat {
             vernacular_alias,
             entry_index,
             field_slug,
+        })
+    }
+
+    fn to_alias(self, current_field_id: Id) -> EntryFieldAlias {
+        let entry_index = self.entry_index.unwrap_or(current_field_id);
+        EntryFieldAlias::Alias(AliasedEntryField {
+            slug: self.field_slug,
+            entry_alias: EntryAlias::Alias({
+                AliasedEntry {
+                    index: entry_index,
+                    vernacular_alias: self.vernacular_alias,
+                }
+            }),
         })
     }
 }
@@ -84,6 +99,13 @@ impl EfDepEsFormat {
             field_slug,
         })
     }
+
+    fn to_alias(self) -> EntryFieldAlias {
+        EntryFieldAlias::Alias(AliasedEntryField {
+            slug: self.field_slug,
+            entry_alias: EntryAlias::Id(self.entry_id),
+        })
+    }
 }
 
 impl Display for EfDepEsFormat {
@@ -119,6 +141,10 @@ impl EfDepIdFormat {
         let field_id = fi.parse::<Id>()?;
         Ok(Self { field_id })
     }
+
+    fn to_alias(self) -> EntryFieldAlias {
+        EntryFieldAlias::Id(self.field_id)
+    }
 }
 
 impl Display for EfDepIdFormat {
@@ -146,6 +172,16 @@ pub enum EfDepAlias {
     Full(EfDepFullFormat),
     Es(EfDepEsFormat),
     Id(EfDepIdFormat),
+}
+
+impl EfDepAlias {
+    pub fn to_alias(self, current_field_id: Id) -> EntryFieldAlias {
+        match self {
+            Self::Full(a) => a.to_alias(current_field_id),
+            Self::Es(a) => a.to_alias(),
+            Self::Id(a) => a.to_alias(),
+        }
+    }
 }
 
 impl Display for EfDepAlias {

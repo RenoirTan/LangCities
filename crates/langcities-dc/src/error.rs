@@ -18,6 +18,7 @@ pub enum DcAppErrorKind {
     Cache,
     /// Cannot send or receive any messages
     Messaging,
+    Unparseable,
     Other,
 }
 
@@ -54,6 +55,7 @@ pub trait DcAppErrorTrait {
     fn auth_service(source: impl Into<Error>) -> Self;
     fn cache(source: impl Into<Error>) -> Self;
     fn messaging(source: impl Into<Error>) -> Self;
+    fn unparseable(source: impl Into<Error>) -> Self;
     fn other(source: impl Into<Error>) -> Self;
 }
 
@@ -104,6 +106,10 @@ impl DcAppErrorTrait for DcAppError {
 
     fn messaging(source: impl Into<Error>) -> Self {
         Self::new(Some(source.into()), DcAppErrorKind::Messaging)
+    }
+
+    fn unparseable(source: impl Into<Error>) -> Self {
+        Self::new(Some(source.into()), DcAppErrorKind::Unparseable)
     }
 }
 

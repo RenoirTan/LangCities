@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use chrono::{DateTime, Utc};
 use langcities_lcdcdsl::component::{EntryAlias, EntryFieldAlias, Id, UserAlias, VernacularAlias};
@@ -19,6 +19,11 @@ impl Display for EntryFieldAliasDto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct GetManyEntryFieldAliasDto {
+    pub aliases: Vec<EntryFieldAliasDto>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -142,4 +147,11 @@ impl EntryFieldWithContext {
             UserAlias::Slug(username) => Some(&**username) == self.owner_username.as_ref(),
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct FoundManyEntryFields {
+    pub entry_fields: Vec<EntryFieldWithContext>,
+    #[schema(value_type = HashMap<String, Option<usize>>)]
+    pub aliases: HashMap<EntryFieldAlias, Option<usize>>,
 }

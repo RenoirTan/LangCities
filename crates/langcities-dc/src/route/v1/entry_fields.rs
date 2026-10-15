@@ -9,7 +9,8 @@ use langcities_common_server::dto::request::RequestContext;
 use crate::{
     api::state::ApiState,
     dto::entry_fields::{
-        CreateEntryFieldDto, EntryFieldAliasDto, EntryFieldDto, UpdateEntryFieldDto,
+        CreateEntryFieldDto, EntryFieldAliasDto, EntryFieldDto, FoundManyEntryFields,
+        GetManyEntryFieldAliasDto, UpdateEntryFieldDto,
     },
     error::{DcAppError, DcAppErrorTrait},
     message::event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
@@ -41,6 +42,27 @@ pub async fn get_entry_field(
         .await?
         .map(|f| Json(f.into()))
         .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/v1/entry_fields",
+    request_body = GetManyEntryFieldAliasDto,
+    responses(
+        (status = 200, body = FoundManyEntryFields, description = "entry details")
+    )
+)]
+#[axum::debug_handler]
+pub async fn get_entry_fields(
+    request_context: RequestContext,
+    State(state): State<ApiState>,
+    Json(dto): Json<GetManyEntryFieldAliasDto>,
+) -> Result<Json<FoundManyEntryFields>, DcAppError> {
+    let aliases = dto.aliases.into_iter().map(|a| a.0);
+    EntryFieldRepo::from_state(state.inner.clone())
+        .get_entry_fields(&state.db, aliases, request_context)
+        .await
+        .map(Json)
 }
 
 #[utoipa::path(

@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     dto::entry_fields::{
-        CreateEntryFieldDto, EntryFieldDto, EntryFieldWithContext, UpdateEntryFieldDto,
+        CreateEntryFieldDto, EntryFieldDto, EntryFieldWithContext, FoundManyEntryFields,
+        UpdateEntryFieldDto,
     },
-    entity::{entries, entry_fields, vernaculars},
+    entity::{dc_users, entries, entry_fields, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
     repo::{
         entry::{EntryAction, EntryRepo},
@@ -68,6 +69,9 @@ struct FindManyEntryFieldComponents {
     pub usernames: HashMap<i64, String>,
 }
 
+/// Intermediate data structure when finding entry fields by alias
+///
+/// Convert to [`FoundManyEntryFields`]
 #[derive(Clone)]
 struct FoundManyEntryFieldComponents {
     pub aliases: HashSet<EntryFieldAlias>,
@@ -76,35 +80,30 @@ struct FoundManyEntryFieldComponents {
     pub caller_id: Id,
 }
 
-impl FoundManyEntryFieldComponents {
-    fn to_matched(self) -> MatchedAliasesToEntryFields {
+impl TryInto<FoundManyEntryFields> for FoundManyEntryFieldComponents {
+    type Error = DcAppError;
+
+    fn try_into(self) -> Result<FoundManyEntryFields, DcAppError> {
         let entry_fields = self
             .entry_fields
             .into_iter()
             .map(|ef| ef.to_normal(&self.usernames))
             .collect::<Vec<_>>();
         let mut aliases = HashMap::new();
-        for alias in self.aliases {
-            let mut index = None;
+        'outer: for alias in self.aliases {
             for (i, entry_field) in entry_fields.iter().enumerate() {
                 if entry_field.matches_alias(&alias, &self.caller_id) {
-                    index = Some(i);
-                    break;
+                    aliases.insert(alias, Some(i));
+                    continue 'outer;
                 }
             }
-            aliases.insert(alias, index);
+            aliases.insert(alias, None);
         }
-        MatchedAliasesToEntryFields {
+        Ok(FoundManyEntryFields {
             entry_fields,
             aliases,
-        }
+        })
     }
-}
-
-#[derive(Clone)]
-struct MatchedAliasesToEntryFields {
-    pub aliases: HashMap<EntryFieldAlias, Option<usize>>,
-    pub entry_fields: Vec<EntryFieldWithContext>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -269,7 +268,7 @@ impl EntryFieldRepo {
             .map_err(DcAppError::database)
     }
 
-    async fn doubly_inner_get_entry_fields<C, I>(
+    async fn inner_find_many_entry_fields<C, I>(
         &self,
         conn: &C,
         aliases: I,
@@ -290,7 +289,7 @@ impl EntryFieldRepo {
             .column_as(entries::Column::Index, "entry_index")
             .column_as(vernaculars::Column::Id, "vernacular_id")
             .column_as(vernaculars::Column::Slug, "vernacular_slug")
-            .column_as(vernaculars::Column::OwnerId, "owner_auth_user_id")
+            .column_as(dc_users::Column::AuthUserId, "owner_auth_user_id")
             .filter(cond)
             .left_join(entries::Entity)
             .join(JoinType::LeftJoin, entries::Relation::Vernaculars.def())
@@ -318,6 +317,25 @@ impl EntryFieldRepo {
     {
         self.inner_get_entry_field(conn, alias, context, EntryFieldAction::Read)
             .await
+    }
+
+    pub async fn get_entry_fields<C, I>(
+        &self,
+        conn: &C,
+        aliases: I,
+        context: RequestContext,
+    ) -> Result<FoundManyEntryFields, DcAppError>
+    where
+        C: ConnectionTrait,
+        I: IntoIterator<Item = EntryFieldAlias>,
+    {
+        let Some(caller_id) = context.caller_id else {
+            return Err(DcAppError::bad_request("caller_id cannot be None"));
+        };
+        let components = self
+            .inner_find_many_entry_fields(conn, aliases, caller_id)
+            .await?;
+        components.try_into()
     }
 
     async fn inner_create_entry_field<C>(

@@ -1,0 +1,19 @@
+mt.123.predicted_ipa: $mt.sc.ot_mt($ot.123.ipa + -je)
+---
+formula:
+  function_call:
+    identifier: $mt.sc.ot_mt
+    arguments:
+      - binary_operation:
+          operator: +
+          lhs:
+            identifier: $ot.123.ipa
+          rhs:
+            literal: -je
+parents:
+  $mt.sc.ot_mt:
+    kind: sc
+    id: 123
+  $ot.123.ipa:
+    kind: ef
+    id: 456

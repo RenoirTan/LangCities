@@ -1,0 +1,141 @@
+when calculated changes, mark field as dirty
+if formula changes but calculated does not, retain current field status
+value = value ?? calculated <- formula
+
+automatic updates are triggered when value changes, not when calculated changes
+if automatic update happens, save original version of entry to job, when job finishes, if version has not changed, then save calculated, increment version and mark dirty
+if manual update happens, save calculated and increment version, mark clean
+accept calculated value updates value and marks clean, triggers updates to children
+
+for example:
+    :mt.136.ipa.formula = $sc.ot2mt(:ot.123.ipa)
+    :ot.123.ipa.value = '/new/'
+    new job created for :mt.136.ipa, save current version number
+    if :mt.136.ipa.version has not changed,
+    update :mt.136.ipa.calculated
+    :mt.136.ipa.dirty = true
+
+events:
+    id
+    table_name
+    row_id
+    field_name
+    old_value
+    new_value
+    manual
+    acked_at
+    completed_at
+
+jobs:
+    id
+    job_kind
+
+entry_jobs:
+    job_id
+    entry_field_id
+    version
+    original_value
+    context: json
+
+users:
+    id
+    username
+    description
+
+auths:
+    id
+    user_id
+    auth_kind
+    body
+
+roles:
+    id
+    user_id
+    resource_id
+    resource_kind
+    role: 'write' | 'read'
+
+dictionaries:
+    id
+    slug
+    owner_id
+    creator_id
+    created_at
+    updater_id
+    updated_at
+    name
+    description
+    visible
+
+sound_changes:
+    id
+    slug
+    owner_id
+    creator_id
+    created_at
+    updater_id
+    updated_at
+    name
+    description
+    engine
+    visible
+
+fonts:
+    id
+    slug
+    owner_id
+    creator_id
+    created_at
+    updater_id
+    updated_at
+    name
+    description
+    visible
+
+entries:
+    id
+    dictionary_id
+    sn
+    creator_id
+    created_at
+
+entry_fields:
+    id
+    entry_id
+    slug
+    formula
+    calculated
+    value
+    version
+    dirty
+    data_type
+    updater_id
+    updated_at
+
+entry_field_dependencies:
+    id
+    entry_field_id
+    parent_id
+    parent_kind
+
+entry_tags:
+    id
+    slug
+    dictionary_id
+    name
+    description
+
+@derperor:ot.display = {
+    main: 'transliteration',
+    caption: 'definition',
+    fields: {
+        native: {
+            font: '@derperor$ft.ot'
+        }
+    },
+}
+
+$sc.pd2ot
+$ft.ot
+:ot.146.ipa
+$sc.pd2ot(:ot.146.ipa)

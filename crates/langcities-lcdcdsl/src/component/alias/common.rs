@@ -1,4 +1,6 @@
 use std::{error::Error as StdError, fmt::Display, ops::AddAssign, str::FromStr};
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 use crate::{
     component::{Id, Slug, UserAlias},
@@ -81,6 +83,7 @@ pub trait ToFullIdentifier: ToIdentifier {
 impl<T> ToFullIdentifier for T where T: ToIdentifier {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SimpleAlias {
     Id(Id),
     Slug(Slug),
@@ -109,6 +112,7 @@ impl_deser_fromfullid!(SimpleAlias);
 impl_ser_tofullid!(SimpleAlias);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SimpleAliasedResource {
     pub slug: Slug,
     pub user_alias: UserAlias,
@@ -143,6 +147,7 @@ impl_ser_tofullid!(SimpleAliasedResource);
 impl_deser_fromfullid!(SimpleAliasedResource);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SimpleResourceAlias {
     Id(Id),
     Alias(SimpleAliasedResource),

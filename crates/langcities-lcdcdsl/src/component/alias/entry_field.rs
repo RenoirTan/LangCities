@@ -1,6 +1,8 @@
 use std::{fmt::Display, str::FromStr};
 
 use smallvec::SmallVec;
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 use crate::{
     component::{AliasedEntry, EntryAlias, Id, Index, Slug, VernacularAlias},
@@ -9,6 +11,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AliasedEntryField {
     pub entry_alias: EntryAlias,
     pub slug: Slug,
@@ -38,6 +41,7 @@ impl_deser_fromfullid!(AliasedEntryField);
 impl_ser_tofullid!(AliasedEntryField);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NeedyAliasedEntryField {
     pub vernacular_alias: Option<VernacularAlias>,
     pub entry_index: Option<Index>,

@@ -26,7 +26,7 @@ langcities-common-server = { path = "../langcities-common-server", features = ["
 langcities-cache = { path = "../langcities-cache" }
 langcities-config = { path = "../langcities-config" }
 langcities-jwt = { path = "../langcities-jwt", features = ["axum"] }
-langcities-lcdcdsl = { path = "../langcities-lcdcdsl" }
+langcities-lcdcdsl = { path = "../langcities-lcdcdsl", features = ["utoipa"] }
 langcities-lcdcdsl-parser = { path = "../langcities-lcdcdsl-parser" }
 langcities-messaging = { path = "../langcities-messaging", features = ["messagepack", "tokio_chan"] }
 langcities-signal = { path = "../langcities-signal" }

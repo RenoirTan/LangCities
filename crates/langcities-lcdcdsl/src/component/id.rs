@@ -1,11 +1,14 @@
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use serde::{Deserialize, Serialize, de::Visitor};
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 use crate::error::{DslError, DslErrorTrait};
 use crate::impl_deser_fromstr;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Id(i64);
 pub type Index = Id;
 
@@ -96,6 +99,7 @@ impl<'de> Deserialize<'de> for Id {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Slug(String);
 
 impl Deref for Slug {

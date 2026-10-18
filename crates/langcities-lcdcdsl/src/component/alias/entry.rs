@@ -1,60 +1,74 @@
 use std::{fmt::Display, str::FromStr};
 
-use smallvec::SmallVec;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
 use crate::{
-    component::{Id, Index, VernacularAlias},
+    component::{
+        AliasParts, FromFullIdentifier, Id, Index, QualifiedAlias, ToFullIdentifier, VernacularRef,
+    },
     error::{DslError, DslErrorTrait},
     impl_deser_fromfullid, impl_ser_tofullid,
 };
 
+const ENTRY_TYPE_TAG: &str = "e";
+
+/// Qualified entry identity: `<vernacular>.<index>`.
+///
+/// `index` is optional because the same payload is used inside an entry field alias,
+/// where `_` means the entry that owns the current field.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AliasedEntry {
-    pub vernacular_alias: VernacularAlias,
-    pub index: Index,
+pub struct QualifiedEntry {
+    pub vernacular: VernacularRef,
+    pub index: Option<Index>,
 }
 
-impl Display for AliasedEntry {
+impl Display for QualifiedEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}", self.vernacular_alias, self.index)
-    }
-}
-
-impl FromStr for AliasedEntry {
-    type Err = DslError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: SmallVec<[&str; 2]> = s.rsplitn(2, '.').collect();
-        if parts.len() <= 1 {
-            return Err(DslError::bad_value_of(s));
+        self.vernacular.fmt(f)?;
+        if let Some(index) = &self.index {
+            write!(f, ".{}", index)
+        } else {
+            write!(f, "._")
         }
-        let index = parts[0].parse::<Index>()?;
-        let vernacular_alias = parts[1].parse::<VernacularAlias>()?;
-        Ok(AliasedEntry {
-            vernacular_alias,
-            index,
-        })
     }
 }
 
-impl_deser_fromfullid!(AliasedEntry);
-impl_ser_tofullid!(AliasedEntry);
+/// Untagged reference to an entry. Used inside entry field aliases.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum EntryRef {
+    Id(Id),
+    Qualified(QualifiedEntry),
+}
+
+impl Display for EntryRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Id(a) => a.fmt(f),
+            Self::Qualified(a) => a.fmt(f),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum EntryAlias {
     Id(Id),
-    Alias(AliasedEntry),
+    Qualified(QualifiedAlias<QualifiedEntry>),
 }
 
 impl Display for EntryAlias {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Id(a) => a.fmt(f),
-            Self::Alias(a) => a.fmt(f),
+            Self::Id(a) => write!(f, "{ENTRY_TYPE_TAG}:{}", a),
+            Self::Qualified(a) => {
+                if a.is_explicit() {
+                    write!(f, "{ENTRY_TYPE_TAG}:")?;
+                }
+                a.value.fmt(f)
+            }
         }
     }
 }
@@ -63,44 +77,84 @@ impl FromStr for EntryAlias {
     type Err = DslError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse::<Id>()
-            .map(Self::Id)
-            .or_else(|_| s.parse::<AliasedEntry>().map(Self::Alias))
+        let parts = AliasParts::parse(s)?;
+        let explicit_type = parts.explicit_type(ENTRY_TYPE_TAG, s)?;
+        match parts.tail.len() {
+            0 => {
+                if !explicit_type {
+                    return Err(DslError::bad_value_of(s));
+                }
+                parts.require_no_owner(s)?;
+                Ok(Self::Id(parts.first.parse::<Id>()?))
+            }
+            1 => {
+                let index = parts.tail[0].parse::<Index>()?;
+                let vernacular = VernacularRef::from_parts(parts.first, parts.owner)?;
+                Ok(Self::Qualified(QualifiedAlias::new(
+                    QualifiedEntry {
+                        vernacular,
+                        index: Some(index),
+                    },
+                    explicit_type,
+                )))
+            }
+            _ => Err(DslError::bad_value_of(s)),
+        }
     }
 }
 
-impl_deser_fromfullid!(EntryAlias);
+impl FromFullIdentifier for EntryAlias {}
+impl ToFullIdentifier for EntryAlias {}
+
 impl_ser_tofullid!(EntryAlias);
+impl_deser_fromfullid!(EntryAlias);
 
 #[cfg(test)]
 mod test {
     use crate::component::{EntryAlias, FromFullIdentifier, ToFullIdentifier};
 
     #[test]
-    fn test_valid_entry_alias() {
-        let cases = ["$lang@me.123", "$lang.456", "$789", "$123.456"];
+    fn test_valid_entry_aliases() {
+        let cases = [
+            "$e:456",
+            "$e:123.100",
+            "$e:mt.100",
+            "$e:mt@derperor.100",
+            "$e:mt@123.100",
+            "$123.100",
+            "$mt.100",
+            "$mt@derperor.100",
+            "$mt@123.100",
+        ];
 
         for case in cases {
-            let result = EntryAlias::from_full(case).unwrap();
-            assert_eq!(result.to_full(), case);
+            let alias = EntryAlias::from_full(case).unwrap();
+            assert_eq!(alias.to_full(), case);
         }
     }
 
     #[test]
-    fn test_invalid_entry_alias() {
+    fn test_old_tag_shaped_slug_is_an_entry() {
+        for case in ["$ef.123", "$sc.123"] {
+            let alias = EntryAlias::from_full(case).unwrap();
+            assert_eq!(alias.to_full(), case);
+        }
+    }
+
+    #[test]
+    fn test_invalid_entry_aliases() {
         let cases = [
-            "lang@me.123",
-            "lang.456",
-            "789",
-            "123.456",
-            "$lang@.234",
-            "$@missing.345",
-            "$ouch.",
-            "$.567",
-            "$.",
+            "$456",
+            "$e:",
+            "$e:mt",
+            "$e:mt@derperor",
+            "$e:123@derperor.100",
+            "$e:mt.100.ipa",
+            "$e:mt._.100",
+            "$mt.sc.ot_mt",
         ];
         for case in cases {
-            assert!(EntryAlias::from_full(case).is_err());
+            assert!(EntryAlias::from_full(case).is_err(), "{case}");
         }
     }
 }

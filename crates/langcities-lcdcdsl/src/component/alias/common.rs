@@ -1,9 +1,17 @@
-use std::{error::Error as StdError, fmt::Display, ops::AddAssign, str::FromStr};
+use std::{
+    error::Error as StdError,
+    fmt::Display,
+    hash::{Hash, Hasher},
+    ops::{AddAssign, Deref},
+    str::FromStr,
+};
+
+use smallvec::SmallVec;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
 use crate::{
-    component::{Id, Slug, UserAlias},
+    component::{Slug, UserAlias},
     error::{DslError, DslErrorTrait},
     impl_deser_fromfullid, impl_ser_tofullid,
 };
@@ -53,13 +61,6 @@ where
     }
 }
 
-impl<T> FromFullIdentifier for T
-where
-    T: FromIdentifier,
-    <Self as FromStr>::Err: BadParseError,
-{
-}
-
 pub trait ToIdentifier: ToString {
     fn to_partial(&self) -> String {
         self.to_string()
@@ -80,100 +81,159 @@ pub trait ToFullIdentifier: ToIdentifier {
     }
 }
 
-impl<T> ToFullIdentifier for T where T: ToIdentifier {}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// Top-level qualified alias. The flag is deliberately private:
+/// it only exists so that an implicit alias can be printed back with the same surface syntax.
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SimpleAlias {
-    Id(Id),
-    Slug(Slug),
+pub struct QualifiedAlias<T> {
+    pub value: T,
+    explicit_type: bool,
 }
 
-impl Display for SimpleAlias {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Id(id) => id.fmt(f),
-            Self::Slug(slug) => slug.fmt(f),
+impl<T> QualifiedAlias<T> {
+    pub(crate) fn new(value: T, explicit_type: bool) -> Self {
+        Self {
+            value,
+            explicit_type,
+        }
+    }
+
+    pub fn is_explicit(&self) -> bool {
+        self.explicit_type
+    }
+}
+
+impl<T: PartialEq> PartialEq for QualifiedAlias<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl<T: Eq> Eq for QualifiedAlias<T> {}
+
+impl<T: Hash> Hash for QualifiedAlias<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
+}
+
+impl<T> Deref for QualifiedAlias<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+/// Parsed form of a partial alias, i.e. after the leading `$` was removed.
+///
+/// `$v:mt@user.123` becomes
+/// `tag=Some("v"), first="mt", owner=Some("user"), tail=["123"]`.
+#[derive(Clone, Debug)]
+pub(crate) struct AliasParts<'a> {
+    pub tag: Option<&'a str>,
+    pub first: &'a str,
+    pub owner: Option<&'a str>,
+    pub tail: SmallVec<[&'a str; 3]>,
+}
+
+impl<'a> AliasParts<'a> {
+    pub fn parse(s: &'a str) -> Result<Self, DslError> {
+        let err = || DslError::bad_value_of(s);
+
+        let (tag, rest) = match s.split_once(':') {
+            Some((tag, rest)) => {
+                tag.parse::<Slug>().map_err(|_| err())?;
+                (Some(tag), rest)
+            }
+            None => (None, s),
+        };
+        if rest.is_empty() {
+            return Err(err());
+        }
+
+        let mut segments = rest.split('.');
+        let first_segment = segments.next().ok_or_else(err)?;
+        if first_segment.is_empty() {
+            return Err(err());
+        }
+        let (first, owner) = match first_segment.split_once('@') {
+            Some((first, owner)) => {
+                if first.is_empty() || owner.is_empty() || owner.contains('@') {
+                    return Err(err());
+                }
+                (first, Some(owner))
+            }
+            None => (first_segment, None),
+        };
+
+        let mut tail = SmallVec::new();
+        for segment in segments {
+            if segment.is_empty() {
+                return Err(err());
+            }
+            tail.push(segment);
+        }
+
+        Ok(Self {
+            tag,
+            first,
+            owner,
+            tail,
+        })
+    }
+
+    pub fn explicit_type(&self, expected: &str, s: &str) -> Result<bool, DslError> {
+        match self.tag {
+            Some(tag) if tag == expected => Ok(true),
+            None => Ok(false),
+            _ => Err(DslError::bad_value_of(s)),
+        }
+    }
+
+    pub fn require_no_owner(&self, s: &str) -> Result<(), DslError> {
+        if self.owner.is_some() {
+            Err(DslError::bad_value_of(s))
+        } else {
+            Ok(())
         }
     }
 }
 
-impl FromStr for SimpleAlias {
-    type Err = DslError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse::<Id>()
-            .map(|id| Self::Id(id))
-            .or_else(|_| s.parse::<Slug>().map(|slug| Self::Slug(slug)))
-    }
-}
-
-impl_deser_fromfullid!(SimpleAlias);
-impl_ser_tofullid!(SimpleAlias);
-
+/// `<slug>[@<user>]`, where an absent user means the current user.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SimpleAliasedResource {
+pub struct SimpleQualifiedResource {
     pub slug: Slug,
-    pub user_alias: UserAlias,
+    pub user_alias: Option<UserAlias>,
 }
 
-impl Display for SimpleAliasedResource {
+impl Display for SimpleQualifiedResource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{}", self.slug, self.user_alias)
+        if let Some(user_alias) = &self.user_alias {
+            write!(f, "{}@{}", self.slug, user_alias)
+        } else {
+            self.slug.fmt(f)
+        }
     }
 }
 
-impl FromStr for SimpleAliasedResource {
+impl FromStr for SimpleQualifiedResource {
     type Err = DslError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.split("@");
-        let slug = parts
-            .next()
-            .ok_or_else(|| DslError::bad_value_of(s))
-            .map(|first| first.parse::<Slug>())
-            .flatten()?;
-        let user_alias = parts
-            .next()
-            .ok_or_else(|| DslError::bad_value_of(s))
-            .map(|second| second.parse::<SimpleAlias>())
-            .flatten()?;
+        let parts = AliasParts::parse(s)?;
+        if parts.tag.is_some() || !parts.tail.is_empty() {
+            return Err(DslError::bad_value_of(s));
+        }
+        let slug = parts.first.parse::<Slug>()?;
+        let user_alias = parts.owner.map(UserAlias::from_bare).transpose()?;
         Ok(Self { slug, user_alias })
     }
 }
 
-impl_ser_tofullid!(SimpleAliasedResource);
-impl_deser_fromfullid!(SimpleAliasedResource);
+impl FromFullIdentifier for SimpleQualifiedResource {}
+impl ToFullIdentifier for SimpleQualifiedResource {}
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SimpleResourceAlias {
-    Id(Id),
-    Alias(SimpleAliasedResource),
-    Slug(Slug),
-}
-
-impl Display for SimpleResourceAlias {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Id(a) => a.fmt(f),
-            Self::Alias(a) => a.fmt(f),
-            Self::Slug(a) => a.fmt(f),
-        }
-    }
-}
-
-impl FromStr for SimpleResourceAlias {
-    type Err = DslError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse::<Id>()
-            .map(Self::Id)
-            .or_else(|_| s.parse::<Slug>().map(Self::Slug))
-            .or_else(|_| s.parse::<SimpleAliasedResource>().map(Self::Alias))
-    }
-}
-
-impl_ser_tofullid!(SimpleResourceAlias);
-impl_deser_fromfullid!(SimpleResourceAlias);
+impl_ser_tofullid!(SimpleQualifiedResource);
+impl_deser_fromfullid!(SimpleQualifiedResource);

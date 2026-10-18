@@ -1,8 +1,5 @@
 use crate::{
-    dependency::{DepAlias, DependencyBuilder},
-    error::DslError,
-    node::NodeId,
-    tree::Tree,
+    component::DepAlias, dependency::DependencyBuilder, error::DslError, node::NodeId, tree::Tree,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]

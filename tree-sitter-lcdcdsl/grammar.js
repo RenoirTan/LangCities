@@ -9,14 +9,20 @@ const identifier_alphanumeric = /(?:[a-z_][a-z0-9_]*)/;
 const identifier_part = new RegExp(
   `(?:${identifier_int.source}|${identifier_alphanumeric.source})`
 );
-const user_namespaced_identifier = new RegExp(
-  `(?:${identifier_part.source}@${identifier_part.source})`
+// $type:first@user
+const dollar_prefixed_part = new RegExp(
+  `(?:\\$(?:${identifier_alphanumeric.source}:)?${identifier_part.source}(?:@${identifier_part.source})?)`,
 );
+const at_prefixed_part = new RegExp(
+  `(?:@${identifier_part.source})`,
+);
+// first@user, first or @user
 const first_identifier_part = new RegExp(
-  `(?:${identifier_part.source}(?:@${identifier_part.source})?)`
+  `(?:${at_prefixed_part.source}|${dollar_prefixed_part.source})`,
 );
+// $type:first@user.second.third
 const identifier = new RegExp(
-  `(?:\\$${first_identifier_part.source}(?:\\.${identifier_part.source})*)`
+  `(?:${first_identifier_part.source}(?:\\.${identifier_part.source})*)`
 );
 
 console.log(`Identifier Regex: ${identifier.source}`);

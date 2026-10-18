@@ -352,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_complex_function() {
-        let mut parser = Parser::from_source("$mt.sc.ot_mt(a + b, $ot.sc.pd_ot('c'))").unwrap();
+        let mut parser = Parser::from_source("$sc:mt.ot_mt(a + b, $sc:ot.pd_ot('c'))").unwrap();
         parser.prepare().unwrap();
 
         let mut node_ids = vec![];

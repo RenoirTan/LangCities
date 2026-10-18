@@ -1,8 +1,371 @@
+=======
+User ID
+=======
+
+@123
+
+---
+
+(source_file
+  (identifier))
+
+========
+Username
+========
+
+@derperor
+
+---
+
+(source_file
+  (identifier))
+
+=================
+Desugared User ID
+=================
+
+$u:123
+
+---
+
+(source_file
+  (identifier))
+
+==================
+Desugared Username
+==================
+
+$u:derperor
+
+---
+
+(source_file
+  (identifier))
+
 ==========
-Identifier
+User Field
 ==========
 
-$mt@123.456.ipa
+$uf:678
+
+---
+
+(source_file
+  (identifier))
+
+=======================
+User Field with User ID
+=======================
+
+@123.country
+
+---
+
+(source_file
+  (identifier))
+
+========================
+User Field with Username
+========================
+
+@derperor.country
+
+---
+
+(source_file
+  (identifier))
+
+=================================
+Desugared User Field with User ID
+=================================
+
+$uf:123.country
+
+---
+
+(source_file
+  (identifier))
+
+==================================
+Desugared User Field with Username
+==================================
+
+$uf:derperor.country
+
+---
+
+(source_file
+  (identifier))
+
+=============
+Vernacular ID
+=============
+
+$v:123
+
+---
+
+(source_file
+  (identifier))
+
+=============================
+Explicit Qualified Vernacular
+=============================
+
+$v:mt@derperor
+
+---
+
+(source_file
+  (identifier))
+
+======================================
+Explicit Template Qualified Vernacular
+======================================
+
+$v:mt
+
+---
+
+(source_file
+  (identifier))
+
+=============================
+Implicit Qualified Vernacular
+=============================
+
+$mt@derperor
+
+---
+
+(source_file
+  (identifier))
+
+======================================
+Implicit Template Qualified Vernacular
+======================================
+
+$mt
+
+---
+
+(source_file
+  (identifier))
+
+========
+Entry ID
+========
+
+$e:456
+
+---
+
+(source_file
+  (identifier))
+
+===========================================
+Explicit Qualified Entry with Vernacular ID
+===========================================
+
+$e:123.100
+
+---
+
+(source_file
+  (identifier))
+
+==================================================
+Explicit Qualified Entry with Qualified Vernacular
+==================================================
+
+$e:mt@derperor.100
+
+---
+
+(source_file
+  (identifier))
+
+===========================================================
+Explicit Qualified Entry with Template Qualified Vernacular
+===========================================================
+
+$e:mt.100
+
+---
+
+(source_file
+  (identifier))
+
+===========================================
+Implicit Qualified Entry with Vernacular ID
+===========================================
+
+$123.100
+
+---
+
+(source_file
+  (identifier))
+
+==================================================
+Implicit Qualified Entry with Qualified Vernacular
+==================================================
+
+$mt@derperor.100
+
+---
+
+(source_file
+  (identifier))
+
+===========================================================
+Implicit Qualified Entry with Template Qualified Vernacular
+===========================================================
+
+$mt.100
+
+---
+
+(source_file
+  (identifier))
+
+==============
+Entry Field ID
+==============
+
+$ef:789
+
+---
+
+(source_file
+  (identifier))
+
+============================================
+Explicit Qualified Entry Field with Entry ID
+============================================
+
+$ef:456.ipa
+
+---
+
+(source_file
+  (identifier))
+
+=================================================
+Explicit Qualified Entry Field with Vernacular ID
+=================================================
+
+$ef:123.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+========================================================
+Explicit Qualified Entry Field with Qualified Vernacular
+========================================================
+
+$ef:mt@derperor.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+=================================================================
+Explicit Qualified Entry Field with Template Qualified Vernacular
+=================================================================
+
+$ef:mt.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+============================================
+Implicit Qualified Entry Field with Entry ID
+============================================
+
+$456.ipa
+
+---
+
+(source_file
+  (identifier))
+
+=================================================
+Implicit Qualified Entry Field with Vernacular ID
+=================================================
+
+$123.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+========================================================
+Implicit Qualified Entry Field with Qualified Vernacular
+========================================================
+
+$mt@derperor.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+=================================================================
+Implicit Qualified Entry Field with Template Qualified Vernacular
+=================================================================
+
+$mt.100.ipa
+
+---
+
+(source_file
+  (identifier))
+
+===============
+Sound Change ID
+===============
+
+$sc:321
+
+---
+
+(source_file
+  (identifier))
+
+==================================================
+Explicit Qualified Sound Change with Vernacular ID
+==================================================
+
+$sc:123.ot_mt
+
+---
+
+(source_file
+  (identifier))
+
+=========================================================
+Explicit Qualified Sound Change with Qualified Vernacular
+=========================================================
+
+$sc:mt@derperor.ot_mt
+
+---
+
+(source_file
+  (identifier))
+
+==================================================================
+Explicit Qualified Sound Change with Template Qualified Vernacular
+==================================================================
+
+$sc:mt.ot_mt
 
 ---
 
@@ -25,7 +388,7 @@ $dummy()
 Simple Function Call
 ====================
 
-$mt.sc.ot_mt($ot.123.ipa)
+$sc:mt.ot_mt($ot.123.ipa)
 
 ---
 
@@ -38,7 +401,7 @@ $mt.sc.ot_mt($ot.123.ipa)
 Unquoted String Literal
 =======================
 
-$mt.sc.ot_mt(/ˈɥɵʉ̯pʰwɛsʰ/)
+$sc:mt.ot_mt(/ˈɥɵʉ̯pʰwɛsʰ/)
 
 ---
 
@@ -144,7 +507,7 @@ Addition Missing LHS
 Addition Missing RHS
 ====================
 
-$mt.sc.ot_mt(/ˈtʰɤɨ̯mjɨ̯əɾ/) +
+$sc:mt.ot_mt(/ˈtʰɤɨ̯mjɨ̯əɾ/) +
 
 ---
 
@@ -179,7 +542,7 @@ Parenthesis Expression 0
 Parenthesis Expression 1
 ========================
 
-$mt.sc.ot_mt(($ot.123.ipa + jə))
+$sc:mt.ot_mt(($ot.123.ipa + jə))
 
 ---
 

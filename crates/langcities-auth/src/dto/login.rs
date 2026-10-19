@@ -1,9 +1,10 @@
+use langcities_lcdcdsl::component::Slug;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct PasswordLoginDto {
-    pub username: String,
+    pub username: Slug,
     pub password: String,
 }
 

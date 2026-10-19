@@ -1,15 +1,20 @@
 use langcities_common_server::dto::users::AuthUserDto;
 
-use crate::entity::users;
+use crate::{
+    entity::users,
+    error::{AuthAppError, AuthAppErrorTrait},
+};
 
-impl From<users::Model> for AuthUserDto {
-    fn from(value: users::Model) -> Self {
-        Self {
-            id: value.id,
-            username: value.username,
+impl TryFrom<users::Model> for AuthUserDto {
+    type Error = AuthAppError;
+
+    fn try_from(value: users::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value.id.into(),
+            username: value.username.parse().map_err(AuthAppError::database)?,
             created_at: value.created_at,
             updated_at: value.updated_at,
-        }
+        })
     }
 }
 
@@ -28,7 +33,9 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".parse().unwrap(),
             updated_at: "2026-01-02T00:00:00Z".parse().unwrap(),
         };
-        let dto: AuthUsersDto = [model].into_iter().collect();
+        let dto: AuthUsersDto = [AuthUserDto::try_from(model).unwrap()]
+            .into_iter()
+            .collect();
         let expected = json!({"users": [{
             "id": 42,
             "username": "alice",
@@ -53,7 +60,7 @@ mod tests {
         use axum::http::Uri;
         use axum_extra::extract::Query;
 
-        let uri: Uri = "/v1/users?aliases=alice&aliases=bob".parse().unwrap();
+        let uri: Uri = "/v1/users?aliases=@alice&aliases=@bob".parse().unwrap();
         let Query(query) = Query::<ManyUserAliasDto>::try_from_uri(&uri).unwrap();
         assert_eq!(query.aliases.len(), 2);
         assert_eq!(query.aliases[0].0.to_string(), "alice");

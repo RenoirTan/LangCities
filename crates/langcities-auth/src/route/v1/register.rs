@@ -25,7 +25,7 @@ pub async fn register(
 ) -> Result<Json<AuthUserDto>, AuthAppError> {
     let password_hash = state.pw_checker.hash_password(dto.password).await?;
     let user = users::ActiveModel {
-        username: ActiveValue::Set(dto.username),
+        username: ActiveValue::Set(dto.username.into()),
         password_hash: ActiveValue::Set(Some(password_hash)),
         ..Default::default()
     };
@@ -41,7 +41,7 @@ pub async fn register(
                 .one(&state.db)
                 .await
             {
-                Ok(Some(user)) => Ok(Json(user.into())),
+                Ok(Some(user)) => Ok(Json(user.try_into()?)),
                 Ok(None) => Err(AuthAppError::other("unsuccessful insert")),
                 Err(e) => Err(AuthAppError::database(e)),
             },

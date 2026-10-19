@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use langcities_lcdcdsl::component::UserAlias;
+use langcities_lcdcdsl::component::{Id, Slug, UserAlias};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -18,8 +18,8 @@ pub struct ManyUserAliasDto {
 /// The public user response returned by the auth service.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct AuthUserDto {
-    pub id: i64,
-    pub username: String,
+    pub id: Id,
+    pub username: Slug,
     #[schema(value_type = String, format = DateTime)]
     pub created_at: DateTime<Utc>,
     #[schema(value_type = String, format = DateTime)]

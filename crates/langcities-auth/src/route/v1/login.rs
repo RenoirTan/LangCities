@@ -2,7 +2,7 @@ use axum::{Json, extract::State};
 
 use crate::{
     dto::login::{PasswordLoginDto, PasswordLoginResponseDto},
-    entity::prelude::*,
+    entity::users,
     error::{AuthAppError, AuthAppErrorTrait},
     session::SessionUserWrapper,
     state::AppState,
@@ -22,7 +22,7 @@ pub async fn password_login(
     mut session_user: SessionUserWrapper,
     Json(dto): Json<PasswordLoginDto>,
 ) -> Result<Json<PasswordLoginResponseDto>, AuthAppError> {
-    let user = Users::find_by_username(&dto.username)
+    let user = users::Entity::find_by_username(&*dto.username)
         .one(&state.db)
         .await
         .map_err(AuthAppError::database)?;

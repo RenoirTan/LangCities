@@ -26,17 +26,18 @@ pub async fn get_user(
     State(state): State<AppState>,
 ) -> Result<Json<AuthUserDto>, AuthAppError> {
     let sql = match &alias.0 {
-        UserAlias::Id(id) => users::Entity::find_by_id(**id),
-        UserAlias::Slug(username) => users::Entity::find_by_username(&**username),
+        UserAlias::Id(id) => users::Entity::find_by_id(**id.id()),
+        UserAlias::Username(username) => users::Entity::find_by_username(&**username.username()),
     };
     sql.one(&state.db)
         .await
         .map(|o| {
-            o.map(|m| Json(m.into()))
-                .ok_or_else(|| AuthAppError::not_found(format!("{} not found", alias.0)))
+            o.ok_or_else(|| AuthAppError::not_found(format!("{} not found", alias.0)))
+                .and_then(|m| m.try_into().map_err(AuthAppError::database))
         })
         .map_err(AuthAppError::database)
         .flatten()
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -58,14 +59,18 @@ pub async fn get_many_users(
         .aliases
         .into_iter()
         .fold(Condition::any(), |q, a| match a.0 {
-            UserAlias::Id(id) => q.add(users::Column::Id.eq(*id)),
-            UserAlias::Slug(username) => q.add(users::Column::Username.eq(&*username)),
+            UserAlias::Id(id) => q.add(users::Column::Id.eq(**id.id())),
+            UserAlias::Username(username) => {
+                q.add(users::Column::Username.eq(&**username.username()))
+            }
         });
     let sql = users::Entity::find().filter(condition);
-    sql.all(&state.db)
-        .await
-        .map(|ms| Json(ms.into_iter().collect()))
-        .map_err(AuthAppError::database)
+    let models = sql.all(&state.db).await.map_err(AuthAppError::database)?;
+    let mut dtos = vec![];
+    for model in models {
+        dtos.push(model.try_into()?);
+    }
+    Ok(Json(AuthUsersDto { users: dtos }))
 }
 
 #[utoipa::path(
@@ -88,8 +93,8 @@ pub async fn delete_user(
         .exec_with_returning(&state.db)
         .await
         .map(|o| {
-            o.map(|m| m.into())
-                .ok_or_else(|| AuthAppError::not_found(format!("user {} not found", id)))
+            o.ok_or_else(|| AuthAppError::not_found(format!("user {} not found", id)))
+                .and_then(|m| m.try_into().map_err(AuthAppError::database))
         })
         .map_err(AuthAppError::database)
         .flatten()?;

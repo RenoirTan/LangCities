@@ -12,6 +12,16 @@ use crate::impl_deser_fromstr;
 pub struct Id(i64);
 pub type Index = Id;
 
+impl Id {
+    pub const fn from_i64(i: i64) -> Self {
+        Id(i)
+    }
+
+    pub const fn to_i64(self) -> i64 {
+        self.0
+    }
+}
+
 impl AsRef<i64> for Id {
     fn as_ref(&self) -> &i64 {
         self
@@ -125,6 +135,15 @@ impl AsRef<str> for Slug {
 impl Display for Slug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl TryFrom<String> for Slug {
+    type Error = DslError;
+
+    #[inline]
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.parse()
     }
 }
 

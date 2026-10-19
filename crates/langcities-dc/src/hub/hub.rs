@@ -30,7 +30,7 @@ impl InnerHub {
     /// create job to get new
     async fn do_efue_override(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
         let dto = CreateEntryFieldJobDto {
-            entry_field_id: *efue.entry_field_id,
+            entry_field_id: efue.entry_field_id,
         };
         let db = self.state.db.clone();
         let repo = EntryFieldJobRepo::from_state(self.state);
@@ -54,7 +54,7 @@ impl InnerHub {
         let dtos = dependencies
             .into_iter()
             .map(|dep| CreateEntryFieldJobDto {
-                entry_field_id: dep.child_entry_field_id,
+                entry_field_id: dep.child_entry_field_id.into(),
             })
             .collect::<Vec<_>>();
         let db = self.state.db.clone();

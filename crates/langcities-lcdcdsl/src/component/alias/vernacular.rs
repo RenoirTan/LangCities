@@ -14,6 +14,8 @@ use crate::{
 
 const VERNACULAR_TYPE_TAG: &str = "v";
 
+pub type QualifiedVernacular = SimpleQualifiedResource;
+
 /// Untagged reference to a vernacular.
 /// Used when a vernacular appears inside an entry,
 /// entry field or sound change alias.
@@ -21,7 +23,7 @@ const VERNACULAR_TYPE_TAG: &str = "v";
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum VernacularRef {
     Id(Id),
-    Qualified(SimpleQualifiedResource),
+    Qualified(QualifiedVernacular),
 }
 
 impl VernacularRef {
@@ -65,7 +67,7 @@ impl FromStr for VernacularRef {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum VernacularAlias {
     Id(Id),
-    Qualified(QualifiedAlias<SimpleQualifiedResource>),
+    Qualified(QualifiedAlias<QualifiedVernacular>),
 }
 
 impl Display for VernacularAlias {
@@ -97,6 +99,24 @@ impl FromStr for VernacularAlias {
             VernacularRef::Qualified(value) => {
                 Ok(Self::Qualified(QualifiedAlias::new(value, explicit_type)))
             }
+        }
+    }
+}
+
+impl From<VernacularRef> for VernacularAlias {
+    fn from(value: VernacularRef) -> Self {
+        match value {
+            VernacularRef::Id(id) => Self::Id(id),
+            VernacularRef::Qualified(alias) => Self::Qualified(QualifiedAlias::from_value(alias)),
+        }
+    }
+}
+
+impl Into<VernacularRef> for VernacularAlias {
+    fn into(self) -> VernacularRef {
+        match self {
+            Self::Id(id) => VernacularRef::Id(id),
+            Self::Qualified(alias) => VernacularRef::Qualified(alias.value),
         }
     }
 }

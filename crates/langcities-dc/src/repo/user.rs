@@ -1,3 +1,4 @@
+use langcities_lcdcdsl::component::Id;
 use sea_orm::{ActiveValue, ConnectionTrait, EntityTrait, TryInsertResult};
 
 use crate::{
@@ -12,12 +13,12 @@ impl UserRepo {
     pub async fn get_user_by_id<C>(
         &self,
         conn: &C,
-        id: i64,
+        id: &Id,
     ) -> Result<Option<dc_users::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
-        dc_users::Entity::find_by_id(id)
+        dc_users::Entity::find_by_id(**id)
             .one(conn)
             .await
             .map_err(DcAppError::database)
@@ -26,12 +27,12 @@ impl UserRepo {
     pub async fn get_user_by_auth_user_id<C>(
         &self,
         conn: &C,
-        auth_user_id: i64,
+        auth_user_id: &Id,
     ) -> Result<Option<dc_users::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
-        dc_users::Entity::find_by_auth_user_id(auth_user_id)
+        dc_users::Entity::find_by_auth_user_id(**auth_user_id)
             .one(conn)
             .await
             .map_err(DcAppError::database)
@@ -40,13 +41,13 @@ impl UserRepo {
     pub async fn create_user<C>(
         &self,
         conn: &C,
-        auth_user_id: i64,
+        auth_user_id: Id,
     ) -> Result<dc_users::Model, DcAppError>
     where
         C: ConnectionTrait,
     {
         let am = dc_users::ActiveModel {
-            auth_user_id: ActiveValue::Set(auth_user_id),
+            auth_user_id: ActiveValue::Set(auth_user_id.clone().into()),
             ..Default::default()
         };
         let result = dc_users::Entity::insert(am)
@@ -57,7 +58,7 @@ impl UserRepo {
         match result {
             TryInsertResult::Empty => Err(DcAppError::database("No SQL executed create_user")),
             TryInsertResult::Conflicted => {
-                match self.get_user_by_auth_user_id(conn, auth_user_id).await? {
+                match self.get_user_by_auth_user_id(conn, &auth_user_id).await? {
                     None => Err(DcAppError::database("could not create nor get user")),
                     Some(model) => Ok(model),
                 }
@@ -69,12 +70,12 @@ impl UserRepo {
     pub async fn get_or_create_user<C>(
         &self,
         conn: &C,
-        auth_user_id: i64,
+        auth_user_id: Id,
     ) -> Result<dc_users::Model, DcAppError>
     where
         C: ConnectionTrait,
     {
-        if let Some(user) = self.get_user_by_auth_user_id(conn, auth_user_id).await? {
+        if let Some(user) = self.get_user_by_auth_user_id(conn, &auth_user_id).await? {
             return Ok(user);
         } else {
             self.create_user(conn, auth_user_id).await

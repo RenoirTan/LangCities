@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::{AliasedVernacular, SimpleAlias, UserAlias, VernacularAlias};
+use langcities_lcdcdsl::component::{Id, QualifiedVernacular, Slug, UserAlias, VernacularRef};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
     IntoActiveModel, QueryFilter, QuerySelect, TransactionError, TransactionTrait, TryInsertResult,
@@ -19,9 +19,9 @@ use crate::{
 /// Only for finding entry field dependencies
 #[derive(Clone)]
 pub(super) struct FindManyVernacularComponents {
-    pub exprs: HashMap<VernacularAlias, Expr>,
+    pub exprs: HashMap<VernacularRef, Expr>,
     /// auth_user_id to username
-    pub usernames: HashMap<i64, String>,
+    pub usernames: HashMap<Id, Slug>,
 }
 
 /// Simple permissions enum
@@ -34,7 +34,7 @@ pub enum VernacularAction {
 }
 
 impl VernacularAction {
-    pub fn enforce_owner(&self) -> bool {
+    pub const fn enforce_owner(&self) -> bool {
         !matches!(self, Self::Read)
     }
 }
@@ -52,33 +52,33 @@ impl VernacularRepo {
 
     pub async fn generate_filter(
         &self,
-        alias: VernacularAlias,
+        alias: VernacularRef,
         context: RequestContext,
         action: VernacularAction,
     ) -> Result<Expr, DcAppError> {
         let expr = match alias {
-            VernacularAlias::Id(id) => vernaculars::Column::Id.eq(*id),
-            VernacularAlias::Alias(alias) => {
+            VernacularRef::Id(id) => vernaculars::Column::Id.eq(*id),
+            VernacularRef::Qualified(alias) => {
                 let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
-                let owner_expr = match alias.user_alias {
-                    UserAlias::Id(owner_id) => Self::generate_owner_filter(*owner_id),
-                    UserAlias::Slug(username) => {
-                        let auth_user_id = self.state.resolve_auth_user_id(&username).await?;
-                        Self::generate_owner_filter(auth_user_id)
+                let owner_expr = match &alias.user_alias {
+                    Some(UserAlias::Id(owner_id)) => Self::generate_owner_filter(**owner_id.id()),
+                    Some(UserAlias::Username(username)) => {
+                        let auth_user_id = self
+                            .state
+                            .resolve_auth_user_id(&username.username())
+                            .await?;
+                        Self::generate_owner_filter(*auth_user_id)
                     }
+                    None => match &context.caller_id {
+                        Some(id) => Self::generate_owner_filter(**id),
+                        None => {
+                            return Err(DcAppError::bad_request(
+                                "no owner id in alias or request context",
+                            ));
+                        }
+                    },
                 };
                 slug_expr.and(owner_expr)
-            }
-            VernacularAlias::Slug(slug) => {
-                if let Some(caller_id) = &context.caller_id {
-                    vernaculars::Column::Slug
-                        .eq(&*slug)
-                        .and(vernaculars::Column::OwnerId.eq(**caller_id))
-                } else {
-                    return Err(DcAppError::unauthorized(
-                        "must be logged in to use slug format",
-                    ));
-                }
             }
         };
         if action.enforce_owner() {
@@ -111,21 +111,21 @@ impl VernacularRepo {
     pub(super) async fn generate_many_filter<I>(
         &self,
         aliases: I,
-        caller_id: i64,
+        caller_id: Id,
     ) -> Result<FindManyVernacularComponents, DcAppError>
     where
-        I: IntoIterator<Item = VernacularAlias>,
+        I: IntoIterator<Item = VernacularRef>,
     {
         let aliases = aliases.into_iter().collect::<Vec<_>>();
-        let mut required_usernames = HashSet::<String>::new();
+        let mut required_usernames = HashSet::<Slug>::new();
         for alias in &aliases {
-            let VernacularAlias::Alias(alias) = alias else {
+            let VernacularRef::Qualified(alias) = alias else {
                 continue;
             };
-            let SimpleAlias::Slug(username) = &alias.user_alias else {
+            let Some(UserAlias::Username(username)) = &alias.user_alias else {
                 continue;
             };
-            required_usernames.insert(username.clone().into());
+            required_usernames.insert(username.username().clone().into());
         }
         let required_usernames = required_usernames.iter().collect::<Vec<_>>();
         let username_to_auth_user_ids = self
@@ -135,21 +135,19 @@ impl VernacularRepo {
         let mut exprs = HashMap::new();
         for alias in aliases {
             let expr = match &alias {
-                VernacularAlias::Id(id) => vernaculars::Column::Id.eq(**id),
-                VernacularAlias::Alias(alias) => {
+                VernacularRef::Id(id) => vernaculars::Column::Id.eq(**id),
+                VernacularRef::Qualified(alias) => {
                     let slug_expr = vernaculars::Column::Slug.eq(&**alias.slug);
                     let owner_auth_user_id = match &alias.user_alias {
-                        UserAlias::Id(id) => **id,
-                        UserAlias::Slug(username) => {
-                            *username_to_auth_user_ids.get(&**username).unwrap()
-                        }
+                        Some(UserAlias::Id(id)) => &*id.id(),
+                        Some(UserAlias::Username(username)) => &*username_to_auth_user_ids
+                            .get(&*username.username())
+                            .unwrap(),
+                        None => &caller_id,
                     };
-                    let owner_expr = Self::generate_joined_owner_filter(owner_auth_user_id);
+                    let owner_expr = Self::generate_joined_owner_filter(**owner_auth_user_id);
                     slug_expr.and(owner_expr)
                 }
-                VernacularAlias::Slug(slug) => vernaculars::Column::Slug
-                    .eq(&**slug)
-                    .and(Self::generate_joined_owner_filter(caller_id)),
             };
             exprs.insert(alias, expr);
         }
@@ -164,7 +162,7 @@ impl VernacularRepo {
     pub(crate) async fn inner_get_vernacular<C>(
         &self,
         conn: &C,
-        alias: VernacularAlias,
+        alias: VernacularRef,
         context: RequestContext,
         action: VernacularAction,
     ) -> Result<Option<vernaculars::Model>, DcAppError>
@@ -182,7 +180,7 @@ impl VernacularRepo {
     pub async fn get_vernacular<C>(
         &self,
         conn: &C,
-        alias: VernacularAlias,
+        alias: VernacularRef,
         context: RequestContext,
     ) -> Result<Option<vernaculars::Model>, DcAppError>
     where
@@ -196,7 +194,7 @@ impl VernacularRepo {
         &self,
         conn: &C,
         dto: CreateVernacularDto,
-        owner_auth_user_id: i64,
+        owner_auth_user_id: Id,
         context: RequestContext,
     ) -> Result<vernaculars::Model, DcAppError>
     where
@@ -222,14 +220,14 @@ impl VernacularRepo {
         &self,
         conn: &C,
         dto: CreateVernacularDto,
-        owner_auth_user_id: i64,
+        owner_auth_user_id: Id,
         context: RequestContext,
     ) -> Result<vernaculars::Model, DcAppError>
     where
         C: ConnectionTrait,
     {
         let slug = dto.slug.clone();
-        let am = dto.to_active_model(owner_auth_user_id);
+        let am = dto.to_active_model(owner_auth_user_id.clone());
         let result = vernaculars::Entity::insert(am)
             .on_conflict_do_nothing_on([vernaculars::Column::Slug, vernaculars::Column::OwnerId])
             .exec_with_returning(conn)
@@ -244,9 +242,9 @@ impl VernacularRepo {
             TryInsertResult::Conflicted => self
                 .get_vernacular(
                     conn,
-                    VernacularAlias::Alias(AliasedVernacular {
+                    VernacularRef::Qualified(QualifiedVernacular {
                         slug,
-                        user_alias: UserAlias::Id(owner_auth_user_id.into()),
+                        user_alias: Some(UserAlias::from_id(owner_auth_user_id)),
                     }),
                     context,
                 )
@@ -274,7 +272,7 @@ impl VernacularRepo {
     pub async fn update_vernacular<C>(
         &self,
         conn: &C,
-        alias: VernacularAlias,
+        alias: VernacularRef,
         dto: UpdateVernacularDto,
         context: RequestContext,
     ) -> Result<Option<vernaculars::Model>, DcAppError>
@@ -299,7 +297,7 @@ impl VernacularRepo {
     pub async fn delete_vernacular<C>(
         &self,
         conn: &C,
-        alias: VernacularAlias,
+        alias: VernacularRef,
         context: RequestContext,
     ) -> Result<Option<vernaculars::Model>, DcAppError>
     where

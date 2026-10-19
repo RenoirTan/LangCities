@@ -29,6 +29,10 @@ impl UserId {
         Self { id, explicit_type }
     }
 
+    pub fn from_id(id: Id) -> Self {
+        Self::new(id, false)
+    }
+
     pub fn id(&self) -> &Id {
         &self.id
     }
@@ -80,6 +84,13 @@ impl Username {
     fn is_explicit(&self) -> bool {
         self.explicit_type
     }
+
+    pub fn from_slug(s: Slug) -> Self {
+        Self {
+            username: s,
+            explicit_type: false,
+        }
+    }
 }
 
 impl Display for Username {
@@ -123,6 +134,14 @@ impl UserAlias {
         }
         let username = s.parse::<Slug>()?;
         Ok(Self::Username(Username::new(username, explicit_type)))
+    }
+
+    pub fn from_id(id: Id) -> Self {
+        Self::Id(UserId::from_id(id))
+    }
+
+    pub fn from_slug(s: Slug) -> Self {
+        Self::Username(Username::from_slug(s))
     }
 }
 

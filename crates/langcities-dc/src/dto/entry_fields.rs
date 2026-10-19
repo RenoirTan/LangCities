@@ -1,7 +1,9 @@
 use std::{collections::HashMap, fmt::Display};
 
 use chrono::{DateTime, Utc};
-use langcities_lcdcdsl::component::{EntryAlias, EntryFieldAlias, Id, UserAlias, VernacularAlias};
+use langcities_lcdcdsl::component::{
+    EntryFieldAlias, EntryFieldRef, EntryRef, Id, Index, Slug, UserAlias, VernacularRef,
+};
 use sea_orm::ActiveValue;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -9,6 +11,7 @@ use utoipa::ToSchema;
 use crate::{
     dto::entries::EntryAliasDto,
     entity::{entries, entry_fields},
+    error::{DcAppError, DcAppErrorTrait},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -21,6 +24,7 @@ impl Display for EntryFieldAliasDto {
     }
 }
 
+/// TODO: optional current_entry_id
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct GetManyEntryFieldAliasDto {
     pub aliases: Vec<EntryFieldAliasDto>,
@@ -28,33 +32,35 @@ pub struct GetManyEntryFieldAliasDto {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldDto {
-    pub id: i64,
-    pub entry_id: i64,
-    pub slug: String,
+    pub id: Id,
+    pub entry_id: Id,
+    pub slug: Slug,
     pub override_value: String,
     pub dirty_value: String,
     pub clean_value: String,
     pub updated_at: DateTime<Utc>,
 }
 
-impl From<entry_fields::Model> for EntryFieldDto {
-    fn from(value: entry_fields::Model) -> Self {
-        Self {
-            id: value.id,
-            entry_id: value.entry_id,
-            slug: value.slug,
+impl TryFrom<entry_fields::Model> for EntryFieldDto {
+    type Error = DcAppError;
+
+    fn try_from(value: entry_fields::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value.id.into(),
+            entry_id: value.entry_id.into(),
+            slug: value.slug.try_into().map_err(DcAppError::database)?,
             override_value: value.override_value,
             dirty_value: value.dirty_value,
             clean_value: value.clean_value,
             updated_at: value.updated_at,
-        }
+        })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct CreateEntryFieldDto {
     pub entry: EntryAliasDto,
-    pub slug: String,
+    pub slug: Slug,
     pub override_value: Option<String>,
 }
 
@@ -75,7 +81,7 @@ impl CreateEntryFieldDto {
         entry: &entries::Model,
     ) -> &'m mut entry_fields::ActiveModel {
         am.entry_id = ActiveValue::Set(entry.id);
-        am.slug = ActiveValue::Set(self.slug);
+        am.slug = ActiveValue::Set(self.slug.into());
         am.override_value = ActiveValue::Set(self.override_value.unwrap_or_default());
         am
     }
@@ -108,43 +114,51 @@ impl UpdateEntryFieldDto {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldWithContext {
     pub entry_field: EntryFieldDto,
-    pub entry_index: i64,
-    pub vernacular_id: i64,
-    pub vernacular_slug: String,
-    pub owner_auth_user_id: i64,
+    pub entry_index: Index,
+    pub vernacular_id: Id,
+    pub vernacular_slug: Slug,
+    pub owner_auth_user_id: Id,
     /// username may not be populated if not specifically called for
-    pub owner_username: Option<String>,
+    pub owner_username: Option<Slug>,
 }
 
 impl EntryFieldWithContext {
-    pub fn matches_alias(&self, alias: &EntryFieldAlias, caller_id: &Id) -> bool {
-        let ef_alias = match alias {
-            EntryFieldAlias::Id(id) => return **id == self.entry_field.id,
-            EntryFieldAlias::Alias(alias) => alias,
+    pub fn matches_ref(
+        &self,
+        alias: &EntryFieldRef,
+        caller_id: &Id,
+        entry_id: Option<&Id>,
+    ) -> bool {
+        let qualified_ef = match alias {
+            EntryFieldRef::Id(id) => return *id == self.entry_field.id,
+            EntryFieldRef::Qualified(alias) => alias,
         };
-        if *ef_alias.slug != self.entry_field.slug {
+        if qualified_ef.slug != self.entry_field.slug {
             return false;
         }
-        let entry_alias = match &ef_alias.entry_alias {
-            EntryAlias::Id(id) => return **id == self.entry_field.entry_id,
-            EntryAlias::Alias(alias) => alias,
+        let qualified_entry = match &qualified_ef.entry {
+            Some(EntryRef::Id(id)) => return *id == self.entry_field.entry_id,
+            Some(EntryRef::Qualified(alias)) => alias,
+            None => return entry_id == Some(&self.entry_field.entry_id),
         };
-        if *entry_alias.index != self.entry_index {
+        if (qualified_entry.index.is_none() && entry_id == Some(&self.entry_field.entry_id))
+            || qualified_entry.index.as_ref() != Some(&self.entry_index)
+        {
             return false;
         }
-        let ver_alias = match &entry_alias.vernacular_alias {
-            VernacularAlias::Id(id) => return **id == self.vernacular_id,
-            VernacularAlias::Slug(slug) => {
-                return **slug == self.vernacular_slug && **caller_id == self.owner_auth_user_id;
-            }
-            VernacularAlias::Alias(alias) => alias,
+        let ver_alias = match &qualified_entry.vernacular {
+            VernacularRef::Id(id) => return *id == self.vernacular_id,
+            VernacularRef::Qualified(alias) => alias,
         };
-        if *ver_alias.slug != self.vernacular_slug {
+        if ver_alias.slug != self.vernacular_slug {
             return false;
         }
         match &ver_alias.user_alias {
-            UserAlias::Id(id) => **id == self.owner_auth_user_id,
-            UserAlias::Slug(username) => Some(&**username) == self.owner_username.as_ref(),
+            Some(UserAlias::Id(id)) => *id.id() == self.owner_auth_user_id,
+            Some(UserAlias::Username(username)) => {
+                Some(username.username()) == self.owner_username.as_ref()
+            }
+            None => *caller_id == self.owner_auth_user_id,
         }
     }
 }

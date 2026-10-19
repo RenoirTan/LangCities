@@ -207,7 +207,7 @@ impl EntryFieldJobRepo {
         C: ConnectionTrait,
     {
         if let Some(model) = self
-            .refresh_latest_active_entry_field_job_for(conn, dto.entry_field_id.into())
+            .refresh_latest_active_entry_field_job_for(conn, dto.entry_field_id.clone())
             .await?
         {
             Ok(model)
@@ -228,7 +228,7 @@ impl EntryFieldJobRepo {
     {
         let checked_dtos = dtos
             .into_iter()
-            .map(|dto| (Id::from(dto.entry_field_id), dto))
+            .map(|dto| (dto.entry_field_id.clone(), dto))
             .collect::<HashMap<_, _>>();
         let updated_jobs = self
             .refresh_latest_active_entry_field_job_for_many(conn, checked_dtos.keys().cloned())

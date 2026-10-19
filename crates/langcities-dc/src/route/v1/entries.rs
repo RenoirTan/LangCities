@@ -33,10 +33,12 @@ pub async fn get_entry(
     State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
     EntryRepo::from_state(state.inner.clone())
-        .get_entry(&state.db, alias.0.clone(), request_context)
+        .get_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
-        .map(|m| Json(m.into()))
+        .map(|m| m.try_into())
         .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
+        .flatten()
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -54,10 +56,10 @@ pub async fn create_entry(
     request_context: RequestContext,
     Json(dto): Json<CreateEntryDto>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.inner.clone())
+    let model = EntryRepo::from_state(state.inner.clone())
         .create_entry(&state.db, dto, request_context)
-        .await
-        .map(|m| Json(m.into()))
+        .await?;
+    Ok(Json(model.try_into()?))
 }
 
 /*
@@ -120,10 +122,12 @@ pub async fn delete_entry(
     State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
     EntryRepo::from_state(state.inner.clone())
-        .delete_entry(&state.db, alias.0.clone(), request_context)
+        .delete_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
-        .map(|m| Json(m.into()))
+        .map(|m| m.try_into())
         .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
+        .flatten()
+        .map(Json)
 }
 
 pub fn get_v1_entries_router() -> Router<ApiState> {

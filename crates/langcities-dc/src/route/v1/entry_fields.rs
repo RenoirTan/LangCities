@@ -38,10 +38,12 @@ pub async fn get_entry_field(
     State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
     EntryFieldRepo::from_state(state.inner.clone())
-        .get_entry_field(&state.db, alias.0.clone(), request_context)
+        .get_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
-        .map(|f| Json(f.into()))
+        .map(|f| f.try_into())
         .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+        .flatten()
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -58,9 +60,9 @@ pub async fn get_entry_fields(
     State(state): State<ApiState>,
     Json(dto): Json<GetManyEntryFieldAliasDto>,
 ) -> Result<Json<FoundManyEntryFields>, DcAppError> {
-    let aliases = dto.aliases.into_iter().map(|a| a.0);
+    let aliases = dto.aliases.into_iter().map(|a| a.0.into());
     EntryFieldRepo::from_state(state.inner.clone())
-        .get_entry_fields(&state.db, aliases, request_context)
+        .get_entry_fields(&state.db, aliases, request_context, None)
         .await
         .map(Json)
 }
@@ -83,7 +85,9 @@ pub async fn create_entry_field(
     EntryFieldRepo::from_state(state.inner.clone())
         .create_entry_field(&state.db, dto, request_context)
         .await
-        .map(|f| Json(f.into()))
+        .map(|f| f.try_into())
+        .flatten()
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -109,7 +113,13 @@ pub async fn update_entry_field(
     Json(dto): Json<UpdateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
     let (old, new) = EntryFieldRepo::from_state(state.inner.clone())
-        .update_entry_field_returning_original(&state.db, alias.0.clone(), dto, request_context)
+        .update_entry_field_returning_original(
+            &state.db,
+            alias.0.clone().into(),
+            dto,
+            request_context,
+            None,
+        )
         .await?
         .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))?;
     if old.override_value != new.override_value {
@@ -126,7 +136,7 @@ pub async fn update_entry_field(
             .await
             .map_err(DcAppError::messaging)?;
     }
-    Ok(Json(new.into()))
+    Ok(Json(new.try_into()?))
 }
 
 #[utoipa::path(
@@ -150,10 +160,12 @@ pub async fn delete_entry_field(
     State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
     EntryFieldRepo::from_state(state.inner.clone())
-        .delete_entry_field(&state.db, alias.0.clone(), request_context)
+        .delete_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
-        .map(|f| Json(f.into()))
+        .map(|f| f.try_into())
         .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+        .flatten()
+        .map(Json)
 }
 
 pub fn get_v1_entry_fields_router() -> Router<ApiState> {

@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use axum::extract::FromRequestParts;
-use langcities_lcdcdsl::component::UserAlias;
+use langcities_lcdcdsl::component::{Id, UserAlias};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, IntoParams)]
 pub struct GetUsersQueryDto {
-    pub auth_user_id: i64,
+    pub auth_user_id: Id,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -23,16 +23,18 @@ pub struct GetUserParamsDto(pub UserAlias);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UserDto {
-    pub id: i64,
-    pub auth_user_id: i64,
+    pub id: Id,
+    pub auth_user_id: Id,
 }
 
-impl From<dc_users::Model> for UserDto {
-    fn from(model: dc_users::Model) -> Self {
-        UserDto {
-            id: model.id,
-            auth_user_id: model.auth_user_id,
-        }
+impl TryFrom<dc_users::Model> for UserDto {
+    type Error = DcAppError;
+
+    fn try_from(model: dc_users::Model) -> Result<Self, Self::Error> {
+        Ok(UserDto {
+            id: model.id.into(),
+            auth_user_id: model.auth_user_id.into(),
+        })
     }
 }
 
@@ -77,7 +79,8 @@ where
     ) -> Result<Self, Self::Rejection> {
         dc_users::Model::from_request_parts(parts, state)
             .await
-            .map(|m| m.into())
+            .map(|m| m.try_into())
+            .flatten()
     }
 }
 

@@ -37,6 +37,22 @@ impl Display for QualifiedEntryField {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum EntryFieldRef {
+    Id(Id),
+    Qualified(QualifiedEntryField),
+}
+
+impl Display for EntryFieldRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Id(a) => a.fmt(f),
+            Self::Qualified(a) => a.fmt(f),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum EntryFieldAlias {
     Id(Id),
     Qualified(QualifiedAlias<QualifiedEntryField>),
@@ -117,6 +133,24 @@ impl FromStr for EntryFieldAlias {
                 )))
             }
             _ => Err(DslError::bad_value_of(s)),
+        }
+    }
+}
+
+impl From<EntryFieldRef> for EntryFieldAlias {
+    fn from(value: EntryFieldRef) -> Self {
+        match value {
+            EntryFieldRef::Id(id) => Self::Id(id),
+            EntryFieldRef::Qualified(alias) => Self::Qualified(QualifiedAlias::from_value(alias)),
+        }
+    }
+}
+
+impl Into<EntryFieldRef> for EntryFieldAlias {
+    fn into(self) -> EntryFieldRef {
+        match self {
+            Self::Id(id) => EntryFieldRef::Id(id),
+            Self::Qualified(alias) => EntryFieldRef::Qualified(alias.value),
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use chrono::{DateTime, Utc};
+use langcities_lcdcdsl::component::Id;
 use sea_orm::{ActiveValue, Value};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -82,8 +83,8 @@ impl Into<Value> for &EntryFieldJobStatus {
 /// TODO: Add refreshed_at so that finishing workers can check if their initial data was stale
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldJobDto {
-    pub id: i64,
-    pub entry_field_id: i64,
+    pub id: Id,
+    pub entry_field_id: Id,
     pub status: EntryFieldJobStatus,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -96,8 +97,8 @@ impl TryFrom<entry_field_jobs::Model> for EntryFieldJobDto {
 
     fn try_from(value: entry_field_jobs::Model) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: value.id,
-            entry_field_id: value.entry_field_id,
+            id: value.id.into(),
+            entry_field_id: value.entry_field_id.into(),
             status: value.status.parse::<EntryFieldJobStatus>()?,
             created_at: value.created_at,
             updated_at: value.updated_at,
@@ -109,13 +110,13 @@ impl TryFrom<entry_field_jobs::Model> for EntryFieldJobDto {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CreateEntryFieldJobDto {
-    pub entry_field_id: i64,
+    pub entry_field_id: Id,
 }
 
 impl CreateEntryFieldJobDto {
     pub fn to_active_model(self, expires_at: DateTime<Utc>) -> entry_field_jobs::ActiveModel {
         entry_field_jobs::ActiveModel {
-            entry_field_id: ActiveValue::Set(self.entry_field_id),
+            entry_field_id: ActiveValue::Set(self.entry_field_id.into()),
             expires_at: ActiveValue::Set(expires_at),
             status: ActiveValue::Set(EntryFieldJobStatus::Queued.to_string()),
             ..Default::default()

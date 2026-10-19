@@ -6,6 +6,7 @@ use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use langcities_jwt::payload::{Claims, ParseJwtClaims, ParsedClaims};
+use langcities_lcdcdsl::component::Id;
 use sea_orm::{ConnectionTrait, TransactionTrait};
 use std::sync::Arc;
 
@@ -15,7 +16,10 @@ pub(crate) async fn resolve_current_user<C: ConnectionTrait + TransactionTrait>(
 ) -> Result<Option<dc_users::Model>, DcAppError> {
     let auth_user_id = claims.sub_to_id().map_err(DcAppError::unauthorized)?;
     match auth_user_id {
-        Some(id) => UserRepo.get_or_create_user(conn, id).await.map(Some),
+        Some(id) => UserRepo
+            .get_or_create_user(conn, Id::from(id))
+            .await
+            .map(Some),
         None => Ok(None),
     }
 }

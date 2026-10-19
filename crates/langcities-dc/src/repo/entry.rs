@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::{EntryAlias, VernacularAlias};
+use langcities_lcdcdsl::component::{EntryRef, Id, Slug, VernacularRef};
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
     IntoActiveModel, QueryFilter, TransactionError, TransactionTrait,
@@ -19,9 +19,9 @@ use crate::{
 
 #[derive(Clone)]
 pub(super) struct FindManyEntryComponents {
-    pub exprs: HashMap<EntryAlias, Expr>,
+    pub exprs: HashMap<EntryRef, Expr>,
     /// auth_user_id to username
-    pub usernames: HashMap<i64, String>,
+    pub usernames: HashMap<Id, Slug>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,12 +67,12 @@ impl EntryRepo {
 
     pub async fn generate_filter(
         &self,
-        alias: EntryAlias,
+        alias: EntryRef,
         context: RequestContext,
         action: EntryAction,
     ) -> Result<Expr, DcAppError> {
         let (entry_expr, ver_expr) = match alias {
-            EntryAlias::Id(id) => {
+            EntryRef::Id(id) => {
                 let id_expr = entries::Column::Id.eq(*id);
                 if action.enforce_owner() {
                     if let Some(auth_user_id) = context.caller_id {
@@ -87,12 +87,15 @@ impl EntryRepo {
                     (id_expr, None)
                 }
             }
-            EntryAlias::Alias(alias) => {
-                let index_expr = entries::Column::Index.eq(*alias.index);
+            EntryRef::Qualified(alias) => {
+                let Some(index) = alias.index else {
+                    return Err(DcAppError::bad_request("entry cannot have wildcard index"));
+                };
+                let index_expr = entries::Column::Index.eq(*index);
                 let ver_expr = self
                     .vernacular_repo
                     .generate_filter(
-                        alias.vernacular_alias,
+                        alias.vernacular.into(),
                         context,
                         action.to_vernacular_action(),
                     )
@@ -120,18 +123,19 @@ impl EntryRepo {
     pub(super) async fn generate_many_filter<I>(
         &self,
         aliases: I,
-        caller_id: i64,
+        caller_id: Id,
+        current_entry_id: Option<Id>,
     ) -> Result<FindManyEntryComponents, DcAppError>
     where
-        I: IntoIterator<Item = EntryAlias>,
+        I: IntoIterator<Item = EntryRef>,
     {
         let aliases = aliases.into_iter().collect::<Vec<_>>();
-        let mut required_vernaculars = HashSet::<VernacularAlias>::new();
+        let mut required_vernaculars = HashSet::<VernacularRef>::new();
         for alias in &aliases {
-            let EntryAlias::Alias(alias) = alias else {
+            let EntryRef::Qualified(alias) = alias else {
                 continue;
             };
-            required_vernaculars.insert(alias.vernacular_alias.clone());
+            required_vernaculars.insert(alias.vernacular.clone());
         }
         let ver_comps = self
             .vernacular_repo
@@ -140,14 +144,19 @@ impl EntryRepo {
         let mut exprs = HashMap::new();
         for alias in aliases {
             let expr = match &alias {
-                EntryAlias::Id(id) => entries::Column::Id.eq(**id),
-                EntryAlias::Alias(alias) => {
-                    let index_expr = entries::Column::Index.eq(*alias.index);
-                    let ver_expr = ver_comps
-                        .exprs
-                        .get(&alias.vernacular_alias)
-                        .unwrap()
-                        .clone();
+                EntryRef::Id(id) => entries::Column::Id.eq(**id),
+                EntryRef::Qualified(alias) => {
+                    let index_expr = entries::Column::Index.eq(**alias
+                        .index
+                        .as_ref()
+                        .or_else(|| current_entry_id.as_ref())
+                        .ok_or_else(|| {
+                            DcAppError::bad_request(
+                                "cannot find entry with wildcard index without current entry",
+                            )
+                        })?);
+                    // TODO: hashmap of VernacularRef instead of VernacularAlias
+                    let ver_expr = ver_comps.exprs.get(&alias.vernacular).unwrap().clone();
                     index_expr.and(ver_expr)
                 }
             };
@@ -162,7 +171,7 @@ impl EntryRepo {
     pub(crate) async fn inner_get_entry<C>(
         &self,
         conn: &C,
-        alias: EntryAlias,
+        alias: EntryRef,
         context: RequestContext,
         action: EntryAction,
     ) -> Result<Option<entries::Model>, DcAppError>
@@ -180,7 +189,7 @@ impl EntryRepo {
     pub async fn get_entry<C>(
         &self,
         conn: &C,
-        alias: EntryAlias,
+        alias: EntryRef,
         context: RequestContext,
     ) -> Result<Option<entries::Model>, DcAppError>
     where
@@ -203,7 +212,7 @@ impl EntryRepo {
             .vernacular_repo
             .inner_get_vernacular(
                 conn,
-                dto.vernacular.clone().0,
+                dto.vernacular.clone().0.into(),
                 context,
                 VernacularAction::Write,
             )
@@ -245,7 +254,7 @@ impl EntryRepo {
     pub async fn delete_entry<C>(
         &self,
         conn: &C,
-        alias: EntryAlias,
+        alias: EntryRef,
         context: RequestContext,
     ) -> Result<Option<entries::Model>, DcAppError>
     where

@@ -98,8 +98,16 @@ impl<T> QualifiedAlias<T> {
         }
     }
 
+    pub fn from_value(value: T) -> Self {
+        Self::new(value, true)
+    }
+
     pub fn is_explicit(&self) -> bool {
         self.explicit_type
+    }
+
+    pub fn to_inner(self) -> T {
+        self.value
     }
 }
 

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 use langcities_common_server::dto::request::RequestContext;
-use langcities_lcdcdsl::component::{EntryFieldAlias, Id};
+use langcities_lcdcdsl::component::{EntryFieldAlias, EntryFieldRef, EntryRef, Id, Slug};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, ExprTrait,
     FromQueryResult, IntoActiveModel, JoinType, QueryFilter, QuerySelect, RelationTrait,
@@ -42,31 +42,31 @@ struct EntryFieldWithSelectableContext {
 }
 
 impl EntryFieldWithSelectableContext {
-    fn to_normal(self, usernames: &HashMap<i64, String>) -> EntryFieldWithContext {
-        let username = usernames.get(&self.owner_auth_user_id);
-        EntryFieldWithContext {
+    fn to_normal(self, usernames: &HashMap<Id, Slug>) -> Result<EntryFieldWithContext, DcAppError> {
+        let username = usernames.get(&self.owner_auth_user_id.into());
+        Ok(EntryFieldWithContext {
             entry_field: EntryFieldDto {
-                id: self.id,
-                entry_id: self.entry_id,
-                slug: self.slug,
+                id: self.id.into(),
+                entry_id: self.entry_id.into(),
+                slug: self.slug.parse().map_err(DcAppError::database)?,
                 override_value: self.override_value,
                 dirty_value: self.dirty_value,
                 clean_value: self.clean_value,
                 updated_at: self.updated_at,
             },
-            entry_index: self.entry_index,
-            vernacular_id: self.vernacular_id,
-            vernacular_slug: self.vernacular_slug,
-            owner_auth_user_id: self.owner_auth_user_id,
+            entry_index: self.entry_index.into(),
+            vernacular_id: self.vernacular_id.into(),
+            vernacular_slug: self.vernacular_slug.parse().map_err(DcAppError::database)?,
+            owner_auth_user_id: self.owner_auth_user_id.into(),
             owner_username: username.cloned(),
-        }
+        })
     }
 }
 
 #[derive(Clone)]
 struct FindManyEntryFieldComponents {
-    pub exprs: HashMap<EntryFieldAlias, Expr>,
-    pub usernames: HashMap<i64, String>,
+    pub exprs: HashMap<EntryFieldRef, Expr>,
+    pub usernames: HashMap<Id, Slug>,
 }
 
 /// Intermediate data structure when finding entry fields by alias
@@ -74,30 +74,31 @@ struct FindManyEntryFieldComponents {
 /// Convert to [`FoundManyEntryFields`]
 #[derive(Clone)]
 struct FoundManyEntryFieldComponents {
-    pub aliases: HashSet<EntryFieldAlias>,
+    pub aliases: HashSet<EntryFieldRef>,
     pub entry_fields: Vec<EntryFieldWithSelectableContext>,
-    pub usernames: HashMap<i64, String>,
+    pub usernames: HashMap<Id, Slug>,
     pub caller_id: Id,
+    pub current_entry_id: Option<Id>,
 }
 
-impl TryInto<FoundManyEntryFields> for FoundManyEntryFieldComponents {
-    type Error = DcAppError;
-
-    fn try_into(self) -> Result<FoundManyEntryFields, DcAppError> {
+impl FoundManyEntryFieldComponents {
+    /// TODO: require original EntryFieldAlias to replace EntryFieldRef
+    pub fn to_found_fields(self) -> Result<FoundManyEntryFields, DcAppError> {
         let entry_fields = self
             .entry_fields
             .into_iter()
             .map(|ef| ef.to_normal(&self.usernames))
-            .collect::<Vec<_>>();
-        let mut aliases = HashMap::new();
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut aliases = HashMap::<EntryFieldAlias, _>::new();
         'outer: for alias in self.aliases {
             for (i, entry_field) in entry_fields.iter().enumerate() {
-                if entry_field.matches_alias(&alias, &self.caller_id) {
-                    aliases.insert(alias, Some(i));
+                if entry_field.matches_ref(&alias, &self.caller_id, self.current_entry_id.as_ref())
+                {
+                    aliases.insert(alias.into(), Some(i));
                     continue 'outer;
                 }
             }
-            aliases.insert(alias, None);
+            aliases.insert(alias.into(), None);
         }
         Ok(FoundManyEntryFields {
             entry_fields,
@@ -161,12 +162,13 @@ impl EntryFieldRepo {
 
     pub async fn generate_filter(
         &self,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         context: RequestContext,
         action: EntryFieldAction,
+        current_entry_id: Option<Id>,
     ) -> Result<Expr, DcAppError> {
         let (field_expr, entry_expr) = match &alias {
-            EntryFieldAlias::Id(id) => {
+            EntryFieldRef::Id(id) => {
                 let id_expr = entry_fields::Column::Id.eq(**id);
                 if action.enforce_owner() {
                     if let Some(auth_user_id) = &context.caller_id {
@@ -186,11 +188,18 @@ impl EntryFieldRepo {
                     (id_expr, None)
                 }
             }
-            EntryFieldAlias::Alias(alias) => {
+            EntryFieldRef::Qualified(alias) => {
+                let entry_alias = alias
+                    .entry
+                    .clone()
+                    .or_else(|| current_entry_id.map(|id| EntryRef::Id(id)))
+                    .ok_or_else(|| {
+                        DcAppError::bad_request("no entry specified, cannot search for field")
+                    })?;
                 let slug_expr = entry_fields::Column::Slug.eq(&*alias.slug);
                 let entry_expr = self
                     .entry_repo
-                    .generate_filter(alias.entry_alias.clone(), context, action.to_entry_action())
+                    .generate_filter(entry_alias, context, action.to_entry_action())
                     .await?;
                 (slug_expr, Some(entry_expr))
             }
@@ -215,30 +224,43 @@ impl EntryFieldRepo {
     pub(super) async fn generate_many_filter<I>(
         &self,
         aliases: I,
-        caller_id: i64,
+        caller_id: Id,
+        current_entry_id: Option<Id>,
     ) -> Result<FindManyEntryFieldComponents, DcAppError>
     where
-        I: IntoIterator<Item = EntryFieldAlias>,
+        I: IntoIterator<Item = EntryFieldRef>,
     {
+        let current_entry_ref = current_entry_id.clone().map(EntryRef::Id);
         let mut required_entries = HashSet::new();
         let aliases = aliases.into_iter().collect::<Vec<_>>();
         for alias in &aliases {
-            let EntryFieldAlias::Alias(alias) = alias else {
+            let EntryFieldRef::Qualified(alias) = alias else {
                 continue;
             };
-            required_entries.insert(alias.entry_alias.clone());
+            let entry_alias = alias
+                .entry
+                .clone()
+                .or_else(|| current_entry_ref.clone())
+                .ok_or_else(|| {
+                    DcAppError::bad_request("no current entry specified for relative entry field")
+                })?;
+            required_entries.insert(entry_alias);
         }
         let entry_comps = self
             .entry_repo
-            .generate_many_filter(required_entries, caller_id)
+            .generate_many_filter(required_entries, caller_id, current_entry_id)
             .await?;
         let mut exprs = HashMap::new();
         for alias in aliases {
             let expr = match &alias {
-                EntryFieldAlias::Id(id) => entry_fields::Column::Id.eq(**id),
-                EntryFieldAlias::Alias(alias) => {
+                EntryFieldRef::Id(id) => entry_fields::Column::Id.eq(**id),
+                EntryFieldRef::Qualified(alias) => {
                     let slug_expr = entry_fields::Column::Slug.eq(&*alias.slug);
-                    let entry_expr = entry_comps.exprs.get(&alias.entry_alias).unwrap().clone();
+                    let entry_expr = entry_comps
+                        .exprs
+                        .get(alias.entry.as_ref().or(current_entry_ref.as_ref()).unwrap())
+                        .unwrap()
+                        .clone();
                     slug_expr.and(entry_expr)
                 }
             };
@@ -253,14 +275,17 @@ impl EntryFieldRepo {
     async fn inner_get_entry_field<C>(
         &self,
         conn: &C,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         context: RequestContext,
         action: EntryFieldAction,
+        current_entry_id: Option<Id>,
     ) -> Result<Option<entry_fields::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
-        let expr = self.generate_filter(alias, context, action).await?;
+        let expr = self
+            .generate_filter(alias, context, action, current_entry_id)
+            .await?;
         entry_fields::Entity::find()
             .filter(expr)
             .one(conn)
@@ -273,12 +298,15 @@ impl EntryFieldRepo {
         conn: &C,
         aliases: I,
         caller_id: Id,
+        current_entry_id: Option<Id>,
     ) -> Result<FoundManyEntryFieldComponents, DcAppError>
     where
         C: ConnectionTrait,
-        I: IntoIterator<Item = EntryFieldAlias>,
+        I: IntoIterator<Item = EntryFieldRef>,
     {
-        let ef_comps = self.generate_many_filter(aliases, *caller_id).await?;
+        let ef_comps = self
+            .generate_many_filter(aliases, caller_id.clone(), current_entry_id.clone())
+            .await?;
         let mut aliases = HashSet::new();
         let mut cond = Condition::any();
         for (alias, expr) in ef_comps.exprs {
@@ -303,20 +331,28 @@ impl EntryFieldRepo {
             entry_fields,
             usernames: ef_comps.usernames,
             caller_id,
+            current_entry_id,
         })
     }
 
     pub async fn get_entry_field<C>(
         &self,
         conn: &C,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         context: RequestContext,
+        current_entry_id: Option<Id>,
     ) -> Result<Option<entry_fields::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
-        self.inner_get_entry_field(conn, alias, context, EntryFieldAction::Read)
-            .await
+        self.inner_get_entry_field(
+            conn,
+            alias,
+            context,
+            EntryFieldAction::Read,
+            current_entry_id,
+        )
+        .await
     }
 
     pub async fn get_entry_fields<C, I>(
@@ -324,18 +360,19 @@ impl EntryFieldRepo {
         conn: &C,
         aliases: I,
         context: RequestContext,
+        current_entry_id: Option<Id>,
     ) -> Result<FoundManyEntryFields, DcAppError>
     where
         C: ConnectionTrait,
-        I: IntoIterator<Item = EntryFieldAlias>,
+        I: IntoIterator<Item = EntryFieldRef>,
     {
         let Some(caller_id) = context.caller_id else {
             return Err(DcAppError::bad_request("caller_id cannot be None"));
         };
         let components = self
-            .inner_find_many_entry_fields(conn, aliases, caller_id)
+            .inner_find_many_entry_fields(conn, aliases, caller_id, current_entry_id)
             .await?;
-        components.try_into()
+        components.to_found_fields()
     }
 
     async fn inner_create_entry_field<C>(
@@ -347,9 +384,10 @@ impl EntryFieldRepo {
     where
         C: ConnectionTrait,
     {
+        let entry_ref: EntryRef = dto.entry.0.clone().into();
         let entry = self
             .entry_repo
-            .inner_get_entry(conn, dto.entry.0.clone(), context, EntryAction::Write)
+            .inner_get_entry(conn, entry_ref, context, EntryAction::Write)
             .await?
             .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", dto.entry)))?;
         let entry_field = entry_fields::Entity::insert(dto.to_active_model(&entry))
@@ -383,14 +421,15 @@ impl EntryFieldRepo {
     pub async fn update_entry_field<C>(
         &self,
         conn: &C,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         dto: UpdateEntryFieldDto,
         context: RequestContext,
+        current_entry_id: Option<Id>,
     ) -> Result<Option<entry_fields::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
-        self.update_entry_field_returning_original(conn, alias, dto, context)
+        self.update_entry_field_returning_original(conn, alias, dto, context, current_entry_id)
             .await
             .map(|o| o.map(|(_old, new)| new))
     }
@@ -398,15 +437,22 @@ impl EntryFieldRepo {
     pub async fn update_entry_field_returning_original<C>(
         &self,
         conn: &C,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         dto: UpdateEntryFieldDto,
         context: RequestContext,
+        current_entry_id: Option<Id>,
     ) -> Result<Option<(entry_fields::Model, entry_fields::Model)>, DcAppError>
     where
         C: ConnectionTrait,
     {
         let old = match self
-            .inner_get_entry_field(conn, alias, context, EntryFieldAction::Write)
+            .inner_get_entry_field(
+                conn,
+                alias,
+                context,
+                EntryFieldAction::Write,
+                current_entry_id,
+            )
             .await?
         {
             Some(model) => model,
@@ -424,14 +470,21 @@ impl EntryFieldRepo {
     pub async fn delete_entry_field<C>(
         &self,
         conn: &C,
-        alias: EntryFieldAlias,
+        alias: EntryFieldRef,
         context: RequestContext,
+        current_entry_id: Option<Id>,
     ) -> Result<Option<entry_fields::Model>, DcAppError>
     where
         C: ConnectionTrait,
     {
         let entry_field = match self
-            .inner_get_entry_field(conn, alias, context, EntryFieldAction::Delete)
+            .inner_get_entry_field(
+                conn,
+                alias,
+                context,
+                EntryFieldAction::Delete,
+                current_entry_id,
+            )
             .await?
         {
             Some(model) => model,

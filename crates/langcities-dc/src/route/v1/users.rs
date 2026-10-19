@@ -25,13 +25,15 @@ pub async fn get_user(
     State(state): State<ApiState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     UserRepo
-        .get_user_by_auth_user_id(&state.db, query.auth_user_id)
+        .get_user_by_auth_user_id(&state.db, &query.auth_user_id)
         .await
         .map(|u| {
-            u.map(|u| Json(u.into()))
+            u.map(|u| u.try_into())
                 .ok_or_else(|| DcAppError::not_found(format!("{} not found", query.auth_user_id)))
+                .flatten()
         })
         .flatten()
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -48,19 +50,21 @@ pub async fn get_user_by_alias(
     State(state): State<ApiState>,
 ) -> Result<Json<UserDto>, DcAppError> {
     match &alias.0 {
-        UserAlias::Id(id) => UserRepo.get_user_by_id(&state.db, **id).await,
-        UserAlias::Slug(username) => {
-            let auth_user_id = state.resolve_auth_user_id(&**username).await?;
+        UserAlias::Id(id) => UserRepo.get_user_by_id(&state.db, id.id()).await,
+        UserAlias::Username(username) => {
+            let auth_user_id = state.resolve_auth_user_id(username.username()).await?;
             UserRepo
-                .get_user_by_auth_user_id(&state.db, auth_user_id)
+                .get_user_by_auth_user_id(&state.db, &auth_user_id)
                 .await
         }
     }
     .map(|u| {
-        u.map(|u| Json(u.into()))
+        u.map(|u| u.try_into())
             .ok_or_else(|| DcAppError::not_found(format!("{} was not found", alias.0)))
+            .flatten()
     })
     .flatten()
+    .map(Json)
 }
 
 pub fn get_v1_users_router() -> Router<ApiState> {

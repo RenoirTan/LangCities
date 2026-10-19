@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
-use langcities_lcdcdsl::component::Slug;
+use langcities_lcdcdsl::component::{Id, Slug};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::dto::vernaculars::CreateVernacularDto;
@@ -11,7 +11,7 @@ use crate::repo::user::UserRepo;
 use crate::repo::vernacular::VernacularRepo;
 use crate::state::AppState;
 
-const SEED_USER_ID: i64 = 1;
+const SEED_USER_ID: Id = Id::from_i64(1);
 const VERNACULAR_COUNT: usize = 10;
 
 #[derive(Clone)]
@@ -24,7 +24,7 @@ impl Seeder {
         Self { state }
     }
 
-    pub async fn seed_user(&self, auth_user_id: i64) -> Result<dc_users::Model, DcAppError> {
+    pub async fn seed_user(&self, auth_user_id: Id) -> Result<dc_users::Model, DcAppError> {
         UserRepo
             .get_or_create_user(&self.state.db, auth_user_id)
             .await
@@ -32,7 +32,7 @@ impl Seeder {
 
     pub async fn seed_vernaculars(
         &self,
-        auth_user_id: i64,
+        auth_user_id: Id,
         vernacular_count: usize,
     ) -> Result<HashMap<i64, String>, DcAppError> {
         let slugs = (0..vernacular_count)
@@ -48,9 +48,9 @@ impl Seeder {
             repo.create_vernacular(
                 &self.state.db,
                 dto,
-                auth_user_id,
+                auth_user_id.clone(),
                 RequestContext {
-                    caller_id: Some(auth_user_id.into()),
+                    caller_id: Some(auth_user_id.clone().into()),
                     access_kind: RequestAccessKind::System,
                 },
             )
@@ -59,7 +59,7 @@ impl Seeder {
 
         let vernacular_records = vernaculars::Entity::find()
             .left_join(dc_users::Entity)
-            .filter(dc_users::Column::AuthUserId.eq(auth_user_id))
+            .filter(dc_users::Column::AuthUserId.eq(*auth_user_id))
             .filter(vernaculars::Column::Slug.is_in(slugs))
             .all(&self.state.db)
             .await

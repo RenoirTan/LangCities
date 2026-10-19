@@ -142,6 +142,7 @@ mod tests {
     use langcities_common_db::config::PartialDbConfig;
     use langcities_common_server::config::PartialServerConfig;
     use langcities_jwt::config::{JwtAlgorithm, PartialJwtConfig};
+    use langcities_lcdcdsl::component::Slug;
     use sea_orm::DatabaseConnection;
     use serde_json::{Value, json};
     use std::sync::Mutex;
@@ -153,6 +154,14 @@ mod tests {
             "created_at": "2026-01-01T00:00:00Z",
             "updated_at": "2026-01-02T00:00:00Z",
         })
+    }
+
+    fn get_alice_slug() -> Slug {
+        "alice".parse().unwrap()
+    }
+
+    fn get_bob_slug() -> Slug {
+        "bob".parse().unwrap()
     }
 
     struct MockAuth {
@@ -247,8 +256,11 @@ mod tests {
         );
         assert!(auth.requests.lock().unwrap().is_empty());
 
+        let alice = get_alice_slug();
+        let bob = get_bob_slug();
+
         state
-            .fetch_and_cache_auth_users(&["alice".into(), "bob".into()])
+            .fetch_and_cache_auth_users(&[&alice, &bob])
             .await
             .unwrap();
         assert_eq!(
@@ -256,17 +268,14 @@ mod tests {
             ["aliases=alice&aliases=bob"]
         );
         assert_eq!(
-            state.get_cached_id_from_username(&"alice".into()).await,
-            Some(17)
+            state.get_cached_id_from_username(&alice).await,
+            Some(17.into())
         );
         assert_eq!(
-            state.get_cached_id_from_username(&"bob".into()).await,
-            Some(42)
+            state.get_cached_id_from_username(&bob).await,
+            Some(42.into())
         );
-        assert_eq!(
-            state.resolve_auth_user_id("alice".into()).await.unwrap(),
-            17
-        );
+        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
         assert_eq!(auth.requests.lock().unwrap().len(), 1);
     }
 
@@ -280,24 +289,18 @@ mod tests {
         )
         .await;
         let state = auth.state(100);
-        assert_eq!(
-            state.resolve_auth_user_id("alice".into()).await.unwrap(),
-            17
-        );
-        assert_eq!(*auth.requests.lock().unwrap(), ["aliases=alice"]);
-        assert_eq!(
-            state.resolve_auth_user_id("alice".into()).await.unwrap(),
-            17
-        );
+        let alice = get_alice_slug();
+        let bob = get_bob_slug();
+
+        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
+        assert_eq!(*auth.requests.lock().unwrap(), ["aliases=@alice"]);
+        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
         assert_eq!(auth.requests.lock().unwrap().len(), 1);
 
         // Resolution must also work when caching is disabled by a zero capacity.
         assert_eq!(
-            auth.state(0)
-                .resolve_auth_user_id("alice".into())
-                .await
-                .unwrap(),
-            17
+            auth.state(0).resolve_auth_user_id(&alice).await.unwrap(),
+            17.into()
         );
     }
 
@@ -307,7 +310,7 @@ mod tests {
         let state = auth.state(100);
         for _ in 0..2 {
             let error = state
-                .resolve_auth_user_id("missing".into())
+                .resolve_auth_user_id(&"missing".parse().unwrap())
                 .await
                 .unwrap_err();
             assert_eq!(error.kind, DcAppErrorKind::NotFound);
@@ -317,6 +320,7 @@ mod tests {
 
     #[tokio::test]
     async fn upstream_http_and_invalid_response_errors_are_bad_gateway() {
+        let alice = get_alice_slug();
         for (status, body) in [
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -339,19 +343,13 @@ mod tests {
         ] {
             let auth = MockAuth::start(status, body).await;
             let state = auth.state(100);
-            let error = state
-                .resolve_auth_user_id("alice".into())
-                .await
-                .unwrap_err();
+            let error = state.resolve_auth_user_id(&alice).await.unwrap_err();
             assert_eq!(error.kind, DcAppErrorKind::AuthService);
             assert_eq!(
                 Into::<StatusCode>::into(error.kind),
                 StatusCode::BAD_GATEWAY
             );
-            assert_eq!(
-                state.get_cached_id_from_username(&"alice".into()).await,
-                None
-            );
+            assert_eq!(state.get_cached_id_from_username(&alice).await, None);
         }
     }
 
@@ -365,7 +363,7 @@ mod tests {
             tokio::task::yield_now().await;
         }
         let error = state
-            .resolve_auth_user_id("alice".into())
+            .resolve_auth_user_id(&get_alice_slug())
             .await
             .unwrap_err();
         assert_eq!(error.kind, DcAppErrorKind::AuthService);
@@ -376,6 +374,7 @@ mod tests {
     async fn username_route_looks_up_dc_user_by_auth_id() {
         use crate::{dto::users::GetUserParamsDto, route::v1::users::get_user_by_alias};
         use axum::extract::{Path, State};
+        use langcities_lcdcdsl::component::UserAlias;
         use sea_orm::{ConnectionTrait, Database};
 
         let auth =
@@ -390,12 +389,12 @@ mod tests {
             .unwrap();
 
         let Json(user) = get_user_by_alias(
-            Path(GetUserParamsDto("alice".parse().unwrap())),
+            Path(GetUserParamsDto(UserAlias::from_slug(get_alice_slug()))),
             State(state),
         )
         .await
         .unwrap();
-        assert_eq!(user.id, 7);
-        assert_eq!(user.auth_user_id, 42);
+        assert_eq!(user.id, 7.into());
+        assert_eq!(user.auth_user_id, 42.into());
     }
 }

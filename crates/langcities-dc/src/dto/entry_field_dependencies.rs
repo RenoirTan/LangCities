@@ -60,15 +60,15 @@ impl TryFrom<entry_field_dependencies::Model> for EntryFieldDependencyDto {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ParentEntryFieldDependencyDto {
     pub parent_kind: EntryFieldDependencyParentKind,
-    pub parent_id: i64,
+    pub parent_id: Id,
 }
 
 impl ParentEntryFieldDependencyDto {
     pub fn to_active_model(self, child_id: Id) -> entry_field_dependencies::ActiveModel {
         entry_field_dependencies::ActiveModel {
-            child_entry_field_id: ActiveValue::Set(*child_id),
+            child_entry_field_id: ActiveValue::Set(child_id.into()),
             parent_kind: ActiveValue::Set(self.parent_kind.into()),
-            parent_id: ActiveValue::Set(self.parent_id),
+            parent_id: ActiveValue::Set(self.parent_id.into()),
         }
     }
 
@@ -76,7 +76,7 @@ impl ParentEntryFieldDependencyDto {
         let parent_kind: i16 = self.parent_kind.into();
         entry_field_dependencies::Column::ParentKind
             .eq(parent_kind)
-            .and(entry_field_dependencies::Column::ParentId.eq(self.parent_id))
+            .and(entry_field_dependencies::Column::ParentId.eq(*self.parent_id))
     }
 }
 

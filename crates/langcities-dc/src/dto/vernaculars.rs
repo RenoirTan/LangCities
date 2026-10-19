@@ -1,12 +1,15 @@
 use std::fmt::Display;
 
 use chrono::Utc;
-use langcities_lcdcdsl::component::{Slug, VernacularAlias};
+use langcities_lcdcdsl::component::{Id, Slug, VernacularAlias};
 use sea_orm::{ActiveValue, entity::prelude::DateTimeUtc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::entity::vernaculars;
+use crate::{
+    entity::vernaculars,
+    error::{DcAppError, DcAppErrorTrait},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String)]
@@ -20,8 +23,8 @@ impl Display for VernacularAliasDto {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct VernacularDto {
-    pub id: i64,
-    pub slug: String,
+    pub id: Id,
+    pub slug: Slug,
     pub name: String,
     #[schema(value_type = String, format = DateTime)]
     pub updated_at: DateTimeUtc,
@@ -31,33 +34,34 @@ pub struct VernacularDto {
     pub next_entry_id: i64,
 }
 
-impl From<vernaculars::Model> for VernacularDto {
-    fn from(model: vernaculars::Model) -> Self {
-        Self {
-            id: model.id,
-            slug: model.slug,
+impl TryFrom<vernaculars::Model> for VernacularDto {
+    type Error = DcAppError;
+
+    fn try_from(model: vernaculars::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: model.id.into(),
+            slug: model.slug.parse().map_err(DcAppError::database)?,
             name: model.name,
             updated_at: model.updated_at,
             created_at: model.created_at,
             owner_id: model.owner_id,
             next_entry_id: model.next_entry_id,
-        }
+        })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct CreateVernacularDto {
-    #[schema(value_type = String)]
     pub slug: Slug,
     pub name: String,
 }
 
 impl CreateVernacularDto {
-    pub fn to_active_model(self, owner_id: i64) -> vernaculars::ActiveModel {
+    pub fn to_active_model(self, owner_id: Id) -> vernaculars::ActiveModel {
         vernaculars::ActiveModel {
             slug: ActiveValue::Set(self.slug.into()),
             name: ActiveValue::Set(self.name),
-            owner_id: ActiveValue::Set(owner_id),
+            owner_id: ActiveValue::Set(owner_id.into()),
             ..Default::default()
         }
     }
@@ -65,7 +69,7 @@ impl CreateVernacularDto {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct UpdateVernacularDto {
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub name: Option<String>,
 }
 
@@ -81,7 +85,7 @@ impl UpdateVernacularDto {
         am: &mut vernaculars::ActiveModel,
     ) -> &mut vernaculars::ActiveModel {
         if let Some(slug) = self.slug {
-            am.slug = ActiveValue::Set(slug);
+            am.slug = ActiveValue::Set(slug.into());
         }
         if let Some(name) = self.name {
             am.name = ActiveValue::Set(name);
@@ -108,7 +112,7 @@ mod tests {
         let alias: VernacularAliasDto = serde_json::from_str(r#""lang@someone""#).unwrap();
 
         assert!(
-            matches!(alias.0, VernacularAlias::Alias(alias) if alias.to_string() == "lang@someone")
+            matches!(alias.0, VernacularAlias::Qualified(alias) if alias.to_string() == "lang@someone")
         );
     }
 

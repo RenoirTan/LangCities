@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
-use langcities_lcdcdsl::component::EntryAlias;
+use langcities_lcdcdsl::component::{EntryAlias, Id, Index};
 use sea_orm::ActiveValue;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 use crate::{
     dto::vernaculars::VernacularAliasDto,
     entity::{entries, vernaculars},
+    error::DcAppError,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -37,20 +38,22 @@ impl EntryAction {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryDto {
-    pub id: i64,
-    pub vernacular_id: i64,
-    pub index: i64,
+    pub id: Id,
+    pub vernacular_id: Id,
+    pub index: Index,
     pub created_at: DateTime<Utc>,
 }
 
-impl From<entries::Model> for EntryDto {
-    fn from(value: entries::Model) -> Self {
-        Self {
-            id: value.id,
-            vernacular_id: value.vernacular_id,
-            index: value.index,
+impl TryFrom<entries::Model> for EntryDto {
+    type Error = DcAppError;
+
+    fn try_from(value: entries::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value.id.into(),
+            vernacular_id: value.vernacular_id.into(),
+            index: value.index.into(),
             created_at: value.created_at,
-        }
+        })
     }
 }
 

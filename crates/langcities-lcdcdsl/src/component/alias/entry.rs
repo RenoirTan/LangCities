@@ -103,6 +103,24 @@ impl FromStr for EntryAlias {
     }
 }
 
+impl From<EntryRef> for EntryAlias {
+    fn from(value: EntryRef) -> Self {
+        match value {
+            EntryRef::Id(id) => Self::Id(id),
+            EntryRef::Qualified(alias) => Self::Qualified(QualifiedAlias::from_value(alias)),
+        }
+    }
+}
+
+impl Into<EntryRef> for EntryAlias {
+    fn into(self) -> EntryRef {
+        match self {
+            Self::Id(id) => EntryRef::Id(id),
+            Self::Qualified(alias) => EntryRef::Qualified(alias.value),
+        }
+    }
+}
+
 impl FromFullIdentifier for EntryAlias {}
 impl ToFullIdentifier for EntryAlias {}
 

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use langcities_lcdcdsl::component::Id;
 use sea_orm::ActiveValue;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -10,11 +11,11 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct EntryFieldJobAttemptDto {
-    pub id: i64,
+    pub id: Id,
     /// parent job
-    pub job_id: i64,
+    pub job_id: Id,
     /// idempotency field
-    pub worker_id: i64,
+    pub worker_id: Id,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     /// if [`None`], allowed to complete/fail the attempt as long as not expired
@@ -27,25 +28,27 @@ pub struct EntryFieldJobAttemptDto {
     pub calculated_value: Option<String>,
 }
 
-impl From<entry_field_job_attempts::Model> for EntryFieldJobAttemptDto {
-    fn from(value: entry_field_job_attempts::Model) -> Self {
-        Self {
-            id: value.id,
-            job_id: value.job_id,
-            worker_id: value.worker_id,
+impl TryFrom<entry_field_job_attempts::Model> for EntryFieldJobAttemptDto {
+    type Error = DcAppError;
+
+    fn try_from(value: entry_field_job_attempts::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value.id.into(),
+            job_id: value.job_id.into(),
+            worker_id: value.worker_id.into(),
             created_at: value.created_at,
             updated_at: value.updated_at,
             finished_at: value.finished_at,
             expires_at: value.expires_at,
             calculated_value: value.calculated_value,
-        }
+        })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct CreateEntryFieldJobAttemptDto {
-    pub job_id: i64,
-    pub worker_id: i64,
+    pub job_id: Id,
+    pub worker_id: Id,
 }
 
 impl CreateEntryFieldJobAttemptDto {
@@ -54,15 +57,15 @@ impl CreateEntryFieldJobAttemptDto {
         entry_field_job: entry_field_jobs::Model,
         expires_at: DateTime<Utc>,
     ) -> Result<entry_field_job_attempts::ActiveModel, DcAppError> {
-        if entry_field_job.id != self.job_id {
+        if entry_field_job.id != *self.job_id {
             return Err(DcAppError::bad_state(format!(
                 "mismatched entry field job ids: {} != {}",
                 entry_field_job.id, self.job_id
             )));
         }
         let am = entry_field_job_attempts::ActiveModel {
-            job_id: ActiveValue::Set(self.job_id),
-            worker_id: ActiveValue::Set(self.worker_id),
+            job_id: ActiveValue::Set(self.job_id.into()),
+            worker_id: ActiveValue::Set(self.worker_id.into()),
             expires_at: ActiveValue::Set(expires_at),
             calculated_value: ActiveValue::Set(None),
             ..Default::default()

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use langcities_common::error::Error;
 use langcities_config::error::{LcConfigError, LcConfigErrorTrait};
+use langcities_lcdcdsl::component::{Slug, ToFullIdentifier, UserAlias};
 use reqwest::{Client, Url};
 
 use crate::dto::users::{AuthUserDto, AuthUsersDto};
@@ -47,11 +48,14 @@ impl AuthClient {
     /// Fetches matching users using repeated `aliases` query parameters.
     /// An empty slice returns no users without making a request. Missing aliases
     /// are omitted from the response; HTTP and deserialization errors are propagated.
-    pub async fn fetch_users(&self, aliases: &[&str]) -> Result<Vec<AuthUserDto>, reqwest::Error> {
+    pub async fn fetch_users(&self, aliases: &[&Slug]) -> Result<Vec<AuthUserDto>, reqwest::Error> {
         if aliases.is_empty() {
             return Ok(Vec::new());
         }
-        let query: Vec<_> = aliases.iter().map(|a| ("aliases", a)).collect();
+        let query: Vec<_> = aliases
+            .iter()
+            .map(|a| ("aliases", UserAlias::from_slug((*a).clone()).to_full()))
+            .collect();
         let response = self
             .http
             .get(self.users_url.clone())

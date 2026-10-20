@@ -35,7 +35,7 @@ impl Claims {
         } else {
             sub.parse::<i64>()
                 .map(|id| Some(id))
-                .map_err(JwtError::invalid_data)
+                .map_err(JwtError::invalid_data_src)
         }
     }
 }

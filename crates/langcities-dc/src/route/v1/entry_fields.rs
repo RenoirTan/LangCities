@@ -41,7 +41,7 @@ pub async fn get_entry_field(
         .get_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
         .map(|f| f.try_into())
-        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+        .ok_or_else(|| DcAppError::not_found_desc(format!("field {} not found", alias)))
         .flatten()
         .map(Json)
 }
@@ -121,7 +121,7 @@ pub async fn update_entry_field(
             None,
         )
         .await?
-        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))?;
+        .ok_or_else(|| DcAppError::not_found_desc(format!("field {} not found", alias)))?;
     if old.override_value != new.override_value {
         let event = EntryFieldUpdateEvent {
             entry_field_id: old.id.into(),
@@ -134,7 +134,7 @@ pub async fn update_entry_field(
             .efue_tx
             .send(event)
             .await
-            .map_err(DcAppError::messaging)?;
+            .map_err(DcAppError::messaging_src)?;
     }
     Ok(Json(new.try_into()?))
 }
@@ -163,7 +163,7 @@ pub async fn delete_entry_field(
         .delete_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
         .map(|f| f.try_into())
-        .ok_or_else(|| DcAppError::not_found(format!("field {} not found", alias)))
+        .ok_or_else(|| DcAppError::not_found_desc(format!("field {} not found", alias)))
         .flatten()
         .map(Json)
 }

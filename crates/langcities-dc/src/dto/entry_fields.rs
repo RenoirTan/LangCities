@@ -48,7 +48,7 @@ impl TryFrom<entry_fields::Model> for EntryFieldDto {
         Ok(Self {
             id: value.id.into(),
             entry_id: value.entry_id.into(),
-            slug: value.slug.try_into().map_err(DcAppError::database)?,
+            slug: value.slug.try_into().map_err(DcAppError::database_src)?,
             override_value: value.override_value,
             dirty_value: value.dirty_value,
             clean_value: value.clean_value,

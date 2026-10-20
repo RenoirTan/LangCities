@@ -130,7 +130,7 @@ impl<'t> TreeTraverser<'t> {
                     }
                 }
                 _ => {
-                    return Err(DslError::unsupported_node(format!(
+                    return Err(DslError::unsupported_node_desc(format!(
                         "node {node_id} has unsupported kind {:?}",
                         node.node
                     )));

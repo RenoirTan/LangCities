@@ -58,7 +58,7 @@ impl CreateEntryFieldJobAttemptDto {
         expires_at: DateTime<Utc>,
     ) -> Result<entry_field_job_attempts::ActiveModel, DcAppError> {
         if entry_field_job.id != *self.job_id {
-            return Err(DcAppError::bad_state(format!(
+            return Err(DcAppError::bad_state_desc(format!(
                 "mismatched entry field job ids: {} != {}",
                 entry_field_job.id, self.job_id
             )));
@@ -97,7 +97,7 @@ impl FailEntryFieldJobAttemptDto {
         model: &mut entry_field_job_attempts::ActiveModel,
     ) -> Result<&mut entry_field_job_attempts::ActiveModel, DcAppError> {
         if let ActiveValue::Unchanged(Some(finished_at)) = model.finished_at {
-            return Err(DcAppError::bad_state(format!(
+            return Err(DcAppError::bad_state_desc(format!(
                 "attempted to update finished entry field job attempt: {}",
                 finished_at
             )));
@@ -132,7 +132,7 @@ impl FinishEntryFieldJobAttemptDto {
         model: &mut entry_field_job_attempts::ActiveModel,
     ) -> Result<&mut entry_field_job_attempts::ActiveModel, DcAppError> {
         if let ActiveValue::Unchanged(Some(finished_at)) = model.finished_at {
-            return Err(DcAppError::bad_state(format!(
+            return Err(DcAppError::bad_state_desc(format!(
                 "attempted to update finished entry field job attempt: {}",
                 finished_at
             )));

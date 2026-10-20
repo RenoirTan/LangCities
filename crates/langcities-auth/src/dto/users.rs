@@ -11,7 +11,7 @@ impl TryFrom<users::Model> for AuthUserDto {
     fn try_from(value: users::Model) -> Result<Self, Self::Error> {
         Ok(Self {
             id: value.id.into(),
-            username: value.username.parse().map_err(AuthAppError::database)?,
+            username: value.username.parse().map_err(AuthAppError::database_src)?,
             created_at: value.created_at,
             updated_at: value.updated_at,
         })

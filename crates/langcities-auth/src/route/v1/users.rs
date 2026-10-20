@@ -30,10 +30,10 @@ pub async fn get_user(
     sql.one(&state.db)
         .await
         .map(|o| {
-            o.ok_or_else(|| AuthAppError::not_found(format!("{} not found", alias.0)))
-                .and_then(|m| m.try_into().map_err(AuthAppError::database))
+            o.ok_or_else(|| AuthAppError::not_found_desc(format!("{} not found", alias.0)))
+                .and_then(|m| m.try_into().map_err(AuthAppError::database_src))
         })
-        .map_err(AuthAppError::database)
+        .map_err(AuthAppError::database_src)
         .flatten()
         .map(Json)
 }
@@ -63,7 +63,10 @@ pub async fn get_many_users(
             }
         });
     let sql = users::Entity::find().filter(condition);
-    let models = sql.all(&state.db).await.map_err(AuthAppError::database)?;
+    let models = sql
+        .all(&state.db)
+        .await
+        .map_err(AuthAppError::database_src)?;
     let mut dtos = vec![];
     for model in models {
         dtos.push(model.try_into()?);
@@ -86,19 +89,19 @@ pub async fn delete_user(
     let user_session = session_user.get_user();
     let id = user_session
         .id
-        .ok_or_else(|| AuthAppError::unauthorized("not logged in"))?;
+        .ok_or_else(|| AuthAppError::unauthorized_desc("not logged in"))?;
     let user: AuthUserDto = users::Entity::delete_by_id(id)
         .exec_with_returning(&state.db)
         .await
         .map(|o| {
-            o.ok_or_else(|| AuthAppError::not_found(format!("user {} not found", id)))
-                .and_then(|m| m.try_into().map_err(AuthAppError::database))
+            o.ok_or_else(|| AuthAppError::not_found_desc(format!("user {} not found", id)))
+                .and_then(|m| m.try_into().map_err(AuthAppError::database_src))
         })
-        .map_err(AuthAppError::database)
+        .map_err(AuthAppError::database_src)
         .flatten()?;
     session_user
         .delete()
         .await
         .map(|()| Json(user))
-        .map_err(AuthAppError::database)
+        .map_err(AuthAppError::database_src)
 }

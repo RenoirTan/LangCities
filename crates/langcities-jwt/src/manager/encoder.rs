@@ -29,7 +29,7 @@ impl JwtEncoder {
         let key_config = config
             .key_config
             .as_ref()
-            .ok_or_else(|| JwtError::bad_config("key_config is None"))?;
+            .ok_or_else(|| JwtError::bad_config_desc("key_config is None"))?;
         // TODO: make sure algorithm has a matching encoding key set
         // doesnt matter, if the config for another algorithm family is also set too
         let algorithm = key_config.algorithm;
@@ -48,7 +48,7 @@ impl JwtEncoder {
         header: Header,
         claims: T,
     ) -> Result<String, JwtError> {
-        let token = encode(&header, &claims, &self.encoding_key).map_err(JwtError::unencodeable)?;
+        let token = encode(&header, &claims, &self.encoding_key).map_err(JwtError::unencodeable_src)?;
         Ok(token)
     }
 }

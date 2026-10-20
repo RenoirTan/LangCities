@@ -6,7 +6,7 @@ use langcities_server::dto::request::RequestContext;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, ExprTrait,
     FromQueryResult, IntoActiveModel, JoinType, QueryFilter, QuerySelect, RelationTrait,
-    TransactionError, TransactionTrait,
+    TransactionTrait,
     sea_query::{Expr, Query},
 };
 use serde::{Deserialize, Serialize};
@@ -48,7 +48,7 @@ impl EntryFieldWithSelectableContext {
             entry_field: EntryFieldDto {
                 id: self.id.into(),
                 entry_id: self.entry_id.into(),
-                slug: self.slug.parse().map_err(DcAppError::database)?,
+                slug: self.slug.parse().map_err(DcAppError::database_src)?,
                 override_value: self.override_value,
                 dirty_value: self.dirty_value,
                 clean_value: self.clean_value,
@@ -56,7 +56,10 @@ impl EntryFieldWithSelectableContext {
             },
             entry_index: self.entry_index.into(),
             vernacular_id: self.vernacular_id.into(),
-            vernacular_slug: self.vernacular_slug.parse().map_err(DcAppError::database)?,
+            vernacular_slug: self
+                .vernacular_slug
+                .parse()
+                .map_err(DcAppError::database_src)?,
             owner_auth_user_id: self.owner_auth_user_id.into(),
             owner_username: username.cloned(),
         })
@@ -182,7 +185,7 @@ impl EntryFieldRepo {
                             .in_subquery(QuerySelect::query(&mut entry_subquery).to_owned());
                         (id_expr, Some(entry_expr))
                     } else {
-                        return Err(DcAppError::unauthorized("unauthorized"));
+                        return Err(DcAppError::unauthorized_desc("unauthorized"));
                     }
                 } else {
                     (id_expr, None)
@@ -194,7 +197,7 @@ impl EntryFieldRepo {
                     .clone()
                     .or_else(|| current_entry_id.map(|id| EntryRef::Id(id)))
                     .ok_or_else(|| {
-                        DcAppError::bad_request("no entry specified, cannot search for field")
+                        DcAppError::bad_request_desc("no entry specified, cannot search for field")
                     })?;
                 let slug_expr = entry_fields::Column::Slug.eq(&*alias.slug);
                 let entry_expr = self
@@ -242,7 +245,9 @@ impl EntryFieldRepo {
                 .clone()
                 .or_else(|| current_entry_ref.clone())
                 .ok_or_else(|| {
-                    DcAppError::bad_request("no current entry specified for relative entry field")
+                    DcAppError::bad_request_desc(
+                        "no current entry specified for relative entry field",
+                    )
                 })?;
             required_entries.insert(entry_alias);
         }
@@ -290,7 +295,7 @@ impl EntryFieldRepo {
             .filter(expr)
             .one(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn inner_find_many_entry_fields<C, I>(
@@ -325,7 +330,7 @@ impl EntryFieldRepo {
             .into_model::<EntryFieldWithSelectableContext>()
             .all(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(FoundManyEntryFieldComponents {
             aliases,
             entry_fields,
@@ -367,7 +372,7 @@ impl EntryFieldRepo {
         I: IntoIterator<Item = EntryFieldRef>,
     {
         let Some(caller_id) = context.caller_id else {
-            return Err(DcAppError::bad_request("caller_id cannot be None"));
+            return Err(DcAppError::bad_request_desc("caller_id cannot be None"));
         };
         let components = self
             .inner_find_many_entry_fields(conn, aliases, caller_id, current_entry_id)
@@ -389,11 +394,11 @@ impl EntryFieldRepo {
             .entry_repo
             .inner_get_entry(conn, entry_ref, context, EntryAction::Write)
             .await?
-            .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", dto.entry)))?;
+            .ok_or_else(|| DcAppError::not_found_desc(format!("entry {} not found", dto.entry)))?;
         let entry_field = entry_fields::Entity::insert(dto.to_active_model(&entry))
             .exec_with_returning(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         // TODO: add job
         Ok(entry_field)
     }
@@ -412,10 +417,7 @@ impl EntryFieldRepo {
             Box::pin(async move { me.inner_create_entry_field(txn, dto, context).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 
     pub async fn update_entry_field<C>(
@@ -463,7 +465,7 @@ impl EntryFieldRepo {
         let new = entry_field
             .update(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(Some((old, new)))
     }
 
@@ -493,7 +495,7 @@ impl EntryFieldRepo {
         entry_fields::Entity::delete_by_id(entry_field.id)
             .exec(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(Some(entry_field))
         // TODO: trigger jobs
     }

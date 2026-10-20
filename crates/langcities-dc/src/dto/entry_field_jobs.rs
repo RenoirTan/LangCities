@@ -48,7 +48,7 @@ impl FromStr for EntryFieldJobStatus {
             "COMPLETED" => Self::Completed,
             "FAILED" => Self::Failed,
             _ => {
-                return Err(DcAppError::database(format!(
+                return Err(DcAppError::database_desc(format!(
                     "Invalid entry field job status encountered! {}",
                     s
                 )));
@@ -152,7 +152,7 @@ impl UpdateEntryFieldJobDto {
         if let ActiveValue::Unchanged(original_status) = &model.status {
             let original_status = original_status.parse::<EntryFieldJobStatus>()?;
             if original_status.is_inactive() && self.status.is_active() {
-                return Err(DcAppError::bad_state(format!(
+                return Err(DcAppError::bad_state_desc(format!(
                     "cannot reactivate inactive entry field job: {} -> {}",
                     original_status, self.status,
                 )));

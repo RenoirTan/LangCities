@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use langcities_common::error::{Error, LcError};
+use langcities_common::error::LcError;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LcConfigErrorKind {
@@ -17,31 +17,16 @@ impl Display for LcConfigErrorKind {
 
 pub type LcConfigError = LcError<LcConfigErrorKind>;
 
-pub trait LcConfigErrorTrait {
-    fn missing_key_of(key: impl Into<String>) -> Self;
-
-    fn missing_key(source: impl Into<Error>) -> Self;
-
-    fn bad_parse(source: impl Into<Error>) -> Self;
-
-    fn other(source: impl Into<Error>) -> Self;
-}
-
-impl LcConfigErrorTrait for LcConfigError {
-    fn missing_key_of(key: impl Into<String>) -> Self {
-        let msg = format!("Key '{}' missing", key.into());
-        Self::missing_key(msg)
+langcities_common::lc_error_trait! {
+    LcConfigErrorTrait for LcConfigError as LcConfigErrorKind {
+        MissingKey, BadParse, Other,
     }
-
-    fn missing_key(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), LcConfigErrorKind::MissingKey)
+    declare {
+        fn missing_key_of(key: impl Into<String>) -> Self;
     }
-
-    fn bad_parse(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), LcConfigErrorKind::BadParse)
-    }
-
-    fn other(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), LcConfigErrorKind::Other)
+    define {
+        fn missing_key_of(key: impl Into<String>) -> Self {
+            Self::missing_key_desc(format!("Key '{}' missing", key.into()))
+        }
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use langcities_common::error::{Error, LcError};
+use langcities_common::error::LcError;
 
 use crate::node::NodeId;
 
@@ -19,32 +19,20 @@ impl Display for DslErrorKind {
 
 pub type DslError = LcError<DslErrorKind>;
 
-pub trait DslErrorTrait {
-    fn node_not_found_of(node_id: impl Into<NodeId>) -> Self;
-    fn node_not_found(source: impl Into<Error>) -> Self;
-    fn unsupported_node(source: impl Into<Error>) -> Self;
-    fn bad_value_of(value: impl Display) -> Self;
-    fn bad_value(source: impl Into<Error>) -> Self;
-}
-
-impl DslErrorTrait for DslError {
-    fn node_not_found_of(node_id: impl Into<NodeId>) -> Self {
-        Self::node_not_found(format!("Node {} not found", node_id.into()))
+langcities_common::lc_error_trait! {
+    DslErrorTrait for DslError as DslErrorKind {
+        NodeNotFound, UnsupportedNode, BadValue,
     }
-
-    fn node_not_found(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), DslErrorKind::NodeNotFound)
+    declare {
+        fn node_not_found_of(node_id: impl Into<NodeId>) -> Self;
+        fn bad_value_of(value: impl Display) -> Self;
     }
-
-    fn unsupported_node(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), DslErrorKind::UnsupportedNode)
-    }
-
-    fn bad_value_of(value: impl Display) -> Self {
-        Self::bad_value(format!("Invalid value: {}", value))
-    }
-
-    fn bad_value(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), DslErrorKind::BadValue)
+    define {
+        fn node_not_found_of(node_id: impl Into<NodeId>) -> Self {
+            Self::node_not_found_desc(format!("Node {} not found", node_id.into()))
+        }
+        fn bad_value_of(value: impl Display) -> Self {
+            Self::bad_value_desc(format!("Invalid value: {}", value))
+        }
     }
 }

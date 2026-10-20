@@ -21,11 +21,11 @@ impl PasswordChecker {
         argon2: &Argon2<'static>,
         password: &str,
     ) -> Result<String, AuthAppError> {
-        let raw_salt = try_generate_salt().map_err(AuthAppError::password_hashing)?;
-        let salt = SaltString::encode_b64(&raw_salt).map_err(AuthAppError::password_hashing)?;
+        let raw_salt = try_generate_salt().map_err(AuthAppError::password_hashing_src)?;
+        let salt = SaltString::encode_b64(&raw_salt).map_err(AuthAppError::password_hashing_src)?;
         let hashed = argon2
             .hash_password(password.as_bytes(), &salt)
-            .map_err(AuthAppError::password_hashing)?
+            .map_err(AuthAppError::password_hashing_src)?
             .to_string();
         Ok(hashed)
     }
@@ -41,7 +41,7 @@ impl PasswordChecker {
         let password = password.as_ref().to_string();
         spawn_blocking(move || Self::inner_hash_password_sync(&self.argon2, &password))
             .await
-            .map_err(AuthAppError::password_hashing)?
+            .map_err(AuthAppError::password_hashing_src)?
     }
 
     pub async fn hash_password(&self, password: impl AsRef<str>) -> Result<String, AuthAppError> {
@@ -53,12 +53,12 @@ impl PasswordChecker {
         password: &str,
         hashed: &str,
     ) -> Result<bool, AuthAppError> {
-        let hashed = PasswordHash::new(hashed).map_err(AuthAppError::password_hashing)?;
+        let hashed = PasswordHash::new(hashed).map_err(AuthAppError::password_hashing_src)?;
         match argon2.verify_password(password.as_bytes(), &hashed) {
             Ok(()) => Ok(true),
             Err(error) => match error {
                 Error::Password => Ok(false),
-                _ => Err(AuthAppError::password_hashing(error)),
+                _ => Err(AuthAppError::password_hashing_src(error)),
             },
         }
     }
@@ -80,7 +80,7 @@ impl PasswordChecker {
         let hashed = hashed.to_string();
         spawn_blocking(move || Self::inner_verify_password(&self.argon2, &password, &hashed))
             .await
-            .map_err(AuthAppError::password_hashing)?
+            .map_err(AuthAppError::password_hashing_src)?
     }
 
     pub async fn verify_password(

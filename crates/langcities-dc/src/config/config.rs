@@ -135,7 +135,7 @@ impl PartialConfig {
             .merge(Json::file("lcdc.json"))
             .merge(env_provider)
             .extract()
-            .map_err(LcConfigError::bad_parse)?;
+            .map_err(LcConfigError::bad_parse_src)?;
         config.merge_with(cli.into());
         Ok(config)
     }
@@ -190,7 +190,7 @@ impl DcConfig {
                 .as_deref()
                 .unwrap_or("http://localhost:8000"),
         )
-        .map_err(LcConfigError::bad_parse)?;
+        .map_err(LcConfigError::bad_parse_src)?;
         validate_base_url(&auth_base_url)?;
         Ok(Self {
             show_config_only: partial.show_config_only.unwrap_or(false),

@@ -69,7 +69,7 @@ impl MxBuilder {
     // TODO: support more backends
     pub fn build_only_api(self) -> Result<ApiMxs, DcAppError> {
         if matches!(self.backend_kind, MxBackendKind::Tokio) {
-            return Err(DcAppError::failed_init(
+            return Err(DcAppError::failed_init_desc(
                 "cannot use tokio channels for api-only",
             ));
         }

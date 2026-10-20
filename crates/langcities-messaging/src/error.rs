@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use langcities_common::error::{Error, LcError};
+use langcities_common::error::LcError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,17 +17,8 @@ impl Display for MessagingErrorKind {
 
 pub type MessagingError = LcError<MessagingErrorKind>;
 
-pub trait MessagingErrorTrait {
-    fn serialization(source: impl Into<Error>) -> Self;
-    fn deserialization(source: impl Into<Error>) -> Self;
-}
-
-impl MessagingErrorTrait for MessagingError {
-    fn serialization(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), MessagingErrorKind::Serialization)
-    }
-
-    fn deserialization(source: impl Into<Error>) -> Self {
-        Self::new(Some(source.into()), MessagingErrorKind::Deserialization)
+langcities_common::lc_error_trait! {
+    MessagingErrorTrait for MessagingError as MessagingErrorKind {
+        Serialization, Deserialization,
     }
 }

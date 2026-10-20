@@ -60,7 +60,7 @@ impl Manager {
             .worker_threads(8)
             .enable_all()
             .build()
-            .map_err(DcAppError::failed_init)?;
+            .map_err(DcAppError::failed_init_src)?;
         Ok(Self::new(state, relay_mxs, runtime))
     }
 
@@ -69,7 +69,9 @@ impl Manager {
         shutdown_signal: impl Future<Output = ()> + Send + 'static,
     ) -> Result<(), DcAppError> {
         let Some(runtime) = &self.runtime else {
-            return Err(DcAppError::failed_init("manager async runtime is missing"));
+            return Err(DcAppError::failed_init_desc(
+                "manager async runtime is missing",
+            ));
         };
         let (Some(relay_mxs), Some(w_tx), Some(w_rx), Some(m_tx), Some(m_rx)) = (
             self.relay_mxs.take(),
@@ -78,7 +80,7 @@ impl Manager {
             self.m_tx.take(),
             self.m_rx.take(),
         ) else {
-            return Err(DcAppError::failed_init("manager channels consumed"));
+            return Err(DcAppError::failed_init_desc("manager channels consumed"));
         };
         let (relay_stop_tx, relay_stop_rx) = oneshot::channel::<()>();
         let (inner_stop_tx, inner_stop_rx) = oneshot::channel::<()>();
@@ -105,12 +107,12 @@ impl Manager {
                 if errors.len() <= 0 {
                     Ok(())
                 } else {
-                    Err(DcAppError::other(
+                    Err(DcAppError::other_desc(
                         "did not successfully join manager threads",
                     ))
                 }
             }
-            Err(_je) => Err(DcAppError::other(
+            Err(_je) => Err(DcAppError::other_desc(
                 "did not successfully join manager threads",
             )),
         }
@@ -258,7 +260,7 @@ impl Manager {
         };
         join_set.spawn(async move {
             let _ = w_job;
-            Err(DcAppError::other("unimplemented"))
+            Err(DcAppError::other_desc("unimplemented"))
         });
     }
 }

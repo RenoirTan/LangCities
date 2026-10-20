@@ -51,7 +51,7 @@ where
         parts
             .extensions
             .get::<dc_users::Model>()
-            .ok_or_else(|| DcAppError::unauthorized(format!("not authorized")))
+            .ok_or_else(|| DcAppError::unauthorized_desc(format!("not authorized")))
             .cloned()
     }
 }

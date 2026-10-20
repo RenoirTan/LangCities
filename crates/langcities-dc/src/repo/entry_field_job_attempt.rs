@@ -2,7 +2,7 @@ use chrono::Utc;
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, IntoActiveModel,
-    PaginatorTrait, QueryFilter, SelectExt, TransactionError, TransactionTrait, sea_query::Expr,
+    PaginatorTrait, QueryFilter, SelectExt, TransactionTrait, sea_query::Expr,
 };
 
 use crate::{
@@ -57,7 +57,7 @@ impl EntryFieldJobAttemptRepo {
         entry_field_job_attempts::Entity::find_by_id(*id)
             .one(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn count_active_attempts_of<C>(&self, conn: &C, job_id: Id) -> Result<u64, DcAppError>
@@ -68,7 +68,7 @@ impl EntryFieldJobAttemptRepo {
             .filter(self.generate_active_filter_for(job_id).await)
             .count(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn exists_active_attempts_of<C>(&self, conn: &C, job_id: Id) -> Result<bool, DcAppError>
@@ -79,7 +79,7 @@ impl EntryFieldJobAttemptRepo {
             .filter(self.generate_active_filter_for(job_id).await)
             .exists(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn inner_create_attempt<C>(
@@ -96,7 +96,7 @@ impl EntryFieldJobAttemptRepo {
             .get_entry_field_job(conn, job_id.clone())
             .await?
         else {
-            return Err(DcAppError::bad_state(format!(
+            return Err(DcAppError::bad_state_desc(format!(
                 "cannot create attempt for non-existing entry field job: {}",
                 job_id
             )));
@@ -110,7 +110,7 @@ impl EntryFieldJobAttemptRepo {
         am.insert(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn create_attempt<C>(
@@ -127,10 +127,7 @@ impl EntryFieldJobAttemptRepo {
             Box::pin(async move { me.inner_create_attempt(txn, job_id, dto).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 
     async fn inner_finish_attempt<C>(
@@ -146,7 +143,7 @@ impl EntryFieldJobAttemptRepo {
             .filter(self.generate_active_filter().await)
             .one(conn)
             .await
-            .map_err(DcAppError::database)?
+            .map_err(DcAppError::database_src)?
         else {
             return Ok(None);
         };
@@ -155,7 +152,7 @@ impl EntryFieldJobAttemptRepo {
         am.update(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn finish_attempt<C>(
@@ -170,10 +167,7 @@ impl EntryFieldJobAttemptRepo {
         let me = self.clone();
         conn.transaction(|txn| Box::pin(async move { me.inner_finish_attempt(txn, id, dto).await }))
             .await
-            .map_err(|e| match e {
-                TransactionError::Connection(e) => DcAppError::database(e),
-                TransactionError::Transaction(e) => e,
-            })
+            .map_err(DcAppError::flatten_tx)
     }
 
     async fn inner_delete_inactive_attempts<C>(
@@ -190,7 +184,7 @@ impl EntryFieldJobAttemptRepo {
             .exec(conn)
             .await
             .map(|r| r.rows_affected)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn delete_inactive_attempts<C>(&self, conn: &C, job_id: Id) -> Result<u64, DcAppError>
@@ -202,9 +196,6 @@ impl EntryFieldJobAttemptRepo {
             Box::pin(async move { me.inner_delete_inactive_attempts(txn, job_id).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 }

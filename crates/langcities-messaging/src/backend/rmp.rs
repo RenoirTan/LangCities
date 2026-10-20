@@ -26,7 +26,7 @@ impl MessagePacker {
     {
         let mut serializer = self.new_serializer();
         data.serialize(&mut serializer)
-            .map_err(MessagingError::serialization)?;
+            .map_err(MessagingError::serialization_src)?;
         Ok(serializer.into_inner())
     }
 
@@ -68,7 +68,7 @@ impl MessageUnpacker {
         T: Message,
     {
         let mut deserializer = self.new_deserializer(read);
-        Deserialize::deserialize(&mut deserializer).map_err(MessagingError::deserialization)
+        Deserialize::deserialize(&mut deserializer).map_err(MessagingError::deserialization_src)
     }
 
     pub fn decode<R, T>(&mut self, read: R) -> Result<T, MessagingError>

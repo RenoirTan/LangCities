@@ -15,7 +15,7 @@ impl<'t> DependencyBuilder<'t> {
     pub fn new(tree: &'t Tree) -> Result<Self, DslError> {
         let start_id = tree
             .root_node_id
-            .ok_or_else(|| DslError::node_not_found("tree has no root node"))?;
+            .ok_or_else(|| DslError::node_not_found_desc("tree has no root node"))?;
         let traverser = TreeTraverser::new(tree, start_id, TraversalKind::Preorder)?;
         Ok(Self {
             traverser,

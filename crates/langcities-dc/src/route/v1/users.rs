@@ -29,7 +29,9 @@ pub async fn get_user(
         .await
         .map(|u| {
             u.map(|u| u.try_into())
-                .ok_or_else(|| DcAppError::not_found(format!("{} not found", query.auth_user_id)))
+                .ok_or_else(|| {
+                    DcAppError::not_found_desc(format!("{} not found", query.auth_user_id))
+                })
                 .flatten()
         })
         .flatten()
@@ -60,7 +62,7 @@ pub async fn get_user_by_alias(
     }
     .map(|u| {
         u.map(|u| u.try_into())
-            .ok_or_else(|| DcAppError::not_found(format!("{} was not found", alias.0)))
+            .ok_or_else(|| DcAppError::not_found_desc(format!("{} was not found", alias.0)))
             .flatten()
     })
     .flatten()

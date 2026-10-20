@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
     let mut signaller = SignallerConfig::default().create_signaller()?;
     let mut signal_stream = signaller
         .boxed_simple_stream()
-        .ok_or_else(|| DcAppError::failed_init("could not get signal stream"))?;
+        .ok_or_else(|| DcAppError::failed_init_desc("could not get signal stream"))?;
 
     let result = 'outer: loop {
         let (stop_tx, stop_rx) = channel::<()>();

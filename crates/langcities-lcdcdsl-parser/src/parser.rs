@@ -70,9 +70,9 @@ impl Parser {
     {
         let (tree_builder, mut ts_parser) = (tree_builder.into(), ts_parser.into());
         let source = &tree_builder.tree.context.source;
-        let raw_tree = ts_parser
-            .parse(source, None)
-            .ok_or_else(|| ParserError::invalid_source("tree-sitter produced no syntax tree"))?;
+        let raw_tree = ts_parser.parse(source, None).ok_or_else(|| {
+            ParserError::invalid_source_desc("tree-sitter produced no syntax tree")
+        })?;
         Ok(Self {
             tree_builder,
             ts_parser,
@@ -88,7 +88,7 @@ impl Parser {
         let mut ts_parser = TSParser::new();
         ts_parser
             .set_language(&LANGUAGE.into())
-            .map_err(ParserError::bad_initialization)?;
+            .map_err(ParserError::bad_initialization_src)?;
         Self::new(tree_builder, ts_parser)
     }
 
@@ -100,7 +100,7 @@ impl Parser {
 
         let root = self.raw_tree.root_node();
         if root.has_error() || root.kind() != "source_file" || root.named_child_count() != 1 {
-            return Err(ParserError::invalid_source(format!(
+            return Err(ParserError::invalid_source_desc(format!(
                 "expected one valid source expression, found kind '{}' with {} named children",
                 root.kind(),
                 root.named_child_count()
@@ -135,7 +135,7 @@ impl Parser {
                         }
                         TransferInstructionKind::Binary(op) => {
                             if self.node_ids_stack.len() < 2 {
-                                return Err(ParserError::invalid_source(
+                                return Err(ParserError::invalid_source_desc(
                                     "binary expression has fewer than two child nodes",
                                 ));
                             }
@@ -147,7 +147,7 @@ impl Parser {
                         TransferInstructionKind::FunctionCall { arg_count } => {
                             let child_count = arg_count + 1;
                             if self.node_ids_stack.len() < child_count {
-                                return Err(ParserError::invalid_source(format!(
+                                return Err(ParserError::invalid_source_desc(format!(
                                     "function call needs {child_count} child nodes but only {} are available",
                                     self.node_ids_stack.len()
                                 )));
@@ -174,7 +174,10 @@ impl Parser {
             };
 
             let node = path.of_tree(&self.raw_tree).ok_or_else(|| {
-                ParserError::invalid_source(format!("AST node missing at path {:?}", path.indices))
+                ParserError::invalid_source_desc(format!(
+                    "AST node missing at path {:?}",
+                    path.indices
+                ))
             })?;
 
             match node.kind() {
@@ -208,7 +211,7 @@ impl Parser {
                 }
                 "parenthesis_expression" => {
                     if node.named_child_count() != 1 {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "parenthesized expression must contain one child",
                         ));
                     }
@@ -218,17 +221,17 @@ impl Parser {
                 }
                 "binary_expression" => {
                     let Some(add_expression) = node.named_child(0) else {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "binary expression has no add expression",
                         ));
                     };
                     if node.named_child_count() != 1 || add_expression.kind() != "add_expression" {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "binary expression must contain one add expression",
                         ));
                     }
                     if add_expression.named_child_count() != 2 {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "add expression must contain two operands",
                         ));
                     }
@@ -247,12 +250,12 @@ impl Parser {
                 "function_call" => {
                     let child_count = node.named_child_count();
                     let Some(identifier) = node.named_child(0) else {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "function call has no identifier",
                         ));
                     };
                     if child_count < 1 || identifier.kind() != "identifier" {
-                        return Err(ParserError::invalid_source(
+                        return Err(ParserError::invalid_source_desc(
                             "function call must start with an identifier",
                         ));
                     }
@@ -277,7 +280,7 @@ impl Parser {
                         )));
                 }
                 _ => {
-                    return Err(ParserError::invalid_source(format!(
+                    return Err(ParserError::invalid_source_desc(format!(
                         "unsupported AST node kind '{}'",
                         node.kind()
                     )));

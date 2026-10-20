@@ -35,7 +35,7 @@ impl SessionUserWrapper {
         self.session
             .insert(Self::USER_KEY, self.user.clone())
             .await
-            .map_err(AuthAppError::failed_session)
+            .map_err(AuthAppError::failed_session_src)
     }
 
     pub fn set_expiry(&self, expiry: Expiry) {
@@ -76,11 +76,11 @@ where
     ) -> Result<Self, Self::Rejection> {
         let session = Session::from_request_parts(parts, state)
             .await
-            .map_err(|(_s, c)| AuthAppError::failed_session(c))?;
+            .map_err(|(_s, c)| AuthAppError::failed_session_src(c))?;
         let dto: SessionUserDto = session
             .get(Self::USER_KEY)
             .await
-            .map_err(AuthAppError::failed_session)?
+            .map_err(AuthAppError::failed_session_src)?
             .unwrap_or_default();
         Ok(SessionUserWrapper::new(session, dto))
     }

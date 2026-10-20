@@ -183,7 +183,7 @@ impl PartialConfig {
                 "LCAUTH_",
             )))
             .extract()
-            .map_err(LcConfigError::bad_parse)?;
+            .map_err(LcConfigError::bad_parse_src)?;
         config.merge_with(cli.into());
         Ok(config)
     }
@@ -301,9 +301,10 @@ impl AuthConfig {
 
     pub fn session_cookie_secret_to_key(&self) -> Result<Key, LcConfigError> {
         match &self.session_cookie_secret {
-            Some(secret) => Key::try_from(secret.as_bytes()).map_err(LcConfigError::bad_parse),
-            None => Key::try_generate()
-                .ok_or_else(|| LcConfigError::other("Failed to generate a session cookie key")),
+            Some(secret) => Key::try_from(secret.as_bytes()).map_err(LcConfigError::bad_parse_src),
+            None => Key::try_generate().ok_or_else(|| {
+                LcConfigError::other_desc("Failed to generate a session cookie key")
+            }),
         }
     }
 

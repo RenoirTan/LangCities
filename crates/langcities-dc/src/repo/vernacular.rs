@@ -4,8 +4,7 @@ use langcities_lcdcdsl::component::{Id, QualifiedVernacular, Slug, UserAlias, Ve
 use langcities_server::dto::request::RequestContext;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
-    IntoActiveModel, QueryFilter, QuerySelect, TransactionError, TransactionTrait, TryInsertResult,
-    sea_query::Expr,
+    IntoActiveModel, QueryFilter, QuerySelect, TransactionTrait, TryInsertResult, sea_query::Expr,
 };
 use serde::{Deserialize, Serialize};
 
@@ -72,7 +71,7 @@ impl VernacularRepo {
                     None => match &context.caller_id {
                         Some(id) => Self::generate_owner_filter(**id),
                         None => {
-                            return Err(DcAppError::bad_request(
+                            return Err(DcAppError::bad_request_desc(
                                 "no owner id in alias or request context",
                             ));
                         }
@@ -85,7 +84,7 @@ impl VernacularRepo {
             if let Some(caller_id) = &context.caller_id {
                 Ok(Self::generate_owner_filter(**caller_id).and(expr))
             } else {
-                Err(DcAppError::unauthorized("unauthorized"))
+                Err(DcAppError::unauthorized_desc("unauthorized"))
             }
         } else {
             Ok(expr)
@@ -174,7 +173,7 @@ impl VernacularRepo {
             .filter(expr)
             .one(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn get_vernacular<C>(
@@ -201,19 +200,14 @@ impl VernacularRepo {
         C: TransactionTrait,
     {
         let me = self.clone();
-        match conn
-            .transaction(|txn| {
-                Box::pin(async move {
-                    me.inner_create_vernacular(txn, dto, owner_auth_user_id, context)
-                        .await
-                })
+        conn.transaction(|txn| {
+            Box::pin(async move {
+                me.inner_create_vernacular(txn, dto, owner_auth_user_id, context)
+                    .await
             })
-            .await
-        {
-            Ok(model) => Ok(model),
-            Err(TransactionError::Transaction(e)) => Err(e),
-            Err(TransactionError::Connection(e)) => Err(DcAppError::database(e)),
-        }
+        })
+        .await
+        .map_err(DcAppError::flatten_tx)
     }
 
     async fn inner_create_vernacular<C>(
@@ -232,10 +226,10 @@ impl VernacularRepo {
             .on_conflict_do_nothing_on([vernaculars::Column::Slug, vernaculars::Column::OwnerId])
             .exec_with_returning(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         let vernacular = match result {
             TryInsertResult::Empty => {
-                return Err(DcAppError::database(
+                return Err(DcAppError::database_desc(
                     "no sql executed for create_vernacular",
                 ));
             }
@@ -250,7 +244,7 @@ impl VernacularRepo {
                 )
                 .await
                 .map(|o| {
-                    o.ok_or_else(|| DcAppError::database("could not insert or get vernacular"))
+                    o.ok_or_else(|| DcAppError::database_desc("could not insert or get vernacular"))
                 })
                 .flatten()?,
             TryInsertResult::Inserted(model) => model,
@@ -264,7 +258,7 @@ impl VernacularRepo {
         })
         .exec_with_returning(conn)
         .await
-        .map_err(DcAppError::database)?;
+        .map_err(DcAppError::database_src)?;
 
         Ok(vernacular)
     }
@@ -291,7 +285,7 @@ impl VernacularRepo {
             .update(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn delete_vernacular<C>(
@@ -310,7 +304,7 @@ impl VernacularRepo {
             vernaculars::Entity::delete_by_id(model.id)
                 .exec(conn)
                 .await
-                .map_err(DcAppError::database)?;
+                .map_err(DcAppError::database_src)?;
             Ok(Some(model))
         } else {
             Ok(None)

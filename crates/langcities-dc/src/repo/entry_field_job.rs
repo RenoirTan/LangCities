@@ -4,8 +4,7 @@ use chrono::Utc;
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
-    IntoActiveModel, ModelTrait, QueryFilter, QueryOrder, TransactionError, TransactionTrait,
-    sea_query::Expr,
+    IntoActiveModel, ModelTrait, QueryFilter, QueryOrder, TransactionTrait, sea_query::Expr,
 };
 
 use crate::{
@@ -65,7 +64,7 @@ impl EntryFieldJobRepo {
         entry_field_jobs::Entity::find_by_id(*id)
             .one(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn find_active_entry_field_jobs_for<C>(
@@ -82,7 +81,7 @@ impl EntryFieldJobRepo {
             .order_by_desc(entry_field_jobs::Column::ExpiresAt)
             .all(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     /*
@@ -103,7 +102,7 @@ impl EntryFieldJobRepo {
         am.update(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
     */
 
@@ -121,7 +120,7 @@ impl EntryFieldJobRepo {
             .order_by_desc(entry_field_jobs::Column::ExpiresAt)
             .all(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         // select only the latest job of each entry field
         // distinct on is a postgres-only feature
         let mut job_ids = HashMap::<i64, i64>::new();
@@ -136,7 +135,7 @@ impl EntryFieldJobRepo {
             )
             .exec_with_returning(conn)
             .await
-            .map_err(DcAppError::database)?
+            .map_err(DcAppError::database_src)?
             .into_iter()
             .map(|j| (Id::from(j.entry_field_id), j))
             .collect::<HashMap<_, _>>();
@@ -156,7 +155,7 @@ impl EntryFieldJobRepo {
             .order_by_desc(entry_field_jobs::Column::ExpiresAt)
             .one(conn)
             .await
-            .map_err(DcAppError::database)?
+            .map_err(DcAppError::database_src)?
         else {
             return Ok(None);
         };
@@ -165,7 +164,7 @@ impl EntryFieldJobRepo {
         am.update(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn inner_create_entry_field_job<C>(
@@ -178,7 +177,7 @@ impl EntryFieldJobRepo {
     {
         let expires_at = Utc::now() + self.state().config.dc.entry_field_job_ttl;
         let am = dto.to_active_model(expires_at);
-        am.insert(conn).await.map_err(DcAppError::database)
+        am.insert(conn).await.map_err(DcAppError::database_src)
     }
 
     async fn inner_create_entry_field_jobs<C, I>(
@@ -195,7 +194,7 @@ impl EntryFieldJobRepo {
         entry_field_jobs::Entity::insert_many(ams)
             .exec_with_returning(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn inner_create_or_refresh_entry_field_job<C>(
@@ -259,10 +258,7 @@ impl EntryFieldJobRepo {
             Box::pin(async move { me.inner_create_or_refresh_entry_field_job(txn, dto).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 
     pub async fn create_or_refresh_entry_field_jobs<C, I>(
@@ -279,10 +275,7 @@ impl EntryFieldJobRepo {
             Box::pin(async move { me.inner_create_or_refresh_entry_field_jobs(txn, dtos).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 
     pub async fn update_entry_field_job<C>(
@@ -302,7 +295,7 @@ impl EntryFieldJobRepo {
         am.update(conn)
             .await
             .map(Some)
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     async fn inner_delete_entry_field_job<C>(
@@ -319,7 +312,7 @@ impl EntryFieldJobRepo {
         let status = model.status.parse::<EntryFieldJobStatus>()?;
         let now = Utc::now();
         if status.is_active() && now <= model.expires_at {
-            return Err(DcAppError::bad_state(format!(
+            return Err(DcAppError::bad_state_desc(format!(
                 "cannot delete active entry field job {id}"
             )));
         }
@@ -327,7 +320,7 @@ impl EntryFieldJobRepo {
             .clone()
             .delete(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(Some(model))
     }
 
@@ -344,9 +337,6 @@ impl EntryFieldJobRepo {
             Box::pin(async move { me.inner_delete_entry_field_job(txn, id).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 }

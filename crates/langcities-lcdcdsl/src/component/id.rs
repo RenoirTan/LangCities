@@ -54,7 +54,7 @@ impl FromStr for Id {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.parse::<i64>()
             .map(|i| Self(i))
-            .map_err(DslError::bad_value)
+            .map_err(|e| DslError::bad_value_all(format!("invalid id '{s}'"), e))
     }
 }
 

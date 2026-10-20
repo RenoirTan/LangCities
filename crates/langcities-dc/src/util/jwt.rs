@@ -58,12 +58,12 @@ impl FromRequestParts<ApiState> for DcClaimsWrapper {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(DcAppError::unauthorized)?;
+            .map_err(DcAppError::unauthorized_src)?;
 
         let token_data = state
             .jwt_decoder()
             .decode_token::<()>(&bearer.token())
-            .map_err(DcAppError::unauthorized)?;
+            .map_err(DcAppError::unauthorized_src)?;
 
         Ok(DcClaimsWrapper(token_data.claims))
     }

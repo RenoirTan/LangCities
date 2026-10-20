@@ -63,7 +63,7 @@ impl Seeder {
             .filter(vernaculars::Column::Slug.is_in(slugs))
             .all(&self.state.db)
             .await
-            .map_err(DcAppError::failed_init)?;
+            .map_err(DcAppError::failed_init_src)?;
         let mut vernaculars = HashMap::new();
         for vernacular in vernacular_records {
             vernaculars.insert(vernacular.id, vernacular.slug);

@@ -1,7 +1,7 @@
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
-    ColumnTrait, Condition, ConnectionTrait, EntityTrait, QueryFilter, TransactionError,
-    TransactionTrait, TryInsertResult,
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, QueryFilter, TransactionTrait,
+    TryInsertResult,
 };
 
 use crate::{
@@ -46,7 +46,7 @@ impl EntryFieldDependencyRepo {
             .filter(entry_field_dependencies::Column::ChildEntryFieldId.eq(*child_id))
             .all(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn add_dependencies_of<C, D>(
@@ -66,7 +66,7 @@ impl EntryFieldDependencyRepo {
             .on_conflict_do_nothing()
             .exec_without_returning(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         match result {
             TryInsertResult::Empty | TryInsertResult::Conflicted => Ok(0),
             TryInsertResult::Inserted(n) => Ok(n),
@@ -92,7 +92,7 @@ impl EntryFieldDependencyRepo {
             .filter(cond)
             .exec(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(result.rows_affected)
     }
 
@@ -108,7 +108,7 @@ impl EntryFieldDependencyRepo {
             .filter(entry_field_dependencies::Column::ChildEntryFieldId.eq(*child_id))
             .exec(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(result.rows_affected)
     }
 
@@ -145,9 +145,6 @@ impl EntryFieldDependencyRepo {
             })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 }

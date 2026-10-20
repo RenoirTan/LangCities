@@ -50,7 +50,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(AuthAppError::failed_session)?;
+            .map_err(AuthAppError::failed_session_src)?;
         Ok(store)
     }
 
@@ -61,7 +61,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(AuthAppError::failed_session)?;
+            .map_err(AuthAppError::failed_session_src)?;
         Ok(store)
     }
 
@@ -72,7 +72,7 @@ impl BoxedSessionStore {
         store
             .migrate()
             .await
-            .map_err(AuthAppError::failed_session)?;
+            .map_err(AuthAppError::failed_session_src)?;
         Ok(store)
     }
 
@@ -90,7 +90,7 @@ impl BoxedSessionStore {
             DbBackend::Postgres => Self::store_from_postgres(db)
                 .await
                 .map(|s| BoxedSessionStore::new(s)),
-            _ => Err(AuthAppError::new(None, AuthAppErrorKind::Other)),
+            _ => Err(AuthAppError::of_kind(AuthAppErrorKind::Other)),
         }
     }
 }

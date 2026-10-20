@@ -4,7 +4,7 @@ use langcities_lcdcdsl::component::{EntryRef, Id, Slug, VernacularRef};
 use langcities_server::dto::request::RequestContext;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
-    IntoActiveModel, QueryFilter, TransactionError, TransactionTrait,
+    IntoActiveModel, QueryFilter, TransactionTrait,
     sea_query::{Expr, Query},
 };
 use serde::{Deserialize, Serialize};
@@ -81,7 +81,7 @@ impl EntryRepo {
                             Some(VernacularRepo::generate_owner_filter(*auth_user_id)),
                         )
                     } else {
-                        return Err(DcAppError::unauthorized("unauthorized"));
+                        return Err(DcAppError::unauthorized_desc("unauthorized"));
                     }
                 } else {
                     (id_expr, None)
@@ -89,7 +89,9 @@ impl EntryRepo {
             }
             EntryRef::Qualified(alias) => {
                 let Some(index) = alias.index else {
-                    return Err(DcAppError::bad_request("entry cannot have wildcard index"));
+                    return Err(DcAppError::bad_request_desc(
+                        "entry cannot have wildcard index",
+                    ));
                 };
                 let index_expr = entries::Column::Index.eq(*index);
                 let ver_expr = self
@@ -151,7 +153,7 @@ impl EntryRepo {
                         .as_ref()
                         .or_else(|| current_entry_id.as_ref())
                         .ok_or_else(|| {
-                            DcAppError::bad_request(
+                            DcAppError::bad_request_desc(
                                 "cannot find entry with wildcard index without current entry",
                             )
                         })?);
@@ -183,7 +185,7 @@ impl EntryRepo {
             .filter(expr)
             .one(conn)
             .await
-            .map_err(DcAppError::database)
+            .map_err(DcAppError::database_src)
     }
 
     pub async fn get_entry<C>(
@@ -218,16 +220,16 @@ impl EntryRepo {
             )
             .await?
             .ok_or_else(|| {
-                DcAppError::not_found(format!("vernacular {} not found", dto.vernacular))
+                DcAppError::not_found_desc(format!("vernacular {} not found", dto.vernacular))
             })?;
         let entry = entries::Entity::insert(dto.to_active_model(&vernacular))
             .exec_with_returning(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         let next_entry_index = vernacular.next_entry_id + 1;
         let mut v = vernacular.into_active_model();
         v.next_entry_id = ActiveValue::Set(next_entry_index);
-        v.update(conn).await.map_err(DcAppError::database)?;
+        v.update(conn).await.map_err(DcAppError::database_src)?;
         Ok(entry)
     }
 
@@ -245,10 +247,7 @@ impl EntryRepo {
             Box::pin(async move { me.inner_create_entry(txn, dto, context).await })
         })
         .await
-        .map_err(|e| match e {
-            TransactionError::Connection(e) => DcAppError::database(e),
-            TransactionError::Transaction(e) => e,
-        })
+        .map_err(DcAppError::flatten_tx)
     }
 
     pub async fn delete_entry<C>(
@@ -270,7 +269,7 @@ impl EntryRepo {
         entries::Entity::delete_by_id(entry.id)
             .exec(conn)
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Ok(Some(entry))
     }
 }

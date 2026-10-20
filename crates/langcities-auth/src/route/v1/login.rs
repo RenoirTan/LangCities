@@ -25,7 +25,7 @@ pub async fn password_login(
     let user = users::Entity::find_by_username(&*dto.username)
         .one(&state.db)
         .await
-        .map_err(AuthAppError::database)?;
+        .map_err(AuthAppError::database_src)?;
     if let Some(user) = user {
         if let Some(hashed) = user.password_hash {
             let ok = state
@@ -42,7 +42,7 @@ pub async fn password_login(
             }
         }
     }
-    Err(AuthAppError::invalid_credentials(
+    Err(AuthAppError::invalid_credentials_desc(
         "Could not find any user with this combination of user and password.",
     ))
 }

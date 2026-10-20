@@ -46,7 +46,7 @@ impl OuterApiState {
         let config = config.borrow();
         let jwt_decoder =
             JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences())
-                .map_err(DcAppError::failed_init)?;
+                .map_err(DcAppError::failed_init_src)?;
         Ok(Self::new(jwt_decoder, api_mxs))
     }
 }
@@ -120,12 +120,14 @@ impl ParseJwtClaims for ApiState {
         }
         match self.jwt_decoder().decode_token::<()>(token) {
             Ok(t) => ParsedClaims::Valid(t.claims),
-            Err(e) => ParsedClaims::Invalid(DcAppError::unauthorized(e)),
+            Err(e) => {
+                ParsedClaims::Invalid(DcAppError::unauthorized_all("invalid access token", e))
+            }
         }
     }
 
     fn map_err(&self, error: Error) -> Self::Error {
-        DcAppError::invalid_access_token(error)
+        DcAppError::invalid_access_token_src(error)
     }
 }
 

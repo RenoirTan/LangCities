@@ -14,7 +14,7 @@ pub(crate) async fn resolve_current_user<C: ConnectionTrait + TransactionTrait>(
     conn: &C,
     claims: &Claims,
 ) -> Result<Option<dc_users::Model>, DcAppError> {
-    let auth_user_id = claims.sub_to_id().map_err(DcAppError::unauthorized)?;
+    let auth_user_id = claims.sub_to_id().map_err(DcAppError::unauthorized_src)?;
     match auth_user_id {
         Some(id) => UserRepo
             .get_or_create_user(conn, Id::from(id))

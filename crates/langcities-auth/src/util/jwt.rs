@@ -26,7 +26,7 @@ impl SessionAuthorization {
         self.user
             .id
             .map(|id| id.to_string())
-            .ok_or_else(|| AuthAppError::unauthorized("not logged in"))
+            .ok_or_else(|| AuthAppError::unauthorized_desc("not logged in"))
     }
 }
 
@@ -84,7 +84,7 @@ impl Access {
         let token = state
             .jwt_encoder
             .encode_claims(header, claims)
-            .map_err(AuthAppError::token_generation)?;
+            .map_err(AuthAppError::token_generation_src)?;
         let expiry = state.claims_generator.expiry.num_seconds();
         Ok(AccessTokenResponseDto::new(token, "Bearer", expiry))
     }

@@ -42,7 +42,7 @@ pub async fn get_vernacular(
         .await
         .map(|m| {
             m.map(|m| m.try_into())
-                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
+                .ok_or_else(|| DcAppError::not_found_desc(format!("{} not found", alias.0)))
                 .flatten()
         })
         .flatten()
@@ -100,7 +100,7 @@ pub async fn update_vernacular(
         .await
         .map(|o| {
             o.map(|m| m.try_into())
-                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
+                .ok_or_else(|| DcAppError::not_found_desc(format!("{} not found", alias.0)))
                 .flatten()
         })
         .flatten()
@@ -132,7 +132,7 @@ pub async fn delete_vernacular(
         .await
         .map(|o| {
             o.map(|m| m.try_into())
-                .ok_or_else(|| DcAppError::not_found(format!("{} not found", alias.0)))
+                .ok_or_else(|| DcAppError::not_found_desc(format!("{} not found", alias.0)))
                 .flatten()
         })
         .flatten()

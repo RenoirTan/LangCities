@@ -22,7 +22,7 @@ impl TryFrom<i16> for EntryFieldDependencyParentKind {
         match value {
             1 => Ok(Self::EntryField),
             2 => Ok(Self::SoundChange),
-            _ => Err(DcAppError::bad_request(format!(
+            _ => Err(DcAppError::bad_request_desc(format!(
                 "bad entry field dependency parent kind {value}"
             ))),
         }

@@ -40,7 +40,7 @@ impl TryFrom<vernaculars::Model> for VernacularDto {
     fn try_from(model: vernaculars::Model) -> Result<Self, Self::Error> {
         Ok(Self {
             id: model.id.into(),
-            slug: model.slug.parse().map_err(DcAppError::database)?,
+            slug: model.slug.parse().map_err(DcAppError::database_src)?,
             name: model.name,
             updated_at: model.updated_at,
             created_at: model.created_at,

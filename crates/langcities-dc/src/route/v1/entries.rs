@@ -36,7 +36,7 @@ pub async fn get_entry(
         .get_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
         .map(|m| m.try_into())
-        .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
+        .ok_or_else(|| DcAppError::not_found_desc(format!("entry {} not found", alias)))
         .flatten()
         .map(Json)
 }
@@ -89,7 +89,7 @@ pub async fn update_vernacular(
         VernacularAccessDto::write(alias.clone(), request_context)
             .resolve(&state.db, &state)
             .await
-            .map(|o| o.ok_or_else(|| DcAppError::not_found(format!("{alias}"))))
+            .map(|o| o.ok_or_else(|| DcAppError::not_found_desc(format!("{alias}"))))
             .flatten()?
             .into();
     dto.update_active_model(&mut active);
@@ -97,7 +97,7 @@ pub async fn update_vernacular(
         .update(&state.db)
         .await
         .map(|m| Json(VernacularDto::from(m)))
-        .map_err(DcAppError::database)
+        .map_err(DcAppError::database_src)
 }
 */
 
@@ -125,7 +125,7 @@ pub async fn delete_entry(
         .delete_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
         .map(|m| m.try_into())
-        .ok_or_else(|| DcAppError::not_found(format!("entry {} not found", alias)))
+        .ok_or_else(|| DcAppError::not_found_desc(format!("entry {} not found", alias)))
         .flatten()
         .map(Json)
 }

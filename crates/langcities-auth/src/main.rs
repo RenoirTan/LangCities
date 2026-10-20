@@ -37,7 +37,7 @@ async fn main() -> Result<(), Error> {
     let mut signaller = SignallerConfig::default().create_signaller()?;
     let mut shutdown_stream = signaller
         .boxed_simple_stream()
-        .ok_or_else(|| AuthAppError::failed_init("could not get shutdown signal"))?;
+        .ok_or_else(|| AuthAppError::failed_init_desc("could not get shutdown signal"))?;
 
     let result = 'outer: loop {
         let (stop_tx, stop_rx) = channel::<()>();

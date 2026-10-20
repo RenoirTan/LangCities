@@ -28,7 +28,7 @@ impl AppState {
         let username_cache = MokaWrapper::new(config.dc.username_cache_max_capacity);
         let username_cache = Box::new(username_cache);
         let auth_client =
-            AuthClient::new(&config.dc.auth_base_url).map_err(DcAppError::failed_init)?;
+            AuthClient::new(&config.dc.auth_base_url).map_err(DcAppError::failed_init_src)?;
         Ok(Self {
             config: Arc::new(config),
             db: db.into(),
@@ -58,12 +58,12 @@ impl AppState {
             .auth_client
             .fetch_users(aliases)
             .await
-            .map_err(DcAppError::auth_service)?;
+            .map_err(DcAppError::auth_service_src)?;
 
         for user in &users {
             self.set_username_cache(user.username.clone(), user.id.clone())
                 .await
-                .map_err(DcAppError::cache)?;
+                .map_err(DcAppError::cache_src)?;
         }
         Ok(users)
     }
@@ -80,7 +80,7 @@ impl AppState {
             .into_iter()
             .find(|user| user.username == *username)
             .map(|user| user.id)
-            .ok_or_else(|| DcAppError::not_found(format!("user '{username}' not found")))
+            .ok_or_else(|| DcAppError::not_found_desc(format!("user '{username}' not found")))
     }
 
     pub async fn resolve_auth_user_ids(
@@ -103,7 +103,7 @@ impl AppState {
             .collect::<HashMap<_, _>>();
         for username in usernames.into_iter().cloned() {
             if !map.contains_key(username) {
-                return Err(DcAppError::cache(format!("{username} not found")));
+                return Err(DcAppError::cache_desc(format!("{username} not found")));
             }
         }
         Ok(map)
@@ -116,7 +116,7 @@ impl AppState {
         let config = config.into();
         let db = Database::connect(config.db.clone().to_connection_options())
             .await
-            .map_err(DcAppError::database)?;
+            .map_err(DcAppError::database_src)?;
         Self::new(config, db)
     }
 }

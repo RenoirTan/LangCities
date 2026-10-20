@@ -42,7 +42,7 @@ impl InnerHub {
                 message_at: Utc::now(),
             })
             .await
-            .map_err(DcAppError::messaging)?;
+            .map_err(DcAppError::messaging_src)?;
         Ok(())
     }
 
@@ -69,7 +69,7 @@ impl InnerHub {
                 .nefcdj_tx
                 .send(msg)
                 .await
-                .map_err(DcAppError::other)?;
+                .map_err(|e| DcAppError::other_all("failed to send message", e))?;
         }
         Ok(())
     }

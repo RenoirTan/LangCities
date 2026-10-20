@@ -1841,8 +1841,8 @@ dependencies = [
  "figment",
  "futures",
  "langcities-common",
- "langcities-common-db",
  "langcities-config",
+ "langcities-db",
  "langcities-jwt",
  "langcities-lcdcdsl",
  "langcities-server",
@@ -1893,7 +1893,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "langcities-common-db"
+name = "langcities-config"
+version = "0.1.0"
+dependencies = [
+ "langcities-common",
+]
+
+[[package]]
+name = "langcities-db"
 version = "0.1.0"
 dependencies = [
  "clap",
@@ -1903,13 +1910,6 @@ dependencies = [
  "log",
  "sea-orm",
  "serde",
-]
-
-[[package]]
-name = "langcities-config"
-version = "0.1.0"
-dependencies = [
- "langcities-common",
 ]
 
 [[package]]
@@ -1924,8 +1924,8 @@ dependencies = [
  "futures",
  "langcities-cache",
  "langcities-common",
- "langcities-common-db",
  "langcities-config",
+ "langcities-db",
  "langcities-jwt",
  "langcities-lcdcdsl",
  "langcities-lcdcdsl-parser",

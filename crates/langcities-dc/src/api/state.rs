@@ -139,7 +139,7 @@ mod tests {
         message::builder::MxBuilder,
     };
     use axum::{Json, Router, extract::RawQuery, http::StatusCode, routing::get};
-    use langcities_common_db::config::PartialDbConfig;
+    use langcities_db::config::PartialDbConfig;
     use langcities_jwt::config::{JwtAlgorithm, PartialJwtConfig};
     use langcities_lcdcdsl::component::Slug;
     use langcities_server::config::PartialServerConfig;

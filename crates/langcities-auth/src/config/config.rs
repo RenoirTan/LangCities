@@ -7,11 +7,11 @@ use figment::{
     util::map,
 };
 use langcities_common::merge::Merge;
-use langcities_common_db::config::{DbConfig, PartialDbConfig};
 use langcities_config::{
     datatype::Milliseconds,
     error::{LcConfigError, LcConfigErrorTrait},
 };
+use langcities_db::config::{DbConfig, PartialDbConfig};
 use langcities_jwt::config::{JwtConfig, PartialJwtConfig};
 use langcities_server::config::{PartialServerConfig, ServerConfig};
 use serde::{Deserialize, Serialize};

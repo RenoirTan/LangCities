@@ -8,11 +8,11 @@ use figment::{
 };
 use langcities_cache::common::Expiry;
 use langcities_common::merge::Merge;
-use langcities_common_db::config::{DbConfig, PartialDbConfig};
 use langcities_config::{
     datatype::Milliseconds,
     error::{LcConfigError, LcConfigErrorTrait},
 };
+use langcities_db::config::{DbConfig, PartialDbConfig};
 use langcities_jwt::config::{JwtConfig, PartialJwtConfig};
 use langcities_server::{
     auth_client::validate_base_url,

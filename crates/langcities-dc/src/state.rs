@@ -4,8 +4,8 @@ use crate::{
 };
 use langcities_cache::{backend::moka::MokaWrapper, common::CacheBackend};
 use langcities_common::error::Error;
-use langcities_common_server::{auth_client::AuthClient, dto::users::AuthUserDto};
 use langcities_lcdcdsl::component::{Id, Slug};
+use langcities_server::{auth_client::AuthClient, dto::users::AuthUserDto};
 use sea_orm::{Database, DatabaseConnection};
 use std::{collections::HashMap, sync::Arc};
 

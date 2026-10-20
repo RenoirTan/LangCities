@@ -1842,10 +1842,10 @@ dependencies = [
  "futures",
  "langcities-common",
  "langcities-common-db",
- "langcities-common-server",
  "langcities-config",
  "langcities-jwt",
  "langcities-lcdcdsl",
+ "langcities-server",
  "langcities-signal",
  "log",
  "password-hash 0.6.1",
@@ -1906,21 +1906,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "langcities-common-server"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "figment",
- "langcities-common",
- "langcities-config",
- "langcities-lcdcdsl",
- "reqwest",
- "serde",
- "utoipa",
-]
-
-[[package]]
 name = "langcities-config"
 version = "0.1.0"
 dependencies = [
@@ -1940,12 +1925,12 @@ dependencies = [
  "langcities-cache",
  "langcities-common",
  "langcities-common-db",
- "langcities-common-server",
  "langcities-config",
  "langcities-jwt",
  "langcities-lcdcdsl",
  "langcities-lcdcdsl-parser",
  "langcities-messaging",
+ "langcities-server",
  "langcities-signal",
  "log",
  "rayon",
@@ -2016,6 +2001,21 @@ dependencies = [
  "rmp-serde",
  "serde",
  "tokio",
+]
+
+[[package]]
+name = "langcities-server"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "figment",
+ "langcities-common",
+ "langcities-config",
+ "langcities-lcdcdsl",
+ "reqwest",
+ "serde",
+ "utoipa",
 ]
 
 [[package]]

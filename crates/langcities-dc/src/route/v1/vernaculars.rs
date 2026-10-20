@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, patch, post},
 };
-use langcities_common_server::dto::request::RequestContext;
+use langcities_server::dto::request::RequestContext;
 
 use crate::{
     api::state::ApiState,

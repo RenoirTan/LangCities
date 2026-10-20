@@ -1,6 +1,4 @@
-use langcities_common_server::dto::users::{
-    AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto,
-};
+use langcities_server::dto::users::{AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto};
 use utoipa::OpenApi;
 use utoipauto::utoipauto;
 

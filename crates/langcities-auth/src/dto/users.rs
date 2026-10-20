@@ -1,4 +1,4 @@
-use langcities_common_server::dto::users::AuthUserDto;
+use langcities_server::dto::users::AuthUserDto;
 
 use crate::{
     entity::users,
@@ -21,7 +21,7 @@ impl TryFrom<users::Model> for AuthUserDto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use langcities_common_server::dto::users::{AuthUsersDto, ManyUserAliasDto};
+    use langcities_server::dto::users::{AuthUsersDto, ManyUserAliasDto};
     use serde_json::json;
 
     #[test]

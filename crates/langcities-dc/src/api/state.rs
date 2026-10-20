@@ -140,9 +140,9 @@ mod tests {
     };
     use axum::{Json, Router, extract::RawQuery, http::StatusCode, routing::get};
     use langcities_common_db::config::PartialDbConfig;
-    use langcities_common_server::config::PartialServerConfig;
     use langcities_jwt::config::{JwtAlgorithm, PartialJwtConfig};
     use langcities_lcdcdsl::component::Slug;
+    use langcities_server::config::PartialServerConfig;
     use sea_orm::DatabaseConnection;
     use serde_json::{Value, json};
     use std::sync::Mutex;

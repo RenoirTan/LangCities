@@ -22,13 +22,13 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 langcities-common = { path = "../langcities-common", features = ["axum"] }
 langcities-common-db = { path = "../langcities-common-db" }
-langcities-common-server = { path = "../langcities-common-server", features = ["auth-client"] }
 langcities-cache = { path = "../langcities-cache" }
 langcities-config = { path = "../langcities-config" }
 langcities-jwt = { path = "../langcities-jwt", features = ["axum"] }
 langcities-lcdcdsl = { path = "../langcities-lcdcdsl", features = ["utoipa"] }
 langcities-lcdcdsl-parser = { path = "../langcities-lcdcdsl-parser" }
 langcities-messaging = { path = "../langcities-messaging", features = ["messagepack", "tokio_chan"] }
+langcities-server = { path = "../langcities-server", features = ["auth-client"] }
 langcities-signal = { path = "../langcities-signal" }
 serde = { version = "1.0.229", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "json"] }

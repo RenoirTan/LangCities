@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_lcdcdsl::component::{Id, Slug};
+use langcities_server::dto::request::{RequestAccessKind, RequestContext};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
 use crate::dto::vernaculars::CreateVernacularDto;

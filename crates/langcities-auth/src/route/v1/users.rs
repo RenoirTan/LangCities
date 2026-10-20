@@ -4,10 +4,8 @@ use axum::{
     extract::{Path, State},
 };
 use axum_extra::extract::Query;
-use langcities_common_server::dto::users::{
-    AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto,
-};
 use langcities_lcdcdsl::component::UserAlias;
+use langcities_server::dto::users::{AuthUserDto, AuthUsersDto, ManyUserAliasDto, UserAliasDto};
 use sea_orm::{ColumnTrait, Condition, EntityTrait, QueryFilter};
 
 use crate::{error::AuthAppError, state::AppState};

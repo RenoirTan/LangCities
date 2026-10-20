@@ -1,5 +1,5 @@
 [package]
-name = "langcities-common-server"
+name = "langcities-server"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

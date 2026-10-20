@@ -1,5 +1,5 @@
 use axum::{Json, extract::State};
-use langcities_common_server::dto::users::AuthUserDto;
+use langcities_server::dto::users::AuthUserDto;
 use sea_orm::{ActiveValue, EntityTrait, TryInsertResult};
 
 use crate::{

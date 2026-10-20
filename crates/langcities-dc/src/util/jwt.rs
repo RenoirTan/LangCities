@@ -8,9 +8,9 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
-use langcities_common_server::dto::request::{RequestAccessKind, RequestContext};
 use langcities_jwt::payload::Claims;
 use langcities_lcdcdsl::component::Id;
+use langcities_server::dto::request::{RequestAccessKind, RequestContext};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug)]

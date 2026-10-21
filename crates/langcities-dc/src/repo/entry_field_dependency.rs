@@ -10,13 +10,13 @@ use crate::{
     },
     entity::entry_field_dependencies,
     error::{DcAppError, DcAppErrorTrait},
-    repo::entry_field::EntryFieldRepo,
-    state::AppState,
+    repo::{entry::EntryRepo, entry_field::EntryFieldRepo, vernacular::VernacularRepo},
+    util::user::UserHelper,
 };
 
 #[derive(Clone)]
 pub struct EntryFieldDependencyRepo {
-    pub entry_field_repo: EntryFieldRepo,
+    entry_field_repo: EntryFieldRepo,
 }
 
 impl EntryFieldDependencyRepo {
@@ -25,13 +25,24 @@ impl EntryFieldDependencyRepo {
         Self { entry_field_repo }
     }
 
-    pub fn from_state(state: impl Into<AppState>) -> Self {
-        Self::new(EntryFieldRepo::from_state(state))
+    #[inline]
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        self.entry_field_repo.user_helper()
     }
 
     #[inline]
-    pub fn state(&self) -> &AppState {
-        self.entry_field_repo.state()
+    pub(super) fn entry_field_repo(&self) -> &EntryFieldRepo {
+        &self.entry_field_repo
+    }
+
+    #[inline]
+    pub(super) fn entry_repo(&self) -> &EntryRepo {
+        self.entry_field_repo.entry_repo()
+    }
+
+    #[inline]
+    pub(super) fn vernacular_repo(&self) -> &VernacularRepo {
+        self.entry_field_repo.vernacular_repo()
     }
 
     pub async fn get_dependencies_of<C>(

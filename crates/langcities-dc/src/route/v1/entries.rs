@@ -9,7 +9,6 @@ use crate::{
     api::state::ApiState,
     dto::entries::{CreateEntryDto, EntryAliasDto, EntryDto},
     error::{DcAppError, DcAppErrorTrait},
-    repo::entry::EntryRepo,
 };
 
 #[utoipa::path(
@@ -32,7 +31,9 @@ pub async fn get_entry(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_repo()
         .get_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
         .map(|m| m.try_into())
@@ -56,7 +57,9 @@ pub async fn create_entry(
     request_context: RequestContext,
     Json(dto): Json<CreateEntryDto>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    let model = EntryRepo::from_state(state.inner.clone())
+    let model = state
+        .inner
+        .entry_repo()
         .create_entry(&state.db, dto, request_context)
         .await?;
     Ok(Json(model.try_into()?))
@@ -121,7 +124,9 @@ pub async fn delete_entry(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<EntryDto>, DcAppError> {
-    EntryRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_repo()
         .delete_entry(&state.db, alias.0.clone().into(), request_context)
         .await?
         .map(|m| m.try_into())

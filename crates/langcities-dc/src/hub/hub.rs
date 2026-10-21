@@ -8,7 +8,6 @@ use crate::{
         event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
         job::{NewEntryFieldCalculateDirtyJob, NewEntryFieldOverrideUpdateJob},
     },
-    repo::{entry_field_dependency::EntryFieldDependencyRepo, entry_field_job::EntryFieldJobRepo},
     state::AppState,
 };
 
@@ -33,7 +32,7 @@ impl InnerHub {
             entry_field_id: efue.entry_field_id,
         };
         let db = self.state.db.clone();
-        let repo = EntryFieldJobRepo::from_state(self.state);
+        let repo = self.state.entry_field_job_repo();
         let job = repo.create_or_refresh_entry_field_job(&db, dto).await?;
         self.txs
             .nefouj_tx
@@ -47,7 +46,7 @@ impl InnerHub {
     }
 
     async fn do_efue_clean(self, efue: EntryFieldUpdateEvent) -> Result<(), DcAppError> {
-        let dependency_repo = EntryFieldDependencyRepo::from_state(self.state.clone());
+        let dependency_repo = self.state.entry_field_dependency_repo();
         let dependencies = dependency_repo
             .get_dependencies_of(&self.state.db, efue.entry_field_id)
             .await?;
@@ -58,7 +57,7 @@ impl InnerHub {
             })
             .collect::<Vec<_>>();
         let db = self.state.db.clone();
-        let repo = EntryFieldJobRepo::from_state(self.state);
+        let repo = self.state.entry_field_job_repo();
         let jobs = repo.create_or_refresh_entry_field_jobs(&db, dtos).await?;
         let msgs = jobs.into_iter().map(|job| NewEntryFieldCalculateDirtyJob {
             job_id: job.id.into(),

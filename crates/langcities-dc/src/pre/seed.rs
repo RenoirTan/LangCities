@@ -8,7 +8,6 @@ use crate::dto::vernaculars::CreateVernacularDto;
 use crate::entity::{dc_users, vernaculars};
 use crate::error::{DcAppError, DcAppErrorTrait};
 use crate::repo::user::UserRepo;
-use crate::repo::vernacular::VernacularRepo;
 use crate::state::AppState;
 
 const SEED_USER_ID: Id = Id::from_i64(1);
@@ -39,7 +38,7 @@ impl Seeder {
             .map(|i| format!("ver{}", i + 1))
             .collect::<Vec<_>>();
 
-        let repo = VernacularRepo::new(self.state.clone());
+        let repo = self.state.vernacular_repo();
         for (i, slug) in slugs.iter().enumerate() {
             let dto = CreateVernacularDto {
                 slug: slug.parse::<Slug>().unwrap(),

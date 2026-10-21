@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait, IntoActiveModel,
@@ -9,8 +9,11 @@ use crate::{
     dto::entry_field_job_attempts::{CreateEntryFieldJobAttemptDto, FinishEntryFieldJobAttemptDto},
     entity::entry_field_job_attempts,
     error::{DcAppError, DcAppErrorTrait},
-    repo::entry_field_job::EntryFieldJobRepo,
-    state::AppState,
+    repo::{
+        entry::EntryRepo, entry_field::EntryFieldRepo, entry_field_job::EntryFieldJobRepo,
+        vernacular::VernacularRepo,
+    },
+    util::user::UserHelper,
 };
 
 #[derive(Clone)]
@@ -26,13 +29,47 @@ impl EntryFieldJobAttemptRepo {
         }
     }
 
-    pub fn from_state(state: impl Into<AppState>) -> Self {
-        Self::new(EntryFieldJobRepo::from_state(state))
+    #[inline]
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        self.entry_field_job_repo.user_helper()
     }
 
     #[inline]
-    pub fn state(&self) -> &AppState {
-        self.entry_field_job_repo.state()
+    pub(super) fn entry_field_job_repo(&self) -> &EntryFieldJobRepo {
+        &self.entry_field_job_repo
+    }
+
+    #[inline]
+    pub(super) fn entry_field_repo(&self) -> &EntryFieldRepo {
+        self.entry_field_job_repo.entry_field_repo()
+    }
+
+    #[inline]
+    pub(super) fn entry_repo(&self) -> &EntryRepo {
+        self.entry_field_job_repo.entry_repo()
+    }
+
+    #[inline]
+    pub(super) fn vernacular_repo(&self) -> &VernacularRepo {
+        self.entry_field_job_repo.vernacular_repo()
+    }
+
+    #[inline]
+    pub(super) fn entry_field_job_ttl(&self) -> Duration {
+        self.entry_field_job_repo.entry_field_job_ttl()
+    }
+
+    #[inline]
+    pub(super) fn expiry_from_time<Tz>(&self, time: DateTime<Tz>) -> DateTime<Tz>
+    where
+        Tz: TimeZone,
+    {
+        self.entry_field_job_repo.expiry_from_time(time)
+    }
+
+    #[inline]
+    pub(super) fn expiry_from_now(&self) -> DateTime<Utc> {
+        self.entry_field_job_repo.expiry_from_now()
     }
 
     pub async fn generate_active_filter(&self) -> Expr {
@@ -105,8 +142,7 @@ impl EntryFieldJobAttemptRepo {
             return Ok(None);
         }
         // TODO: replace with separate expiry config
-        let am =
-            dto.to_active_model(job, Utc::now() + self.state().config.dc.entry_field_job_ttl)?;
+        let am = dto.to_active_model(job, self.expiry_from_now())?;
         am.insert(conn)
             .await
             .map(Some)

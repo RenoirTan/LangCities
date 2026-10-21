@@ -22,7 +22,7 @@ use crate::{
         entry::{EntryAction, EntryRepo},
         vernacular::{VernacularAction, VernacularRepo},
     },
-    state::AppState,
+    util::user::UserHelper,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, FromQueryResult)]
@@ -140,7 +140,7 @@ impl EntryFieldAction {
 
 #[derive(Clone)]
 pub struct EntryFieldRepo {
-    pub entry_repo: EntryRepo,
+    entry_repo: EntryRepo,
 }
 
 impl EntryFieldRepo {
@@ -149,18 +149,19 @@ impl EntryFieldRepo {
         Self { entry_repo }
     }
 
-    pub fn from_state(state: impl Into<AppState>) -> Self {
-        Self::new(EntryRepo::from_state(state))
+    #[inline]
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        self.entry_repo.user_helper()
     }
 
     #[inline]
-    pub fn state(&self) -> &AppState {
-        self.entry_repo.state()
+    pub(super) fn vernacular_repo(&self) -> &VernacularRepo {
+        &self.entry_repo.vernacular_repo()
     }
 
     #[inline]
-    pub fn vernacular_repo(&self) -> &VernacularRepo {
-        &self.entry_repo.vernacular_repo
+    pub(super) fn entry_repo(&self) -> &EntryRepo {
+        &self.entry_repo
     }
 
     pub async fn generate_filter(

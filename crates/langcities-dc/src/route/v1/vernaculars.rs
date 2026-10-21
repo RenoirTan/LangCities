@@ -14,7 +14,6 @@ use crate::{
         },
     },
     error::{DcAppError, DcAppErrorTrait},
-    repo::vernacular::VernacularRepo,
 };
 
 #[utoipa::path(
@@ -37,7 +36,9 @@ pub async fn get_vernacular(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.inner.clone())
+    state
+        .inner
+        .vernacular_repo()
         .get_vernacular(&state.db, alias.0.clone().into(), request_context)
         .await
         .map(|m| {
@@ -65,7 +66,9 @@ pub async fn create_vernacular(
     request_context: RequestContext,
     Json(dto): Json<CreateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.inner.clone())
+    state
+        .inner
+        .vernacular_repo()
         .create_vernacular(&state.db, dto, user.auth_user_id, request_context)
         .await
         .map(|m| m.try_into())
@@ -95,16 +98,18 @@ pub async fn update_vernacular(
     State(state): State<ApiState>,
     Json(dto): Json<UpdateVernacularDto>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.inner.clone())
+    state
+        .inner
+        .vernacular_repo()
         .update_vernacular(&state.db, alias.0.clone().into(), dto, request_context)
         .await
         .map(|o| {
             o.map(|m| m.try_into())
                 .ok_or_else(|| DcAppError::not_found_desc(format!("{} not found", alias.0)))
                 .flatten()
+                .map(Json)
         })
         .flatten()
-        .map(Json)
 }
 
 #[utoipa::path(
@@ -127,7 +132,9 @@ pub async fn delete_vernacular(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<VernacularDto>, DcAppError> {
-    VernacularRepo::new(state.inner.clone())
+    state
+        .inner
+        .vernacular_repo()
         .delete_vernacular(&state.db, alias.0.clone().into(), request_context)
         .await
         .map(|o| {

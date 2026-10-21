@@ -34,7 +34,12 @@ where
     }
 
     async fn get(&self, key: &K) -> Option<V>;
-    async fn get_many(&self, keys: &[&K]) -> HashMap<K, V>;
+    async fn get_many(&self, keys: &mut (dyn Iterator<Item = &K> + Send)) -> HashMap<K, V>;
+
+    async fn get_many_from_sliced_keys(&self, keys: &[&K]) -> HashMap<K, V> {
+        self.get_many(&mut keys.into_iter().map(|k| *k)).await
+    }
+
     async fn set(&self, key: K, value: V, expiry: Expiry) -> Result<Option<V>, Error>;
     async fn take(&self, key: &K) -> Option<V>;
 

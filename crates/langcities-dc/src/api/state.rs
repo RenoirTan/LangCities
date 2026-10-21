@@ -139,6 +139,7 @@ mod tests {
         config::{PartialConfig, PartialDcConfig},
         error::DcAppErrorKind,
         message::builder::MxBuilder,
+        util::user::UserHelper,
     };
     use axum::{Json, Router, extract::RawQuery, http::StatusCode, routing::get};
     use langcities_db::config::PartialDbConfig;
@@ -227,7 +228,8 @@ mod tests {
             let jwt_decoder =
                 JwtDecoder::from_config(&config.jwt, Microservice::Dc.allowed_audiences()).unwrap();
             let outer = OuterApiState::new(jwt_decoder, self.api_mxs.clone());
-            let inner = AppState::new(config, DatabaseConnection::default()).unwrap();
+            let user_helper = UserHelper::create(&config).unwrap();
+            let inner = AppState::new(config, DatabaseConnection::default(), user_helper);
             ApiState::new(inner, outer)
         }
     }
@@ -251,7 +253,8 @@ mod tests {
         let state = auth.state(100);
         assert!(
             state
-                .fetch_and_cache_auth_users(&[])
+                .user_helper
+                .fetch_and_cache_aliases(&[])
                 .await
                 .unwrap()
                 .is_empty()
@@ -262,7 +265,8 @@ mod tests {
         let bob = get_bob_slug();
 
         state
-            .fetch_and_cache_auth_users(&[&alice, &bob])
+            .user_helper
+            .fetch_and_cache_aliases([&alice, &bob])
             .await
             .unwrap();
         assert_eq!(
@@ -270,14 +274,21 @@ mod tests {
             ["aliases=alice&aliases=bob"]
         );
         assert_eq!(
-            state.get_cached_id_from_username(&alice).await,
+            state.user_helper.get_cached_id_from_username(&alice).await,
             Some(17.into())
         );
         assert_eq!(
-            state.get_cached_id_from_username(&bob).await,
+            state.user_helper.get_cached_id_from_username(&bob).await,
             Some(42.into())
         );
-        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
+        assert_eq!(
+            state
+                .user_helper
+                .resolve_auth_user_id(&alice)
+                .await
+                .unwrap(),
+            17.into()
+        );
         assert_eq!(auth.requests.lock().unwrap().len(), 1);
     }
 
@@ -294,14 +305,32 @@ mod tests {
         let alice = get_alice_slug();
         let bob = get_bob_slug();
 
-        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
+        assert_eq!(
+            state
+                .user_helper
+                .resolve_auth_user_id(&alice)
+                .await
+                .unwrap(),
+            17.into()
+        );
         assert_eq!(*auth.requests.lock().unwrap(), ["aliases=@alice"]);
-        assert_eq!(state.resolve_auth_user_id(&alice).await.unwrap(), 17.into());
+        assert_eq!(
+            state
+                .user_helper
+                .resolve_auth_user_id(&alice)
+                .await
+                .unwrap(),
+            17.into()
+        );
         assert_eq!(auth.requests.lock().unwrap().len(), 1);
 
         // Resolution must also work when caching is disabled by a zero capacity.
         assert_eq!(
-            auth.state(0).resolve_auth_user_id(&alice).await.unwrap(),
+            auth.state(0)
+                .user_helper
+                .resolve_auth_user_id(&alice)
+                .await
+                .unwrap(),
             17.into()
         );
     }
@@ -312,7 +341,8 @@ mod tests {
         let state = auth.state(100);
         for _ in 0..2 {
             let error = state
-                .resolve_auth_user_id(&"missing".parse().unwrap())
+                .user_helper
+                .resolve_auth_user_id(&"missing".parse::<Slug>().unwrap())
                 .await
                 .unwrap_err();
             assert_eq!(error.kind, DcAppErrorKind::NotFound);
@@ -345,13 +375,20 @@ mod tests {
         ] {
             let auth = MockAuth::start(status, body).await;
             let state = auth.state(100);
-            let error = state.resolve_auth_user_id(&alice).await.unwrap_err();
+            let error = state
+                .user_helper
+                .resolve_auth_user_id(&alice)
+                .await
+                .unwrap_err();
             assert_eq!(error.kind, DcAppErrorKind::AuthService);
             assert_eq!(
                 Into::<StatusCode>::into(error.kind),
                 StatusCode::BAD_GATEWAY
             );
-            assert_eq!(state.get_cached_id_from_username(&alice).await, None);
+            assert_eq!(
+                state.user_helper.get_cached_id_from_username(&alice).await,
+                None
+            );
         }
     }
 
@@ -365,6 +402,7 @@ mod tests {
             tokio::task::yield_now().await;
         }
         let error = state
+            .user_helper
             .resolve_auth_user_id(&get_alice_slug())
             .await
             .unwrap_err();

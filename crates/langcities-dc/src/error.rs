@@ -52,6 +52,9 @@ langcities_common::lc_error_trait! {
     }
     declare {
         fn flatten_tx(e: TransactionError<DcAppError>) -> DcAppError;
+        fn to_not_found<T, F>(e: Option<T>, description: F) -> Result<T, DcAppError>
+        where
+            F: FnOnce() -> String;
     }
     define {
         fn flatten_tx(e: TransactionError<DcAppError>) -> DcAppError {
@@ -59,6 +62,13 @@ langcities_common::lc_error_trait! {
                 TransactionError::Connection(e) => DcAppError::database_src(e),
                 TransactionError::Transaction(e) => e,
             }
+        }
+
+        fn to_not_found<T, F>(e: Option<T>, description: F) -> Result<T, DcAppError>
+        where
+            F: FnOnce() -> String
+        {
+            e.ok_or_else(|| DcAppError::not_found_desc(description()))
         }
     }
 }

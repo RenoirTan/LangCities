@@ -14,7 +14,6 @@ use crate::{
     },
     error::{DcAppError, DcAppErrorTrait},
     message::event::{EntryFieldUpdateEvent, EntryFieldValueChanged},
-    repo::entry_field::EntryFieldRepo,
 };
 
 #[utoipa::path(
@@ -37,7 +36,9 @@ pub async fn get_entry_field(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_field_repo()
         .get_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
         .map(|f| f.try_into())
@@ -61,7 +62,9 @@ pub async fn get_entry_fields(
     Json(dto): Json<GetManyEntryFieldAliasDto>,
 ) -> Result<Json<FoundManyEntryFields>, DcAppError> {
     let aliases = dto.aliases.into_iter().map(|a| a.0.into());
-    EntryFieldRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_field_repo()
         .get_entry_fields(&state.db, aliases, request_context, None)
         .await
         .map(Json)
@@ -82,7 +85,9 @@ pub async fn create_entry_field(
     request_context: RequestContext,
     Json(dto): Json<CreateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_field_repo()
         .create_entry_field(&state.db, dto, request_context)
         .await
         .map(|f| f.try_into())
@@ -112,7 +117,9 @@ pub async fn update_entry_field(
     State(state): State<ApiState>,
     Json(dto): Json<UpdateEntryFieldDto>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    let (old, new) = EntryFieldRepo::from_state(state.inner.clone())
+    let (old, new) = state
+        .inner
+        .entry_field_repo()
         .update_entry_field_returning_original(
             &state.db,
             alias.0.clone().into(),
@@ -159,7 +166,9 @@ pub async fn delete_entry_field(
     request_context: RequestContext,
     State(state): State<ApiState>,
 ) -> Result<Json<EntryFieldDto>, DcAppError> {
-    EntryFieldRepo::from_state(state.inner.clone())
+    state
+        .inner
+        .entry_field_repo()
         .delete_entry_field(&state.db, alias.0.clone().into(), request_context, None)
         .await?
         .map(|f| f.try_into())

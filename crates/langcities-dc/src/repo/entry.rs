@@ -14,7 +14,7 @@ use crate::{
     entity::{entries, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
     repo::vernacular::{VernacularAction, VernacularRepo},
-    state::AppState,
+    util::user::UserHelper,
 };
 
 #[derive(Clone)]
@@ -47,7 +47,7 @@ impl EntryAction {
 
 #[derive(Clone)]
 pub struct EntryRepo {
-    pub vernacular_repo: VernacularRepo,
+    vernacular_repo: VernacularRepo,
 }
 
 impl EntryRepo {
@@ -56,13 +56,14 @@ impl EntryRepo {
         Self { vernacular_repo }
     }
 
-    pub fn from_state(state: impl Into<AppState>) -> Self {
-        Self::new(VernacularRepo::new(state))
+    #[inline]
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        &self.vernacular_repo.user_helper()
     }
 
     #[inline]
-    pub fn state(&self) -> &AppState {
-        &self.vernacular_repo.state
+    pub(super) fn vernacular_repo(&self) -> &VernacularRepo {
+        &self.vernacular_repo
     }
 
     pub async fn generate_filter(

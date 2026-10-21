@@ -48,14 +48,18 @@ impl AuthClient {
     /// Fetches matching users using repeated `aliases` query parameters.
     /// An empty slice returns no users without making a request. Missing aliases
     /// are omitted from the response; HTTP and deserialization errors are propagated.
-    pub async fn fetch_users(&self, aliases: &[&Slug]) -> Result<Vec<AuthUserDto>, reqwest::Error> {
-        if aliases.is_empty() {
-            return Ok(Vec::new());
-        }
+    pub async fn fetch_users<'a, I>(&self, aliases: I) -> Result<Vec<AuthUserDto>, reqwest::Error>
+    where
+        I: IntoIterator<Item = &'a Slug>,
+        <I as IntoIterator>::IntoIter: Send,
+    {
         let query: Vec<_> = aliases
-            .iter()
-            .map(|a| ("aliases", UserAlias::from_slug((*a).clone()).to_full()))
+            .into_iter()
+            .map(|a| ("aliases", UserAlias::from_slug(a.clone()).to_full()))
             .collect();
+        if query.len() <= 0 {
+            return Ok(vec![]);
+        }
         let response = self
             .http
             .get(self.users_url.clone())

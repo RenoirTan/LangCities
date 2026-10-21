@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use langcities_lcdcdsl::component::Id;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, ExprTrait,
@@ -11,28 +11,63 @@ use crate::{
     dto::entry_field_jobs::{CreateEntryFieldJobDto, EntryFieldJobStatus, UpdateEntryFieldJobDto},
     entity::entry_field_jobs,
     error::{DcAppError, DcAppErrorTrait},
-    repo::entry_field::EntryFieldRepo,
-    state::AppState,
+    repo::{entry::EntryRepo, entry_field::EntryFieldRepo, vernacular::VernacularRepo},
+    util::user::UserHelper,
 };
 
 #[derive(Clone)]
 pub struct EntryFieldJobRepo {
-    pub entry_field_repo: EntryFieldRepo,
+    entry_field_repo: EntryFieldRepo,
+    entry_field_job_ttl: Duration,
 }
 
 impl EntryFieldJobRepo {
-    pub fn new(entry_field_repo: impl Into<EntryFieldRepo>) -> Self {
-        let entry_field_repo = entry_field_repo.into();
-        Self { entry_field_repo }
-    }
-
-    pub fn from_state(state: impl Into<AppState>) -> Self {
-        Self::new(EntryFieldRepo::from_state(state))
+    pub fn new(
+        entry_field_repo: impl Into<EntryFieldRepo>,
+        entry_field_job_ttl: impl Into<Duration>,
+    ) -> Self {
+        Self {
+            entry_field_repo: entry_field_repo.into(),
+            entry_field_job_ttl: entry_field_job_ttl.into(),
+        }
     }
 
     #[inline]
-    pub fn state(&self) -> &AppState {
-        self.entry_field_repo.state()
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        self.entry_field_repo.user_helper()
+    }
+
+    #[inline]
+    pub(super) fn entry_field_repo(&self) -> &EntryFieldRepo {
+        &self.entry_field_repo
+    }
+
+    #[inline]
+    pub(super) fn entry_repo(&self) -> &EntryRepo {
+        self.entry_field_repo.entry_repo()
+    }
+
+    #[inline]
+    pub(super) fn vernacular_repo(&self) -> &VernacularRepo {
+        self.entry_field_repo.vernacular_repo()
+    }
+
+    #[inline]
+    pub(super) fn entry_field_job_ttl(&self) -> Duration {
+        self.entry_field_job_ttl
+    }
+
+    #[inline]
+    pub(super) fn expiry_from_time<Tz>(&self, time: DateTime<Tz>) -> DateTime<Tz>
+    where
+        Tz: TimeZone,
+    {
+        time + self.entry_field_job_ttl
+    }
+
+    #[inline]
+    pub(super) fn expiry_from_now(&self) -> DateTime<Utc> {
+        self.expiry_from_time(Utc::now())
     }
 
     pub async fn generate_active_filter_for(&self, entry_field_id: Id) -> Expr {
@@ -131,7 +166,7 @@ impl EntryFieldJobRepo {
             .filter(entry_field_jobs::Column::Id.is_in(job_ids.values()))
             .col_expr(
                 entry_field_jobs::Column::ExpiresAt,
-                Expr::value(Utc::now() + self.state().config.dc.entry_field_job_ttl),
+                Expr::value(self.expiry_from_now()),
             )
             .exec_with_returning(conn)
             .await
@@ -160,7 +195,7 @@ impl EntryFieldJobRepo {
             return Ok(None);
         };
         let mut am = latest.into_active_model();
-        am.expires_at = ActiveValue::Set(Utc::now() + self.state().config.dc.entry_field_job_ttl);
+        am.expires_at = ActiveValue::Set(self.expiry_from_now());
         am.update(conn)
             .await
             .map(Some)
@@ -175,8 +210,7 @@ impl EntryFieldJobRepo {
     where
         C: ConnectionTrait,
     {
-        let expires_at = Utc::now() + self.state().config.dc.entry_field_job_ttl;
-        let am = dto.to_active_model(expires_at);
+        let am = dto.to_active_model(self.expiry_from_now());
         am.insert(conn).await.map_err(DcAppError::database_src)
     }
 
@@ -189,7 +223,7 @@ impl EntryFieldJobRepo {
         C: ConnectionTrait,
         I: IntoIterator<Item = CreateEntryFieldJobDto>,
     {
-        let expires_at = Utc::now() + self.state().config.dc.entry_field_job_ttl;
+        let expires_at = self.expiry_from_now();
         let ams = dtos.into_iter().map(|dto| dto.to_active_model(expires_at));
         entry_field_jobs::Entity::insert_many(ams)
             .exec_with_returning(conn)

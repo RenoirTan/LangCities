@@ -54,7 +54,10 @@ pub async fn get_user_by_alias(
     match &alias.0 {
         UserAlias::Id(id) => UserRepo.get_user_by_id(&state.db, id.id()).await,
         UserAlias::Username(username) => {
-            let auth_user_id = state.resolve_auth_user_id(username.username()).await?;
+            let auth_user_id = state
+                .user_helper
+                .resolve_auth_user_id(username.username())
+                .await?;
             UserRepo
                 .get_user_by_auth_user_id(&state.db, &auth_user_id)
                 .await

@@ -105,10 +105,10 @@ where
         self.inner.get(key).await.map(|entry| entry.value)
     }
 
-    async fn get_many(&self, keys: &[&K]) -> HashMap<K, V> {
+    async fn get_many(&self, keys: &mut (dyn Iterator<Item = &K> + Send)) -> HashMap<K, V> {
         let mut map = HashMap::new();
         for key in keys {
-            let key = (*key).to_owned();
+            let key = key.to_owned();
             let Some(value) = self.get(&key).await else {
                 continue;
             };

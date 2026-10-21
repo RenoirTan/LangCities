@@ -12,7 +12,7 @@ use crate::{
     dto::vernaculars::{CreateVernacularDto, UpdateVernacularDto},
     entity::{dc_users, entries, vernaculars},
     error::{DcAppError, DcAppErrorTrait},
-    state::AppState,
+    util::user::UserHelper,
 };
 
 /// Only for finding entry field dependencies
@@ -40,13 +40,18 @@ impl VernacularAction {
 
 #[derive(Clone)]
 pub struct VernacularRepo {
-    pub state: AppState,
+    user_helper: UserHelper,
 }
 
 impl VernacularRepo {
-    pub fn new(state: impl Into<AppState>) -> Self {
-        let state = state.into();
-        Self { state }
+    pub fn new(user_helper: impl Into<UserHelper>) -> Self {
+        let user_helper = user_helper.into();
+        Self { user_helper }
+    }
+
+    #[inline]
+    pub(super) fn user_helper(&self) -> &UserHelper {
+        &self.user_helper
     }
 
     pub async fn generate_filter(
@@ -63,7 +68,7 @@ impl VernacularRepo {
                     Some(UserAlias::Id(owner_id)) => Self::generate_owner_filter(**owner_id.id()),
                     Some(UserAlias::Username(username)) => {
                         let auth_user_id = self
-                            .state
+                            .user_helper
                             .resolve_auth_user_id(&username.username())
                             .await?;
                         Self::generate_owner_filter(*auth_user_id)
@@ -128,8 +133,8 @@ impl VernacularRepo {
         }
         let required_usernames = required_usernames.iter().collect::<Vec<_>>();
         let username_to_auth_user_ids = self
-            .state
-            .resolve_auth_user_ids(&required_usernames)
+            .user_helper
+            .resolve_auth_user_ids(required_usernames)
             .await?;
         let mut exprs = HashMap::new();
         for alias in aliases {

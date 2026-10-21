@@ -266,7 +266,7 @@ mod tests {
 
         state
             .user_helper
-            .fetch_and_cache_aliases([&alice, &bob])
+            .fetch_and_cache_aliases(&[&alice, &bob])
             .await
             .unwrap();
         assert_eq!(

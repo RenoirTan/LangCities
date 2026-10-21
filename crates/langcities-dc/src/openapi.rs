@@ -49,4 +49,21 @@ mod tests {
             json!("string")
         );
     }
+
+    #[test]
+    fn entry_field_alias_query_parameter_is_array_of_registered_strings() {
+        let document = serde_json::to_value(ApiDoc::openapi()).unwrap();
+        let parameter = &document["paths"]["/v1/entry_fields"]["get"]["parameters"][0];
+
+        assert_eq!(parameter["name"], json!("aliases"));
+        assert_eq!(parameter["in"], json!("query"));
+        assert_eq!(
+            parameter["schema"]["items"]["$ref"],
+            json!("#/components/schemas/EntryFieldAliasDto")
+        );
+        assert_eq!(
+            document["components"]["schemas"]["EntryFieldAliasDto"]["type"],
+            json!("string")
+        );
+    }
 }

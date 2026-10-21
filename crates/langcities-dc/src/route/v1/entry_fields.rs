@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, patch, post},
 };
+use axum_extra::extract::Query;
 use chrono::Utc;
 use langcities_server::dto::request::RequestContext;
 
@@ -50,7 +51,7 @@ pub async fn get_entry_field(
 #[utoipa::path(
     get,
     path = "/v1/entry_fields",
-    request_body = GetManyEntryFieldAliasDto,
+    params(GetManyEntryFieldAliasDto),
     responses(
         (status = 200, body = FoundManyEntryFields, description = "entry details")
     )
@@ -58,10 +59,10 @@ pub async fn get_entry_field(
 #[axum::debug_handler]
 pub async fn get_entry_fields(
     request_context: RequestContext,
+    Query(query): Query<GetManyEntryFieldAliasDto>,
     State(state): State<ApiState>,
-    Json(dto): Json<GetManyEntryFieldAliasDto>,
 ) -> Result<Json<FoundManyEntryFields>, DcAppError> {
-    let aliases = dto.aliases.into_iter().map(|a| a.0.into());
+    let aliases = query.aliases.into_iter().map(|a| a.0.into());
     state
         .inner
         .entry_field_repo()
@@ -180,6 +181,7 @@ pub async fn delete_entry_field(
 pub fn get_v1_entry_fields_router() -> Router<ApiState> {
     Router::new()
         .route("/entry_fields/{alias}", get(get_entry_field))
+        .route("/entry_fields", get(get_entry_fields))
         .route("/entry_fields", post(create_entry_field))
         .route("/entry_fields/{alias}", patch(update_entry_field))
         .route("/entry_fields/{alias}", delete(delete_entry_field))

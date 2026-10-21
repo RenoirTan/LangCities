@@ -62,27 +62,19 @@ impl UserHelper {
         self.username_cache.get(username).await
     }
 
-    pub async fn get_cached_ids_from_usernames<'a, I>(&self, usernames: I) -> HashMap<Slug, Id>
-    where
-        I: IntoIterator<Item = &'a Slug>,
-        <I as IntoIterator>::IntoIter: Send,
-    {
+    pub async fn get_cached_ids_from_usernames(&self, usernames: &[&Slug]) -> HashMap<Slug, Id> {
         self.username_cache
-            .get_many(&mut usernames.into_iter())
+            .get_many(&mut usernames.iter().map(|u| *u))
             .await
     }
 
-    pub async fn fetch_and_cache_aliases<'a, I>(
+    pub async fn fetch_and_cache_aliases(
         &self,
-        aliases: I,
-    ) -> Result<Vec<AuthUserDto>, DcAppError>
-    where
-        I: IntoIterator<Item = &'a Slug>,
-        <I as IntoIterator>::IntoIter: Send,
-    {
+        aliases: &[&Slug],
+    ) -> Result<Vec<AuthUserDto>, DcAppError> {
         let users = self
             .auth_client
-            .fetch_users(aliases)
+            .fetch_users(aliases.iter().map(|a| *a))
             .await
             .map_err(DcAppError::auth_service_src)?;
 
@@ -103,7 +95,7 @@ impl UserHelper {
             return Ok(id);
         }
         let users = self
-            .fetch_and_cache_aliases(std::slice::from_ref(username))
+            .fetch_and_cache_aliases(std::slice::from_ref(&username))
             .await?;
         // Use the response directly: a cache entry can expire or be evicted immediately.
         users
@@ -113,34 +105,26 @@ impl UserHelper {
             .ok_or_else(|| DcAppError::not_found_desc(format!("user '{username}' not found")))
     }
 
-    pub async fn resolve_auth_user_ids<'a, I>(
+    pub async fn resolve_auth_user_ids(
         &self,
-        usernames: I,
-    ) -> Result<HashMap<Slug, Id>, DcAppError>
-    where
-        I: IntoIterator<Item = &'a Slug>,
-        <I as IntoIterator>::IntoIter: Send,
-    {
-        let usernames: Vec<_> = usernames.into_iter().collect();
-        let map = self
-            .get_cached_ids_from_usernames(usernames.iter().map(|s| *s))
-            .await;
+        usernames: &[&Slug],
+    ) -> Result<HashMap<Slug, Id>, DcAppError> {
+        let map = self.get_cached_ids_from_usernames(usernames).await;
         let missing_usernames = usernames
             .iter()
-            .filter(|u| map.contains_key(**u))
+            .map(|u| *u)
+            .filter(|u| map.contains_key(*u))
             .collect::<Vec<_>>();
         if missing_usernames.len() <= 0 {
             return Ok(map);
         }
-        let users = self
-            .fetch_and_cache_aliases(missing_usernames.into_iter().cloned())
-            .await?;
+        let users = self.fetch_and_cache_aliases(&missing_usernames).await?;
         let map = users
             .into_iter()
             .map(|d| (d.username, d.id))
             .collect::<HashMap<_, _>>();
-        for username in usernames.into_iter().cloned() {
-            if !map.contains_key(&username) {
+        for username in usernames.iter().map(|u| *u) {
+            if !map.contains_key(username) {
                 return Err(DcAppError::cache_desc(format!("{username} not found")));
             }
         }

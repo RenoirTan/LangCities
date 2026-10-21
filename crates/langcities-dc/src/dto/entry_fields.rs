@@ -6,7 +6,7 @@ use langcities_lcdcdsl::component::{
 };
 use sea_orm::ActiveValue;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     dto::entries::EntryAliasDto,
@@ -25,7 +25,7 @@ impl Display for EntryFieldAliasDto {
 }
 
 /// TODO: optional current_entry_id
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct GetManyEntryFieldAliasDto {
     pub aliases: Vec<EntryFieldAliasDto>,
 }

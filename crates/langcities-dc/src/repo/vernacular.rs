@@ -134,7 +134,7 @@ impl VernacularRepo {
         let required_usernames = required_usernames.iter().collect::<Vec<_>>();
         let username_to_auth_user_ids = self
             .user_helper
-            .resolve_auth_user_ids(required_usernames)
+            .resolve_auth_user_ids(&required_usernames)
             .await?;
         let mut exprs = HashMap::new();
         for alias in aliases {
